@@ -1,10 +1,19 @@
 import Link from "next/link";
 
-import { deleteCharacter, levelUpCharacter, MAX_CHARACTER_LEVEL } from "@/app/characters/actions";
+import { deleteCharacter, levelUpCharacter } from "@/app/characters/actions";
+import { MAX_CHARACTER_LEVEL } from "@/lib/characters/constants";
 
 type AbilityScores = Record<string, number>;
 
 type AbilityGenerationMethod = "POINT_BUY" | "RANDOM";
+
+const EMPTY_PROFICIENCIES = {
+    armor: [] as string[],
+    weapons: [] as string[],
+    tools: [] as string[],
+    skills: [] as string[],
+    languages: [] as string[],
+};
 
 interface CharacterCardProps {
     character: {
@@ -24,9 +33,6 @@ interface CharacterCardProps {
             skills: string[];
             languages: string[];
         };
-        armorBonus: number;
-        shieldBonus: number;
-        miscBonus: number;
         spellsCount: number;
         updatedAt: Date;
     };
@@ -48,10 +54,7 @@ export function CharacterCard({ character }: CharacterCardProps) {
         alignment,
         generationMethod,
         abilityScores,
-        proficiencies,
-        armorBonus,
-        shieldBonus,
-        miscBonus,
+        proficiencies: rawProficiencies,
         spellsCount,
         updatedAt,
     } = character;
@@ -63,12 +66,15 @@ export function CharacterCard({ character }: CharacterCardProps) {
         .join(" · ");
 
     const canLevelUp = level < MAX_CHARACTER_LEVEL;
-    const dexScore = abilityScores.dex ?? 10;
-    const dexContribution = Math.floor((dexScore - 10) / 2);
-    const armorClass = dexContribution + armorBonus + shieldBonus + miscBonus;
-
-    const formatSigned = (value: number) => (value >= 0 ? `+${value}` : `${value}`);
-
+    const proficiencies = rawProficiencies
+        ? {
+            armor: rawProficiencies.armor ?? EMPTY_PROFICIENCIES.armor,
+            weapons: rawProficiencies.weapons ?? EMPTY_PROFICIENCIES.weapons,
+            tools: rawProficiencies.tools ?? EMPTY_PROFICIENCIES.tools,
+            skills: rawProficiencies.skills ?? EMPTY_PROFICIENCIES.skills,
+            languages: rawProficiencies.languages ?? EMPTY_PROFICIENCIES.languages,
+        }
+        : EMPTY_PROFICIENCIES;
     const topSkills = proficiencies.skills.slice(0, 4);
     const topWeapons = proficiencies.weapons.slice(0, 3);
     const topArmor = proficiencies.armor.slice(0, 2);
@@ -169,16 +175,6 @@ export function CharacterCard({ character }: CharacterCardProps) {
                     );
                 })}
             </dl>
-
-            <div className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white">
-                <div className="flex items-center justify-between text-[0.6rem] uppercase tracking-[0.35em] text-white/60">
-                    <span>Armor Class</span>
-                    <span>{armorClass}</span>
-                </div>
-                <p className="mt-2 text-xs text-white/70">
-                    AC = ({formatSigned(dexContribution)} Dex) {formatSigned(armorBonus)} Armor {formatSigned(shieldBonus)} Shield {formatSigned(miscBonus)} Misc
-                </p>
-            </div>
 
             <div className="flex items-center justify-between text-xs text-white/60">
                 <span>Updated {updatedAt.toLocaleDateString()}</span>

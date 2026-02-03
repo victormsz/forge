@@ -19,6 +19,7 @@ import {
 } from "@/lib/point-buy";
 
 import { authOptions } from "@/lib/auth";
+import { MAX_CHARACTER_LEVEL } from "@/lib/characters/constants";
 import { prisma } from "@/lib/prisma";
 
 interface AbilityScoreBounds {
@@ -41,10 +42,6 @@ const EMPTY_PROFICIENCIES: CharacterProficiencies = {
     skills: [],
     languages: [],
 };
-
-export const MAX_CHARACTER_LEVEL = 20;
-const DEFENSE_MIN = -5;
-const DEFENSE_MAX = 20;
 
 function parseAbilityScores(input: FormDataEntryValue | null, bounds?: AbilityScoreBounds): AbilityScores {
     const fallback: AbilityScores = { ...DEFAULT_ABILITY_SCORES };
@@ -103,20 +100,6 @@ function parseProficiencies(input: FormDataEntryValue | null): CharacterProficie
     }
 }
 
-function parseDefenseBonus(input: FormDataEntryValue | null): number {
-    if (typeof input !== "string") {
-        return 0;
-    }
-
-    const numericValue = Number(input);
-    if (!Number.isFinite(numericValue)) {
-        return 0;
-    }
-
-    const clamped = Math.min(DEFENSE_MAX, Math.max(DEFENSE_MIN, Math.trunc(numericValue)));
-    return clamped;
-}
-
 export async function createCharacter(formData: FormData) {
     const session = await getServerSession(authOptions);
 
@@ -132,9 +115,6 @@ export async function createCharacter(formData: FormData) {
     const alignmentInput = formData.get("alignment");
     const abilityScoresInput = formData.get("abilityScores");
     const proficienciesInput = formData.get("proficiencies");
-    const armorBonusInput = formData.get("armorBonus");
-    const shieldBonusInput = formData.get("shieldBonus");
-    const miscBonusInput = formData.get("miscBonus");
     const name = typeof nameInput === "string" && nameInput.trim().length > 0 ? nameInput.trim() : "New Adventurer";
 
     const allowedMethods = new Set<AbilityGenerationMethod>([
@@ -157,9 +137,6 @@ export async function createCharacter(formData: FormData) {
             : { min: MIN_ABILITY_SCORE, max: MAX_ABILITY_SCORE },
     );
     const proficiencies = parseProficiencies(proficienciesInput);
-    const armorBonus = parseDefenseBonus(armorBonusInput);
-    const shieldBonus = parseDefenseBonus(shieldBonusInput);
-    const miscBonus = parseDefenseBonus(miscBonusInput);
 
     if (generationMethod === AbilityGenerationMethod.POINT_BUY) {
         const totalCost = calculatePointBuyCost(abilityScores);
@@ -184,9 +161,6 @@ export async function createCharacter(formData: FormData) {
             background,
             alignment,
             proficiencies,
-            armorBonus,
-            shieldBonus,
-            miscBonus,
         },
     });
 

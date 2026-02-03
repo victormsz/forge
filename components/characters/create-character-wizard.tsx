@@ -36,6 +36,9 @@ const abilityOptions: { label: string; value: AbilityGenerationMethod; descripti
     },
 ];
 
+const DEFENSE_MIN = -5;
+const DEFENSE_MAX = 20;
+
 const SKILL_LIST = [
     "Acrobatics",
     "Animal Handling",
@@ -264,6 +267,26 @@ const abilityMeta: Record<AbilityKey, { label: string; summary: string }> = {
     cha: { label: "Charisma", summary: "Social checks, spell DCs" },
 };
 
+const defenseBonusMeta = [
+    {
+        key: "armorBonus",
+        label: "Armor Bonus",
+        helper: "Chain, plate, natural carapace, or mage armor.",
+    },
+    {
+        key: "shieldBonus",
+        label: "Shield Bonus",
+        helper: "Bucklers through tower shields.",
+    },
+    {
+        key: "miscBonus",
+        label: "Misc Bonus",
+        helper: "Infusions, rings, fighting styles, cover.",
+    },
+] as const;
+
+type DefenseBonusKey = (typeof defenseBonusMeta)[number]["key"];
+
 const baseSteps = [
     { id: "core", title: "Core Details", description: "Name your hero and choose ability generation." },
     { id: "ancestry", title: "Choose Ancestry", description: "Pick the people and culture that shaped them." },
@@ -330,6 +353,9 @@ interface WizardFormState {
     background: string;
     alignment: string;
     abilityScores: AbilityScores;
+    armorBonus: number;
+    shieldBonus: number;
+    miscBonus: number;
 }
 
 function SubmitButton({ disabled }: { disabled: boolean }) {
@@ -355,6 +381,9 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
         background: "",
         alignment: "",
         abilityScores: { ...DEFAULT_ABILITY_SCORES },
+        armorBonus: 0,
+        shieldBonus: 0,
+        miscBonus: 0,
     }));
     const [rolledSets, setRolledSets] = useState<RolledSet[]>([]);
     const [rollAssignments, setRollAssignments] = useState<RollAssignments>({});
@@ -666,6 +695,11 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
         Boolean(formState.alignment) &&
         generationReady;
 
+    const dexScore = formState.abilityScores.dex ?? DEFAULT_ABILITY_SCORES.dex;
+    const dexModifier = Math.floor((dexScore - 10) / 2);
+    const previewArmorClass = dexModifier + formState.armorBonus + formState.shieldBonus + formState.miscBonus;
+    const formatSigned = (value: number) => (value >= 0 ? `+${value}` : `${value}`);
+
     const adjustAbilityScore = (ability: AbilityKey, delta: 1 | -1) => {
         if (!isPointBuy) {
             return;
@@ -692,6 +726,17 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
         });
     };
 
+    const updateDefenseBonus = useCallback(
+        (key: DefenseBonusKey, rawValue: string) => {
+            const numericValue = Number(rawValue);
+            const nextValue = Number.isFinite(numericValue)
+                ? Math.min(DEFENSE_MAX, Math.max(DEFENSE_MIN, Math.trunc(numericValue)))
+                : 0;
+            setFormState((prev) => ({ ...prev, [key]: nextValue }));
+        },
+        [setFormState],
+    );
+
     return (
         <form action={action} className="mt-2 flex flex-col gap-6" aria-labelledby="character-wizard-title">
             <input type="hidden" name="name" value={formState.name} />
@@ -701,6 +746,9 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
             <input type="hidden" name="background" value={formState.background} />
             <input type="hidden" name="alignment" value={formState.alignment} />
             <input type="hidden" name="abilityScores" value={JSON.stringify(formState.abilityScores)} />
+            <input type="hidden" name="armorBonus" value={formState.armorBonus} />
+            <input type="hidden" name="shieldBonus" value={formState.shieldBonus} />
+            <input type="hidden" name="miscBonus" value={formState.miscBonus} />
             <div className="space-y-6">
                 <section className="rounded-3xl border border-white/10 bg-gradient-to-b from-white/10 to-white/0 p-6 shadow-lg">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -744,6 +792,18 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                                 </div>
                             </div>
                         ))}
+                    </div>
+                    <div className="mt-6 rounded-2xl border border-white/10 bg-black/30 p-5">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p className="text-[0.55rem] uppercase tracking-[0.35em] text-white/60">Armor Class</p>
+                                <p className="text-sm text-white/70">AC = (Dex) + armor + shield + misc</p>
+                            </div>
+                            <p className="text-3xl font-semibold text-white">{previewArmorClass}</p>
+                        </div>
+                        <p className="mt-2 text-xs text-white/60">
+                            ({formatSigned(dexModifier)} Dex) {formatSigned(formState.armorBonus)} Armor {formatSigned(formState.shieldBonus)} Shield {formatSigned(formState.miscBonus)} Misc
+                        </p>
                     </div>
                     <div className="mt-6 h-2 w-full rounded-full bg-white/10">
                         <div className="h-full rounded-full bg-rose-400 transition-all" style={{ width: `${progress}%` }} />
@@ -858,6 +918,35 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                                     </div>
                                 </div>
                             )}
+                            <div className="rounded-3xl border border-white/10 bg-black/40 p-5">
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        <p className="text-xs uppercase tracking-[0.35em] text-white/60">Armor class inputs</p>
+                                        <p className="text-sm text-white/70">Dex modifier + armor + shield + misc</p>
+                                    </div>
+                                    <p className="text-2xl font-semibold text-white">Current AC {previewArmorClass}</p>
+                                </div>
+                                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                    {defenseBonusMeta.map(({ key, label, helper }) => (
+                                        <label key={key} className="flex flex-col rounded-2xl border border-white/15 bg-black/50 p-4">
+                                            <span className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">{label}</span>
+                                            <span className="text-xs text-white/50">{helper}</span>
+                                            <input
+                                                type="number"
+                                                min={DEFENSE_MIN}
+                                                max={DEFENSE_MAX}
+                                                step={1}
+                                                value={formState[key]}
+                                                onChange={(event) => updateDefenseBonus(key, event.target.value)}
+                                                className="mt-3 rounded-2xl border border-white/20 bg-black/60 px-4 py-3 text-center text-2xl font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
+                                            />
+                                            <span className="mt-1 text-[0.55rem] uppercase tracking-[0.3em] text-white/50">
+                                                {DEFENSE_MIN} to {DEFENSE_MAX}
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     )}
 

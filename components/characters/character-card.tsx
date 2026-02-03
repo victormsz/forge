@@ -24,6 +24,9 @@ interface CharacterCardProps {
             skills: string[];
             languages: string[];
         };
+        armorBonus: number;
+        shieldBonus: number;
+        miscBonus: number;
         spellsCount: number;
         updatedAt: Date;
     };
@@ -46,6 +49,9 @@ export function CharacterCard({ character }: CharacterCardProps) {
         generationMethod,
         abilityScores,
         proficiencies,
+        armorBonus,
+        shieldBonus,
+        miscBonus,
         spellsCount,
         updatedAt,
     } = character;
@@ -57,6 +63,11 @@ export function CharacterCard({ character }: CharacterCardProps) {
         .join(" · ");
 
     const canLevelUp = level < MAX_CHARACTER_LEVEL;
+    const dexScore = abilityScores.dex ?? 10;
+    const dexContribution = Math.floor((dexScore - 10) / 2);
+    const armorClass = dexContribution + armorBonus + shieldBonus + miscBonus;
+
+    const formatSigned = (value: number) => (value >= 0 ? `+${value}` : `${value}`);
 
     const topSkills = proficiencies.skills.slice(0, 4);
     const topWeapons = proficiencies.weapons.slice(0, 3);
@@ -158,6 +169,16 @@ export function CharacterCard({ character }: CharacterCardProps) {
                     );
                 })}
             </dl>
+
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white">
+                <div className="flex items-center justify-between text-[0.6rem] uppercase tracking-[0.35em] text-white/60">
+                    <span>Armor Class</span>
+                    <span>{armorClass}</span>
+                </div>
+                <p className="mt-2 text-xs text-white/70">
+                    AC = ({formatSigned(dexContribution)} Dex) {formatSigned(armorBonus)} Armor {formatSigned(shieldBonus)} Shield {formatSigned(miscBonus)} Misc
+                </p>
+            </div>
 
             <div className="flex items-center justify-between text-xs text-white/60">
                 <span>Updated {updatedAt.toLocaleDateString()}</span>

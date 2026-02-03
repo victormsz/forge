@@ -47,6 +47,9 @@ export default async function CharactersPage() {
         proficiencies: character.proficiencies
             ? ({ ...EMPTY_PROFICIENCIES, ...(character.proficiencies as Record<string, string[]>) })
             : { ...EMPTY_PROFICIENCIES },
+        armorBonus: character.armorBonus,
+        shieldBonus: character.shieldBonus,
+        miscBonus: character.miscBonus,
         spellsCount: character.spells.length,
         updatedAt: character.updatedAt,
     }));

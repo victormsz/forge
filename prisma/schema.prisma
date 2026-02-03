@@ -58,6 +58,9 @@ model Character {
   charClass         String?
   background        String?
   alignment         String?
+  armorBonus        Int                      @default(0)
+  shieldBonus       Int                      @default(0)
+  miscBonus         Int                      @default(0)
   proficiencies     Json?
   generationMethod  AbilityGenerationMethod  @default(POINT_BUY)
   abilityScores     Json

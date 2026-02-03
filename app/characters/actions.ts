@@ -42,6 +42,8 @@ const EMPTY_PROFICIENCIES: CharacterProficiencies = {
     languages: [],
 };
 
+export const MAX_CHARACTER_LEVEL = 20;
+
 function parseAbilityScores(input: FormDataEntryValue | null, bounds?: AbilityScoreBounds): AbilityScores {
     const fallback: AbilityScores = { ...DEFAULT_ABILITY_SCORES };
     const minValue = bounds?.min ?? MIN_ABILITY_SCORE;
@@ -188,5 +190,38 @@ export async function deleteCharacter(formData: FormData) {
     }
 
     await prisma.character.delete({ where: { id: characterId } });
+    revalidatePath("/characters");
+}
+
+export async function levelUpCharacter(formData: FormData) {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+        throw new Error("Authentication required to level up characters.");
+    }
+
+    const characterIdInput = formData.get("characterId");
+    const characterId = typeof characterIdInput === "string" ? characterIdInput : null;
+
+    if (!characterId) {
+        throw new Error("Character id missing.");
+    }
+
+    const existing = await prisma.character.findUnique({
+        where: { id: characterId },
+        select: { userId: true, level: true },
+    });
+
+    if (!existing || existing.userId !== session.user.id) {
+        throw new Error("Character not found or access denied.");
+    }
+
+    const nextLevel = Math.min(MAX_CHARACTER_LEVEL, existing.level + 1);
+
+    if (nextLevel === existing.level) {
+        return;
+    }
+
+    await prisma.character.update({ where: { id: characterId }, data: { level: nextLevel } });
     revalidatePath("/characters");
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { deleteCharacter } from "@/app/characters/actions";
+import { deleteCharacter, levelUpCharacter, MAX_CHARACTER_LEVEL } from "@/app/characters/actions";
 
 type AbilityScores = Record<string, number>;
 
@@ -55,6 +55,8 @@ export function CharacterCard({ character }: CharacterCardProps) {
     ]
         .filter(Boolean)
         .join(" · ");
+
+    const canLevelUp = level < MAX_CHARACTER_LEVEL;
 
     const topSkills = proficiencies.skills.slice(0, 4);
     const topWeapons = proficiencies.weapons.slice(0, 3);
@@ -121,6 +123,18 @@ export function CharacterCard({ character }: CharacterCardProps) {
                         <p className="font-semibold text-white">{spellsCount}</p>
                         <p>known spells</p>
                     </div>
+                    <form action={levelUpCharacter} className="text-right">
+                        <input type="hidden" name="characterId" value={id} />
+                        <button
+                            type="submit"
+                            disabled={!canLevelUp}
+                            aria-disabled={!canLevelUp}
+                            title={canLevelUp ? "Gain one level" : "Maximum level reached"}
+                            className="rounded-full border border-white/20 px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.3em] text-white/90 transition hover:border-emerald-300 hover:text-emerald-200 disabled:cursor-not-allowed disabled:border-white/10 disabled:text-white/30"
+                        >
+                            Level up
+                        </button>
+                    </form>
                     <form action={deleteCharacter} className="text-right">
                         <input type="hidden" name="characterId" value={id} />
                         <button

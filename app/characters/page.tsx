@@ -13,6 +13,14 @@ export const metadata: Metadata = {
     description: "Manage your D&D 5.5 roster with point-buy or random builds, spells, and export-ready sheets.",
 };
 
+const EMPTY_PROFICIENCIES = {
+    armor: [] as string[],
+    weapons: [] as string[],
+    tools: [] as string[],
+    skills: [] as string[],
+    languages: [] as string[],
+};
+
 export default async function CharactersPage() {
     const session = await getServerSession(authOptions);
 
@@ -36,6 +44,9 @@ export default async function CharactersPage() {
         alignment: character.alignment,
         generationMethod: character.generationMethod,
         abilityScores: (character.abilityScores as Record<string, number>) ?? {},
+        proficiencies: character.proficiencies
+            ? ({ ...EMPTY_PROFICIENCIES, ...(character.proficiencies as Record<string, string[]>) })
+            : { ...EMPTY_PROFICIENCIES },
         spellsCount: character.spells.length,
         updatedAt: character.updatedAt,
     }));

@@ -26,6 +26,22 @@ interface AbilityScoreBounds {
     max?: number;
 }
 
+interface CharacterProficiencies {
+    armor: string[];
+    weapons: string[];
+    tools: string[];
+    skills: string[];
+    languages: string[];
+}
+
+const EMPTY_PROFICIENCIES: CharacterProficiencies = {
+    armor: [],
+    weapons: [],
+    tools: [],
+    skills: [],
+    languages: [],
+};
+
 function parseAbilityScores(input: FormDataEntryValue | null, bounds?: AbilityScoreBounds): AbilityScores {
     const fallback: AbilityScores = { ...DEFAULT_ABILITY_SCORES };
     const minValue = bounds?.min ?? MIN_ABILITY_SCORE;
@@ -54,6 +70,35 @@ function parseAbilityScores(input: FormDataEntryValue | null, bounds?: AbilitySc
     return fallback;
 }
 
+function parseProficiencies(input: FormDataEntryValue | null): CharacterProficiencies {
+    if (typeof input !== "string") {
+        return { ...EMPTY_PROFICIENCIES };
+    }
+
+    try {
+        const parsed = JSON.parse(input) as Partial<Record<keyof CharacterProficiencies, unknown>>;
+
+        const coerce = (value: unknown): string[] => {
+            if (!Array.isArray(value)) {
+                return [];
+            }
+            return value
+                .filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
+                .map((entry) => entry.trim());
+        };
+
+        return {
+            armor: coerce(parsed.armor),
+            weapons: coerce(parsed.weapons),
+            tools: coerce(parsed.tools),
+            skills: coerce(parsed.skills),
+            languages: coerce(parsed.languages),
+        };
+    } catch {
+        return { ...EMPTY_PROFICIENCIES };
+    }
+}
+
 export async function createCharacter(formData: FormData) {
     const session = await getServerSession(authOptions);
 
@@ -68,6 +113,7 @@ export async function createCharacter(formData: FormData) {
     const backgroundInput = formData.get("background");
     const alignmentInput = formData.get("alignment");
     const abilityScoresInput = formData.get("abilityScores");
+    const proficienciesInput = formData.get("proficiencies");
     const name = typeof nameInput === "string" && nameInput.trim().length > 0 ? nameInput.trim() : "New Adventurer";
 
     const allowedMethods = new Set<AbilityGenerationMethod>([
@@ -89,6 +135,7 @@ export async function createCharacter(formData: FormData) {
             ? { min: RANDOM_MIN_ABILITY_SCORE, max: RANDOM_MAX_ABILITY_SCORE }
             : { min: MIN_ABILITY_SCORE, max: MAX_ABILITY_SCORE },
     );
+    const proficiencies = parseProficiencies(proficienciesInput);
 
     if (generationMethod === AbilityGenerationMethod.POINT_BUY) {
         const totalCost = calculatePointBuyCost(abilityScores);
@@ -112,6 +159,7 @@ export async function createCharacter(formData: FormData) {
             charClass,
             background,
             alignment,
+            proficiencies,
         },
     });
 

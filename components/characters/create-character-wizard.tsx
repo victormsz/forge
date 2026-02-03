@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DragEvent } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -36,42 +36,156 @@ const abilityOptions: { label: string; value: AbilityGenerationMethod; descripti
     },
 ];
 
-const ancestryOptions = [
+const SKILL_LIST = [
+    "Acrobatics",
+    "Animal Handling",
+    "Arcana",
+    "Athletics",
+    "Deception",
+    "History",
+    "Insight",
+    "Intimidation",
+    "Investigation",
+    "Medicine",
+    "Nature",
+    "Perception",
+    "Performance",
+    "Persuasion",
+    "Religion",
+    "Sleight of Hand",
+    "Stealth",
+    "Survival",
+];
+
+type ProficiencyCategory = "armor" | "weapons" | "tools" | "skills" | "languages";
+
+interface ProficiencyBlock {
+    armor: string[];
+    weapons: string[];
+    tools: string[];
+    skills: string[];
+    languages: string[];
+}
+
+const EMPTY_PROFICIENCIES: ProficiencyBlock = {
+    armor: [],
+    weapons: [],
+    tools: [],
+    skills: [],
+    languages: [],
+};
+
+const PROFICIENCY_LABELS: Record<ProficiencyCategory, string> = {
+    armor: "Armor",
+    weapons: "Weapons",
+    tools: "Tools",
+    skills: "Skills",
+    languages: "Languages",
+};
+
+interface BaseOption<T extends string = string> {
+    label: string;
+    value: T;
+    description: string;
+    detail?: string;
+}
+
+interface AncestryOption extends BaseOption {
+    detail: string;
+    proficiencies: ProficiencyBlock;
+}
+
+interface BackgroundOption extends BaseOption {
+    detail: string;
+    proficiencies: ProficiencyBlock;
+}
+
+interface ClassOption extends BaseOption {
+    proficiencies: {
+        armor: string[];
+        weapons: string[];
+        tools: string[];
+        skills: {
+            fixed: string[];
+            choices?: {
+                count: number;
+                options: string[];
+            };
+        };
+    };
+}
+
+function dedupeList(values: string[]) {
+    return Array.from(new Set(values.filter((value) => value && value.trim().length > 0))).map((value) => value.trim());
+}
+
+const ancestryOptions: AncestryOption[] = [
     {
         label: "Human",
         value: "Human",
         description: "Adaptable excellence across every class.",
         detail: "Humans thrive in any environment, picking up regional tricks and diplomatic savvy in equal measure.",
+        proficiencies: {
+            ...EMPTY_PROFICIENCIES,
+            languages: ["Common", "One additional language of your choice"],
+        },
     },
     {
         label: "Elf",
         value: "Elf",
         description: "Graceful experts with sharp minds and senses.",
         detail: "Elven lineages gift keen senses, a trance-like meditative rest, and timeless lore passed down in song.",
+        proficiencies: {
+            ...EMPTY_PROFICIENCIES,
+            weapons: ["Longswords", "Shortswords", "Shortbows", "Longbows"],
+            skills: ["Perception"],
+            languages: ["Common", "Elvish"],
+        },
     },
     {
         label: "Dwarf",
         value: "Dwarf",
         description: "Stalwart defenders with deep artisan roots.",
         detail: "Dwarves train from childhood with tools and axes, bolstered by hearty constitutions and clan oaths.",
+        proficiencies: {
+            ...EMPTY_PROFICIENCIES,
+            weapons: ["Battleaxes", "Handaxes", "Light hammers", "Warhammers"],
+            tools: ["One type of artisan's tools (smith, brewer, or mason)"],
+            languages: ["Common", "Dwarvish"],
+        },
     },
     {
         label: "Halfling",
         value: "Halfling",
         description: "Lucky nimble souls who dodge danger.",
         detail: "Halflings blend optimism with supernatural luck, slipping past giants and calamity with a grin.",
+        proficiencies: {
+            ...EMPTY_PROFICIENCIES,
+            skills: ["Stealth"],
+            languages: ["Common", "Halfling"],
+        },
     },
     {
         label: "Dragonborn",
         value: "Dragonborn",
         description: "Heritage of dragons, breath weapons included.",
         detail: "Draconic ancestry fuels elemental breath, proud honor codes, and intimidating presence on any battlefield.",
+        proficiencies: {
+            ...EMPTY_PROFICIENCIES,
+            languages: ["Common", "Draconic"],
+        },
     },
     {
         label: "Orc",
         value: "Orc",
         description: "Relentless strength, perfect for frontline heroes.",
         detail: "Orcs carry ancestral fury that converts into raw power and tireless endurance during extended fights.",
+        proficiencies: {
+            ...EMPTY_PROFICIENCIES,
+            skills: ["Intimidation"],
+            weapons: ["Martial weapons"],
+            languages: ["Common", "Orcish"],
+        },
     },
 ];
 

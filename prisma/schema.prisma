@@ -58,6 +58,7 @@ model Character {
   charClass         String?
   background        String?
   alignment         String?
+  proficiencies     Json?
   generationMethod  AbilityGenerationMethod  @default(POINT_BUY)
   abilityScores     Json
   pointBuyBudget    Int                      @default(27)

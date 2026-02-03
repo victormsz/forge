@@ -17,6 +17,13 @@ interface CharacterCardProps {
         alignment: string | null;
         generationMethod: AbilityGenerationMethod;
         abilityScores: AbilityScores;
+        proficiencies: {
+            armor: string[];
+            weapons: string[];
+            tools: string[];
+            skills: string[];
+            languages: string[];
+        };
         spellsCount: number;
         updatedAt: Date;
     };
@@ -38,6 +45,7 @@ export function CharacterCard({ character }: CharacterCardProps) {
         alignment,
         generationMethod,
         abilityScores,
+        proficiencies,
         spellsCount,
         updatedAt,
     } = character;
@@ -47,6 +55,10 @@ export function CharacterCard({ character }: CharacterCardProps) {
     ]
         .filter(Boolean)
         .join(" · ");
+
+    const topSkills = proficiencies.skills.slice(0, 4);
+    const topWeapons = proficiencies.weapons.slice(0, 3);
+    const topArmor = proficiencies.armor.slice(0, 2);
 
     return (
         <article className="group flex flex-col gap-4 rounded-3xl border border-white/10 bg-white/5 p-4 text-white transition hover:-translate-y-1 hover:border-rose-300/60 hover:bg-white/10">
@@ -63,6 +75,46 @@ export function CharacterCard({ character }: CharacterCardProps) {
                             <span className="rounded-full border border-white/15 px-2 py-1 text-white/70">{alignment}</span>
                         )}
                     </div>
+                    {(topSkills.length > 0 || topWeapons.length > 0 || topArmor.length > 0) && (
+                        <div className="mt-4 space-y-2 text-[0.65rem] text-white/70">
+                            {topSkills.length > 0 && (
+                                <div>
+                                    <p className="uppercase tracking-[0.3em] text-white/50">Skills</p>
+                                    <div className="mt-1 flex flex-wrap gap-1">
+                                        {topSkills.map((skill) => (
+                                            <span key={skill} className="rounded-full border border-white/15 px-2 py-0.5 text-white/80">
+                                                {skill}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            {topWeapons.length > 0 && (
+                                <div>
+                                    <p className="uppercase tracking-[0.3em] text-white/50">Weapons</p>
+                                    <div className="mt-1 flex flex-wrap gap-1">
+                                        {topWeapons.map((weapon) => (
+                                            <span key={weapon} className="rounded-full border border-white/15 px-2 py-0.5 text-white/80">
+                                                {weapon}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            {topArmor.length > 0 && (
+                                <div>
+                                    <p className="uppercase tracking-[0.3em] text-white/50">Armor</p>
+                                    <div className="mt-1 flex flex-wrap gap-1">
+                                        {topArmor.map((armor) => (
+                                            <span key={armor} className="rounded-full border border-white/15 px-2 py-0.5 text-white/80">
+                                                {armor}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
                 <div className="flex flex-col items-end gap-2">
                     <div className="rounded-2xl border border-white/15 bg-white/5 px-3 py-2 text-right text-xs text-white/70">

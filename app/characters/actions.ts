@@ -1,0 +1,144 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+
+import { AbilityGenerationMethod } from "@prisma/client";
+
+import type { AbilityScores } from "@/lib/point-buy";
+import {
+    ABILITY_KEYS,
+    DEFAULT_ABILITY_SCORES,
+    MAX_ABILITY_SCORE,
+    MIN_ABILITY_SCORE,
+    POINT_BUY_BUDGET,
+    RANDOM_MAX_ABILITY_SCORE,
+    RANDOM_MIN_ABILITY_SCORE,
+    calculatePointBuyCost,
+} from "@/lib/point-buy";
+
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+
+interface AbilityScoreBounds {
+    min?: number;
+    max?: number;
+}
+
+function parseAbilityScores(input: FormDataEntryValue | null, bounds?: AbilityScoreBounds): AbilityScores {
+    const fallback: AbilityScores = { ...DEFAULT_ABILITY_SCORES };
+    const minValue = bounds?.min ?? MIN_ABILITY_SCORE;
+    const maxValue = bounds?.max ?? MAX_ABILITY_SCORE;
+
+    if (typeof input !== "string") {
+        return fallback;
+    }
+
+    try {
+        const parsed = JSON.parse(input) as Record<string, unknown>;
+
+        for (const ability of ABILITY_KEYS) {
+            const rawValue = parsed[ability];
+            const numericValue = typeof rawValue === "number" ? Math.trunc(rawValue) : Number(rawValue);
+
+            if (Number.isFinite(numericValue)) {
+                const boundedValue = Math.min(maxValue, Math.max(minValue, numericValue));
+                fallback[ability] = boundedValue;
+            }
+        }
+    } catch {
+        return fallback;
+    }
+
+    return fallback;
+}
+
+export async function createCharacter(formData: FormData) {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+        throw new Error("Authentication required to create characters.");
+    }
+
+    const nameInput = formData.get("name");
+    const methodInput = formData.get("method");
+    const ancestryInput = formData.get("ancestry");
+    const classInput = formData.get("class");
+    const backgroundInput = formData.get("background");
+    const alignmentInput = formData.get("alignment");
+    const abilityScoresInput = formData.get("abilityScores");
+    const name = typeof nameInput === "string" && nameInput.trim().length > 0 ? nameInput.trim() : "New Adventurer";
+
+    const allowedMethods = new Set<AbilityGenerationMethod>([
+        AbilityGenerationMethod.POINT_BUY,
+        AbilityGenerationMethod.RANDOM,
+    ]);
+
+    const generationMethod = allowedMethods.has(methodInput as AbilityGenerationMethod)
+        ? (methodInput as AbilityGenerationMethod)
+        : AbilityGenerationMethod.POINT_BUY;
+
+    const ancestry = typeof ancestryInput === "string" && ancestryInput.trim().length > 0 ? ancestryInput.trim() : null;
+    const charClass = typeof classInput === "string" && classInput.trim().length > 0 ? classInput.trim() : null;
+    const background = typeof backgroundInput === "string" && backgroundInput.trim().length > 0 ? backgroundInput.trim() : null;
+    const alignment = typeof alignmentInput === "string" && alignmentInput.trim().length > 0 ? alignmentInput.trim() : null;
+    const abilityScores = parseAbilityScores(
+        abilityScoresInput,
+        generationMethod === AbilityGenerationMethod.RANDOM
+            ? { min: RANDOM_MIN_ABILITY_SCORE, max: RANDOM_MAX_ABILITY_SCORE }
+            : { min: MIN_ABILITY_SCORE, max: MAX_ABILITY_SCORE },
+    );
+
+    if (generationMethod === AbilityGenerationMethod.POINT_BUY) {
+        const totalCost = calculatePointBuyCost(abilityScores);
+
+        if (totalCost > POINT_BUY_BUDGET) {
+            throw new Error("Point buy exceeds the 27-point budget.");
+        }
+    }
+
+    if (!ancestry || !charClass || !background || !alignment) {
+        throw new Error("Select ancestry, class, background, and alignment to forge a hero.");
+    }
+
+    await prisma.character.create({
+        data: {
+            name,
+            userId: session.user.id,
+            generationMethod,
+            abilityScores,
+            ancestry,
+            charClass,
+            background,
+            alignment,
+        },
+    });
+
+    revalidatePath("/characters");
+    redirect("/characters");
+}
+
+export async function deleteCharacter(formData: FormData) {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+        throw new Error("Authentication required to delete characters.");
+    }
+
+    const characterIdInput = formData.get("characterId");
+    const characterId = typeof characterIdInput === "string" ? characterIdInput : null;
+
+    if (!characterId) {
+        throw new Error("Character id missing.");
+    }
+
+    const existing = await prisma.character.findUnique({ where: { id: characterId } });
+
+    if (!existing || existing.userId !== session.user.id) {
+        throw new Error("Character not found or access denied.");
+    }
+
+    await prisma.character.delete({ where: { id: characterId } });
+    revalidatePath("/characters");
+}

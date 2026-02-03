@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
 
 import { AbilityGenerationMethod, SpellTargetShape } from "@prisma/client";
 
 import { CharacterCard } from "@/components/characters/character-card";
-import { authOptions } from "@/lib/auth";
+import { getCurrentActor } from "@/lib/current-actor";
 import { prisma } from "@/lib/prisma";
 
 const shapeLabels: Record<SpellTargetShape, string> = {
@@ -17,25 +16,33 @@ const shapeLabels: Record<SpellTargetShape, string> = {
     SQUARE: "Square / Cube",
 };
 
+const EMPTY_PROFICIENCIES = {
+    armor: [] as string[],
+    weapons: [] as string[],
+    tools: [] as string[],
+    skills: [] as string[],
+    languages: [] as string[],
+};
+
 export const metadata: Metadata = {
     title: "ForgeSheet | Command Dashboard",
     description: "Review your roster, spell coverage, and next actions for your D&D 5.5 heroes.",
 };
 
 export default async function DashboardPage() {
-    const session = await getServerSession(authOptions);
+    const actor = await getCurrentActor();
 
-    if (!session?.user?.id) {
+    if (!actor) {
         redirect("/");
     }
 
     const [user, characters] = await Promise.all([
         prisma.user.findUnique({
-            where: { id: session.user.id },
+            where: { id: actor.userId },
             select: { id: true, name: true, email: true, createdAt: true },
         }),
         prisma.character.findMany({
-            where: { userId: session.user.id },
+            where: { userId: actor.userId },
             include: { spells: { select: { id: true, shape: true } } },
             orderBy: { updatedAt: "desc" },
         }),
@@ -82,11 +89,17 @@ export default async function DashboardPage() {
             value: totalSpells.toString(),
             detail: totalSpells > 0 ? "Custom targeting ready" : "Log your first spell",
         },
-        {
-            title: "Account created",
-            value: user.createdAt.toLocaleDateString(),
-            detail: user.email,
-        },
+        actor.isGuest
+            ? {
+                title: "Guest access",
+                value: "Limited (1 hero)",
+                detail: "Sign in to unlock leveling, items, and spells",
+            }
+            : {
+                title: "Account created",
+                value: user.createdAt.toLocaleDateString(),
+                detail: user.email,
+            },
         {
             title: "Latest update",
             value: latestCharacter ? latestCharacter.name : "No activity yet",
@@ -104,8 +117,13 @@ export default async function DashboardPage() {
         level: character.level,
         charClass: character.charClass,
         ancestry: character.ancestry,
+        background: character.background,
+        alignment: character.alignment,
         generationMethod: character.generationMethod,
         abilityScores: (character.abilityScores as Record<string, number>) ?? {},
+        proficiencies: character.proficiencies
+            ? ({ ...EMPTY_PROFICIENCIES, ...(character.proficiencies as Record<string, string[]>) })
+            : { ...EMPTY_PROFICIENCIES },
         spellsCount: character.spells.length,
         updatedAt: character.updatedAt,
     }));
@@ -119,6 +137,9 @@ export default async function DashboardPage() {
                     <p className="max-w-3xl text-sm text-white/70">
                         Track roster momentum, spell coverage, and ability workflows from a single panel. Jump into the forge to add new heroes or refine your latest build.
                     </p>
+                    {actor.isGuest && (
+                        <p className="text-xs text-white/60">Guest mode: one hero slot, no leveling, items, or spells. Sign in with Google/Discord when you are ready for the full toolkit.</p>
+                    )}
                     <div className="flex flex-wrap gap-3">
                         <Link
                             href="/characters"
@@ -157,11 +178,20 @@ export default async function DashboardPage() {
                                         level: latestCharacter.level,
                                         charClass: latestCharacter.charClass,
                                         ancestry: latestCharacter.ancestry,
+                                        background: latestCharacter.background,
+                                        alignment: latestCharacter.alignment,
                                         generationMethod: latestCharacter.generationMethod,
                                         abilityScores: (latestCharacter.abilityScores as Record<string, number>) ?? {},
+                                        proficiencies: latestCharacter.proficiencies
+                                            ? ({
+                                                ...EMPTY_PROFICIENCIES,
+                                                ...(latestCharacter.proficiencies as Record<string, string[]>),
+                                            })
+                                            : { ...EMPTY_PROFICIENCIES },
                                         spellsCount: latestCharacter.spells.length,
                                         updatedAt: latestCharacter.updatedAt,
                                     }}
+                                    disableLevelUp={actor.isGuest}
                                 />
                             </div>
                         ) : (
@@ -199,7 +229,7 @@ export default async function DashboardPage() {
                     {rosterPreview.length ? (
                         <div className="mt-6 grid gap-4 lg:grid-cols-3">
                             {rosterPreview.map((character) => (
-                                <CharacterCard key={character.id} character={character} />
+                                <CharacterCard key={character.id} character={character} disableLevelUp={actor.isGuest} />
                             ))}
                         </div>
                     ) : (

@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
 
 import Link from "next/link";
 
 import { CharacterCard } from "@/components/characters/character-card";
-import { authOptions } from "@/lib/auth";
+import { getCurrentActor } from "@/lib/current-actor";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
@@ -22,14 +21,14 @@ const EMPTY_PROFICIENCIES = {
 };
 
 export default async function CharactersPage() {
-    const session = await getServerSession(authOptions);
+    const actor = await getCurrentActor();
 
-    if (!session?.user?.id) {
+    if (!actor) {
         redirect("/");
     }
 
     const characters = await prisma.character.findMany({
-        where: { userId: session.user.id },
+        where: { userId: actor.userId },
         orderBy: { updatedAt: "desc" },
         include: { spells: { select: { id: true } } },
     });
@@ -51,6 +50,8 @@ export default async function CharactersPage() {
         updatedAt: character.updatedAt,
     }));
 
+    const guestLimitReached = actor.isGuest && serialized.length >= 1;
+
     return (
         <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(250,232,214,0.15),_transparent_45%),_#050506] text-white">
             <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-16 sm:px-6 lg:px-8">
@@ -67,13 +68,25 @@ export default async function CharactersPage() {
                     <p className="text-sm text-white/70">
                         Launch the dedicated forge to walk through ability method, ancestry, and class with live previews and guided steps.
                     </p>
+                    {actor.isGuest && (
+                        <p className="mt-3 text-xs text-white/60">Guest mode supports one hero. Delete your current character or sign in with Google/Discord to unlock unlimited slots, leveling, and spell/item tracking.</p>
+                    )}
                     <div className="mt-6 flex flex-wrap gap-3">
-                        <Link
-                            href="/characters/create"
-                            className="rounded-full bg-rose-400 px-6 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-black transition hover:bg-rose-300"
-                        >
-                            Start creation flow
-                        </Link>
+                        {guestLimitReached ? (
+                            <span
+                                aria-disabled="true"
+                                className="rounded-full border border-white/15 px-6 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-white/40"
+                            >
+                                Guest slot filled
+                            </span>
+                        ) : (
+                            <Link
+                                href="/characters/create"
+                                className="rounded-full bg-rose-400 px-6 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-black transition hover:bg-rose-300"
+                            >
+                                Start creation flow
+                            </Link>
+                        )}
                         <Link
                             href="/dashboard"
                             className="rounded-full border border-white/20 px-6 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:border-white/40"
@@ -89,7 +102,9 @@ export default async function CharactersPage() {
                             <p>No characters yet. Use the forge above to conjure your first hero.</p>
                         </div>
                     ) : (
-                        serialized.map((character) => <CharacterCard key={character.id} character={character} />)
+                        serialized.map((character) => (
+                            <CharacterCard key={character.id} character={character} disableLevelUp={actor.isGuest} />
+                        ))
                     )}
                 </section>
             </main>

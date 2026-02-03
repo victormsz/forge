@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
 
 import { CreateCharacterWizard } from "@/components/characters/create-character-wizard";
 import { createCharacter } from "@/app/characters/actions";
-import { authOptions } from "@/lib/auth";
+import { getCurrentActor } from "@/lib/current-actor";
+import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
     title: "ForgeSheet | Create Character",
@@ -13,10 +13,18 @@ export const metadata: Metadata = {
 };
 
 export default async function CharacterCreatePage() {
-    const session = await getServerSession(authOptions);
+    const actor = await getCurrentActor();
 
-    if (!session?.user?.id) {
+    if (!actor) {
         redirect("/");
+    }
+
+    if (actor.isGuest) {
+        const existingCharacters = await prisma.character.count({ where: { userId: actor.userId } });
+
+        if (existingCharacters >= 1) {
+            redirect("/characters");
+        }
     }
 
     return (

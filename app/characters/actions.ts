@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
+import { getCurrentActor } from "@/lib/current-actor";
 
 import { AbilityGenerationMethod } from "@prisma/client";
 
@@ -18,7 +18,6 @@ import {
     calculatePointBuyCost,
 } from "@/lib/point-buy";
 
-import { authOptions } from "@/lib/auth";
 import { MAX_CHARACTER_LEVEL } from "@/lib/characters/constants";
 import { prisma } from "@/lib/prisma";
 
@@ -101,10 +100,18 @@ function parseProficiencies(input: FormDataEntryValue | null): CharacterProficie
 }
 
 export async function createCharacter(formData: FormData) {
-    const session = await getServerSession(authOptions);
+    const actor = await getCurrentActor();
 
-    if (!session?.user?.id) {
+    if (!actor) {
         throw new Error("Authentication required to create characters.");
+    }
+
+    if (actor.isGuest) {
+        const existingCharacters = await prisma.character.count({ where: { userId: actor.userId } });
+
+        if (existingCharacters >= 1) {
+            throw new Error("Guest access supports only one character. Delete your current hero or sign in to add more.");
+        }
     }
 
     const nameInput = formData.get("name");
@@ -153,7 +160,7 @@ export async function createCharacter(formData: FormData) {
     await prisma.character.create({
         data: {
             name,
-            userId: session.user.id,
+            userId: actor.userId,
             generationMethod,
             abilityScores,
             ancestry,
@@ -169,9 +176,9 @@ export async function createCharacter(formData: FormData) {
 }
 
 export async function deleteCharacter(formData: FormData) {
-    const session = await getServerSession(authOptions);
+    const actor = await getCurrentActor();
 
-    if (!session?.user?.id) {
+    if (!actor) {
         throw new Error("Authentication required to delete characters.");
     }
 
@@ -184,7 +191,7 @@ export async function deleteCharacter(formData: FormData) {
 
     const existing = await prisma.character.findUnique({ where: { id: characterId } });
 
-    if (!existing || existing.userId !== session.user.id) {
+    if (!existing || existing.userId !== actor.userId) {
         throw new Error("Character not found or access denied.");
     }
 
@@ -193,10 +200,14 @@ export async function deleteCharacter(formData: FormData) {
 }
 
 export async function levelUpCharacter(formData: FormData) {
-    const session = await getServerSession(authOptions);
+    const actor = await getCurrentActor();
 
-    if (!session?.user?.id) {
+    if (!actor) {
         throw new Error("Authentication required to level up characters.");
+    }
+
+    if (actor.isGuest) {
+        throw new Error("Guest access cannot level up characters.");
     }
 
     const characterIdInput = formData.get("characterId");
@@ -211,7 +222,7 @@ export async function levelUpCharacter(formData: FormData) {
         select: { userId: true, level: true },
     });
 
-    if (!existing || existing.userId !== session.user.id) {
+    if (!existing || existing.userId !== actor.userId) {
         throw new Error("Character not found or access denied.");
     }
 

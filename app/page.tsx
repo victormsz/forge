@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 
+import { continueAsGuest } from "@/app/guest/actions";
 import { SignInButtons, SignOutButton } from "@/components/auth/auth-buttons";
 import { authOptions } from "@/lib/auth";
+import { getCurrentActor } from "@/lib/current-actor";
 
 const featureCards = [
   {
@@ -21,7 +23,20 @@ const featureCards = [
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
-  const userName = session?.user?.name ?? "Adventurer";
+  const actor = await getCurrentActor(session);
+  const isGuest = actor?.isGuest ?? false;
+  const userName = session?.user?.name ?? actor?.name ?? "Adventurer";
+  const guestLimitCopy = "Guest access covers one character slot without leveling, items, or spells.";
+  const heroHeadline = session
+    ? `${userName}, your spellbook is ready.`
+    : isGuest
+      ? "Guest mode unlocked — limited forge access."
+      : "Sign in to start forging.";
+  const heroBody = session
+    ? "Create a character, assign ownership, and start logging ability rolls, spell slots, and party buffs."
+    : isGuest
+      ? "Prototype a hero without linking an account. Guest mode saves one character and previews the forge, but leveling, inventory, and spell tracking stay locked until you sign in."
+      : "Authenticate once, sync across devices, and keep every feature unlocked while we build the 5.5 ruleset.";
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(250,232,214,0.8),_transparent_55%),_#0b0b0d] text-white">
@@ -42,12 +57,10 @@ export default async function Home() {
           <div className="space-y-4">
             <p className="text-sm uppercase tracking-[0.2em] text-rose-200">Welcome</p>
             <h2 className="text-2xl font-semibold text-white">
-              {session ? `${userName}, your spellbook is ready.` : "Sign in to start forging."}
+              {heroHeadline}
             </h2>
             <p className="text-sm text-white/70">
-              {session
-                ? "Create a character, assign ownership, and start logging ability rolls, spell slots, and party buffs."
-                : "Authenticate once, sync across devices, and keep every feature unlocked while we build the 5.5 ruleset."}
+              {heroBody}
             </p>
             {session ? (
               <div className="flex flex-col gap-4">
@@ -59,8 +72,33 @@ export default async function Home() {
                 </Link>
                 <SignOutButton />
               </div>
+            ) : isGuest ? (
+              <div className="flex flex-col gap-4">
+                <Link
+                  href="/dashboard"
+                  className="rounded-full bg-rose-400 px-6 py-3 text-center text-sm font-semibold uppercase tracking-wide text-black transition hover:bg-rose-300"
+                >
+                  Resume guest dashboard
+                </Link>
+                <p className="text-xs text-white/70">{guestLimitCopy}</p>
+                <div className="space-y-2">
+                  <SignInButtons />
+                  <p className="text-xs text-white/60">Sign in with Google or Discord to unlock unlimited heroes and full spell/item tooling.</p>
+                </div>
+              </div>
             ) : (
-              <SignInButtons />
+              <div className="flex flex-col gap-4">
+                <SignInButtons />
+                <form action={continueAsGuest} className="space-y-2">
+                  <button
+                    type="submit"
+                    className="w-full rounded-full border border-white/20 px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white transition hover:border-rose-200"
+                  >
+                    Continue as guest
+                  </button>
+                  <p className="text-xs text-white/70">{guestLimitCopy}</p>
+                </form>
+              </div>
             )}
           </div>
           <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/10 to-white/0 p-6">
@@ -79,6 +117,12 @@ export default async function Home() {
                   <span className="text-sm text-white/70">Export</span>
                   <span className="text-sm font-semibold text-white">PDF (soon)</span>
                 </div>
+              </div>
+            ) : isGuest ? (
+              <div className="mt-4 space-y-3 text-sm text-white/70">
+                <p>• Guest mode saves one hero for seven days.</p>
+                <p>• Level ups and inventory/spell tracking stay locked.</p>
+                <p>• Sign in when you are ready to keep the character forever.</p>
               </div>
             ) : (
               <div className="mt-4 space-y-3 text-sm text-white/70">

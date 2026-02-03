@@ -36,6 +36,7 @@ interface CharacterCardProps {
         spellsCount: number;
         updatedAt: Date;
     };
+    disableLevelUp?: boolean;
 }
 
 const generationMethodCopy: Record<AbilityGenerationMethod, string> = {
@@ -43,7 +44,7 @@ const generationMethodCopy: Record<AbilityGenerationMethod, string> = {
     RANDOM: "Random Rolls",
 };
 
-export function CharacterCard({ character }: CharacterCardProps) {
+export function CharacterCard({ character, disableLevelUp = false }: CharacterCardProps) {
     const {
         id,
         name,
@@ -144,9 +145,9 @@ export function CharacterCard({ character }: CharacterCardProps) {
                         <input type="hidden" name="characterId" value={id} />
                         <button
                             type="submit"
-                            disabled={!canLevelUp}
-                            aria-disabled={!canLevelUp}
-                            title={canLevelUp ? "Gain one level" : "Maximum level reached"}
+                            disabled={disableLevelUp || !canLevelUp}
+                            aria-disabled={disableLevelUp || !canLevelUp}
+                            title={disableLevelUp ? "Guest access cannot level up" : canLevelUp ? "Gain one level" : "Maximum level reached"}
                             className="rounded-full border border-white/20 px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.3em] text-white/90 transition hover:border-emerald-300 hover:text-emerald-200 disabled:cursor-not-allowed disabled:border-white/10 disabled:text-white/30"
                         >
                             Level up

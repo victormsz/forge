@@ -43,6 +43,9 @@ model User {
   name       String?
   image      String?
   emailVerified DateTime?
+  hashedPassword String?
+  emailVerificationToken String? @unique
+  emailVerificationExpires DateTime?
   createdAt  DateTime    @default(now())
   characters Character[]
 

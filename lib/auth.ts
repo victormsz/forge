@@ -1,9 +1,11 @@
 import type { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import DiscordProvider from "next-auth/providers/discord";
+import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 
 import { prisma } from "@/lib/prisma";
+import { verifyPassword } from "@/lib/auth/password-utils";
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -34,6 +36,38 @@ export const authOptions: NextAuthOptions = {
             clientSecret: discordClientSecret ?? "",
             allowDangerousEmailAccountLinking: true,
         }),
+        CredentialsProvider({
+            id: "credentials",
+            name: "Email",
+            credentials: {
+                email: { label: "Email", type: "text" },
+                password: { label: "Password", type: "password" },
+            },
+            async authorize(credentials) {
+                if (!credentials?.email || !credentials?.password) {
+                    throw new Error("Email and password are required.");
+                }
+
+                const email = credentials.email.trim().toLowerCase();
+                const user = await prisma.user.findUnique({ where: { email } });
+
+                if (!user || !user.hashedPassword) {
+                    throw new Error("No account found for that email.");
+                }
+
+                if (!user.emailVerified) {
+                    throw new Error("Please verify your email before signing in.");
+                }
+
+                const valid = await verifyPassword(credentials.password, user.hashedPassword);
+
+                if (!valid) {
+                    throw new Error("Invalid email or password.");
+                }
+
+                return user;
+            },
+        }),
     ],
     callbacks: {
         async session({ session, user }) {
@@ -47,7 +81,7 @@ export const authOptions: NextAuthOptions = {
     },
     secret: process.env.NEXTAUTH_SECRET,
     pages: {
-        signIn: "/",
+        signIn: "/auth/email/login",
     },
 };
 

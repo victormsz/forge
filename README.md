@@ -6,7 +6,7 @@ ForgeSheet is a mobile-first Next.js 16 app for crafting D&D 5.5 characters, log
 - **Auth + Ownership** — NextAuth + Prisma adapter keeps user accounts, sessions, and OAuth identities in sync.
 - **Characters & Spells** — Prisma models cover point-buy/random stat generation, spell targeting shapes (single, cone, circle, line, square), and affinity (friendly, hostile, all, environment).
 - **Mobile dashboard** — Landing experience is optimized for touch devices first, while still scaling up to desktop.
-- **PDF-ready export (planned)** — Character layouts are designed with predictable print styles so they can be rendered to PDF in a later phase.
+- **PDF export (beta)** — Server-side PDF generation overlays your data on the legacy 5E JPEG sheet, ready for the table.
 
 ## Tech Stack
 - Next.js 16 App Router + React 19
@@ -39,6 +39,12 @@ ForgeSheet is a mobile-first Next.js 16 app for crafting D&D 5.5 characters, log
 	npm run dev
 	```
 6. Visit [http://localhost:3000](http://localhost:3000) and sign in to unlock the builder dashboard.
+
+### PDF Template Setup
+1. Drop your sheet artwork (the JPEG from the design team) into `public/templates/dnd-5e-sheet.jpg`.
+2. Hit `npm run dev` (or restart if it was already running) so Next.js can serve the static asset.
+3. Open the Characters page and click **Export PDF** on any card — this calls `/api/characters/:id/sheet` and streams the generated file.
+4. Need a different layout? Duplicate `DEFAULT_CHARACTER_SHEET_TEMPLATE` in `lib/export/character-sheet-template.ts` and tweak the coordinates/asset path.
 
 ## Database & Prisma
 - Generate the Prisma Client after schema edits:

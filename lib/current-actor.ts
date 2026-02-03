@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { GUEST_COOKIE_NAME, clearGuestCookie } from "@/lib/guest-session";
+import { GUEST_COOKIE_NAME } from "@/lib/guest-session";
 
 export interface CurrentActor {
     userId: string;
@@ -18,10 +18,6 @@ export async function getCurrentActor(existingSession?: Session | null): Promise
     const cookieStore = await cookies();
 
     if (session?.user?.id) {
-        if (cookieStore.get(GUEST_COOKIE_NAME)) {
-            await clearGuestCookie();
-        }
-
         return {
             userId: session.user.id,
             isGuest: false,
@@ -42,7 +38,6 @@ export async function getCurrentActor(existingSession?: Session | null): Promise
     });
 
     if (!guestUser || !guestUser.isGuest) {
-        await clearGuestCookie();
         return null;
     }
 

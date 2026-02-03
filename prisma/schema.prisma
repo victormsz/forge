@@ -65,6 +65,7 @@ model Character {
   proficiencies     Json?
   generationMethod  AbilityGenerationMethod  @default(POINT_BUY)
   abilityScores     Json
+  levelUpChoices   Json?
   pointBuyBudget    Int                      @default(27)
   createdAt         DateTime                 @default(now())
   updatedAt         DateTime                 @updatedAt

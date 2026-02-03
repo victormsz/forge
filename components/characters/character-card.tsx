@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { deleteCharacter, levelUpCharacter } from "@/app/characters/actions";
+import { deleteCharacter } from "@/app/characters/actions";
 import { MAX_CHARACTER_LEVEL } from "@/lib/characters/constants";
 
 type AbilityScores = Record<string, number>;
@@ -141,18 +141,24 @@ export function CharacterCard({ character, disableLevelUp = false }: CharacterCa
                         <p className="font-semibold text-white">{spellsCount}</p>
                         <p>known spells</p>
                     </div>
-                    <form action={levelUpCharacter} className="text-right">
-                        <input type="hidden" name="characterId" value={id} />
+                    {disableLevelUp || !canLevelUp ? (
                         <button
-                            type="submit"
-                            disabled={disableLevelUp || !canLevelUp}
-                            aria-disabled={disableLevelUp || !canLevelUp}
-                            title={disableLevelUp ? "Guest access cannot level up" : canLevelUp ? "Gain one level" : "Maximum level reached"}
-                            className="rounded-full border border-white/20 px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.3em] text-white/90 transition hover:border-emerald-300 hover:text-emerald-200 disabled:cursor-not-allowed disabled:border-white/10 disabled:text-white/30"
+                            type="button"
+                            disabled
+                            aria-disabled="true"
+                            title={disableLevelUp ? "Guest access cannot level up" : "Maximum level reached"}
+                            className="rounded-full border border-white/20 px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.3em] text-white/30"
                         >
                             Level up
                         </button>
-                    </form>
+                    ) : (
+                        <Link
+                            href={`/characters/${id}/level-up`}
+                            className="rounded-full border border-white/20 px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.3em] text-white/90 transition hover:border-emerald-300 hover:text-emerald-200"
+                        >
+                            Level up
+                        </Link>
+                    )}
                     <form action={deleteCharacter} className="text-right">
                         <input type="hidden" name="characterId" value={id} />
                         <button
@@ -179,12 +185,21 @@ export function CharacterCard({ character, disableLevelUp = false }: CharacterCa
 
             <div className="flex items-center justify-between text-xs text-white/60">
                 <span>Updated {updatedAt.toLocaleDateString()}</span>
-                <Link
-                    href={`/characters/${id}`}
-                    className="text-rose-200 underline-offset-4 transition hover:text-rose-100 hover:underline"
-                >
-                    Open sheet
-                </Link>
+                <div className="flex items-center gap-3">
+                    <Link
+                        href={`/api/characters/${id}/sheet`}
+                        prefetch={false}
+                        className="text-white/70 underline-offset-4 transition hover:text-white hover:underline"
+                    >
+                        Export PDF
+                    </Link>
+                    <Link
+                        href={`/characters/${id}`}
+                        className="text-rose-200 underline-offset-4 transition hover:text-rose-100 hover:underline"
+                    >
+                        Open sheet
+                    </Link>
+                </div>
             </div>
         </article>
     );

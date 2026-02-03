@@ -3,6 +3,7 @@ import { AbilityGenerationMethod } from "@prisma/client";
 import { MAX_CHARACTER_LEVEL } from "@/lib/characters/constants";
 import type { LevelUpInput, CreateCharacterInput, LevelUpChoicesMeta } from "@/lib/characters/types";
 import { assertPointBuyWithinBudget } from "@/lib/characters/form-parsers";
+import { getLevelRequirement } from "@/lib/characters/leveling/level-requirements";
 import type { CurrentActor } from "@/lib/current-actor";
 import { prisma } from "@/lib/prisma";
 
@@ -22,7 +23,7 @@ export class CharacterService {
     private async requireCharacter(characterId: string) {
         const character = await prisma.character.findUnique({
             where: { id: characterId },
-            select: { id: true, userId: true, level: true },
+            select: { id: true, userId: true, level: true, charClass: true },
         });
 
         if (!character) {
@@ -87,8 +88,31 @@ export class CharacterService {
             return { updated: false, level: existing.level };
         }
 
+        const requirements = getLevelRequirement(existing.charClass, nextLevel);
+
+        if (requirements.requiresSubclass && !input.subclass) {
+            throw new Error("Subclass selection is required at this level.");
+        }
+
+        if (requirements.abilityScoreIncrements === 0 && input.abilityIncreases.length > 0) {
+            throw new Error("Ability score improvements are not unlocked at this level.");
+        }
+
+        if (requirements.abilityScoreIncrements > 0 && input.abilityIncreases.length !== requirements.abilityScoreIncrements) {
+            throw new Error(`Select ${requirements.abilityScoreIncrements} ability score increases for this level.`);
+        }
+
+        const abilityIncreases = requirements.abilityScoreIncrements > 0
+            ? input.abilityIncreases.slice(0, requirements.abilityScoreIncrements)
+            : [];
+        const featChoice = requirements.allowFeatChoice ? input.feat ?? null : null;
+        const subclassChoice = input.subclass ?? null;
+
         const levelUpChoices: LevelUpChoicesMeta = {
             ...input,
+            abilityIncreases,
+            feat: featChoice,
+            subclass: subclassChoice,
             fromLevel: existing.level,
             toLevel: nextLevel,
             appliedAt: new Date().toISOString(),

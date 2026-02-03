@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { levelUpCharacter } from "@/app/characters/actions";
 import { ABILITY_SCORE_PICKLIST, GLOBAL_FEAT_OPTIONS, getSubclassOptions } from "@/lib/characters/level-up-options";
 import { MAX_CHARACTER_LEVEL } from "@/lib/characters/constants";
+import { getLevelRequirement } from "@/lib/characters/leveling/level-requirements";
 import { getCurrentActor } from "@/lib/current-actor";
 import { prisma } from "@/lib/prisma";
 
@@ -43,6 +44,7 @@ export default async function LevelUpPage({ params }: LevelUpPageProps) {
         redirect("/characters");
     }
 
+    const requirement = getLevelRequirement(character.charClass, nextLevel);
     const abilityScores = (character.abilityScores as Record<string, number>) ?? {};
     const abilityDisplay = ABILITY_SCORE_PICKLIST.map((entry) => ({
         ...entry,
@@ -50,6 +52,9 @@ export default async function LevelUpPage({ params }: LevelUpPageProps) {
     }));
 
     const subclassOptions = getSubclassOptions(character.charClass);
+    const abilitySlots = requirement.abilityScoreIncrements;
+    const showFeatChoice = requirement.allowFeatChoice;
+    const showSubclassChoice = requirement.requiresSubclass;
 
     return (
         <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(250,232,214,0.15),_transparent_45%),_#050506] py-16 text-white">
@@ -66,7 +71,7 @@ export default async function LevelUpPage({ params }: LevelUpPageProps) {
                         <p className="text-xs uppercase tracking-[0.4em] text-white/60">{character.charClass ?? "Hero"}</p>
                         <h1 className="text-3xl font-semibold">Advance {character.name}</h1>
                         <p className="text-sm text-white/70">
-                            You are moving from level {character.level} to level {nextLevel}. Choose a subclass, optional feat, and any ability score improvements unlocked at this tier before locking in the level.
+                            You are moving from level {character.level} to level {nextLevel}. The form below highlights only the options that unlock for this class and level so every advancement stays rules-accurate.
                         </p>
                     </header>
 
@@ -84,73 +89,87 @@ export default async function LevelUpPage({ params }: LevelUpPageProps) {
                     <form action={levelUpCharacter} className="space-y-6">
                         <input type="hidden" name="characterId" value={character.id} />
 
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <label htmlFor="subclass" className="text-sm font-semibold">Subclass</label>
-                                <span className="text-xs text-white/60">Unlocked at class tier requirements</span>
-                            </div>
-                            {subclassOptions.length > 0 ? (
-                                <select
-                                    id="subclass"
-                                    name="subclass"
-                                    defaultValue=""
-                                    className="w-full rounded-2xl border border-white/15 bg-black/30 px-4 py-3 text-sm text-white focus:border-rose-300 focus:outline-none"
-                                >
-                                    <option value="">Select a subclass</option>
-                                    {subclassOptions.map((option) => (
-                                        <option key={option.value} value={option.value}>
-                                            {option.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            ) : (
-                                <p className="rounded-2xl border border-dashed border-white/20 bg-black/20 px-4 py-3 text-sm text-white/60">
-                                    This class does not have predefined subclass options yet. Add notes below to track your choice.
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="space-y-2">
-                            <label htmlFor="feat" className="text-sm font-semibold">Feat (optional)</label>
-                            <select
-                                id="feat"
-                                name="feat"
-                                defaultValue=""
-                                className="w-full rounded-2xl border border-white/15 bg-black/30 px-4 py-3 text-sm text-white focus:border-rose-300 focus:outline-none"
-                            >
-                                <option value="">Choose a feat</option>
-                                {GLOBAL_FEAT_OPTIONS.map((feat) => (
-                                    <option key={feat.value} value={feat.value}>
-                                        {feat.label}
-                                    </option>
-                                ))}
-                            </select>
-                            <p className="text-xs text-white/60">Feats become available at specific class levels or via variant rules.</p>
-                        </div>
-
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm font-semibold">Ability score improvements</span>
-                                <span className="text-xs text-white/60">Pick up to two +1 increases</span>
-                            </div>
-                            <div className="grid gap-3 sm:grid-cols-2">
-                                {["abilityIncreasePrimary", "abilityIncreaseSecondary"].map((field) => (
+                        {showSubclassChoice && (
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label htmlFor="subclass" className="text-sm font-semibold">Subclass</label>
+                                    <span className="text-xs text-white/60">Required at this level</span>
+                                </div>
+                                {subclassOptions.length > 0 ? (
                                     <select
-                                        key={field}
-                                        name={field}
+                                        id="subclass"
+                                        name="subclass"
                                         defaultValue=""
                                         className="w-full rounded-2xl border border-white/15 bg-black/30 px-4 py-3 text-sm text-white focus:border-rose-300 focus:outline-none"
                                     >
-                                        <option value="">No change</option>
-                                        {ABILITY_SCORE_PICKLIST.map((ability) => (
-                                            <option key={ability.value} value={ability.value}>
-                                                {ability.label}
+                                        <option value="">Select a subclass</option>
+                                        {subclassOptions.map((option) => (
+                                            <option key={option.value} value={option.value}>
+                                                {option.label}
                                             </option>
                                         ))}
                                     </select>
-                                ))}
+                                ) : (
+                                    <input
+                                        id="subclass"
+                                        name="subclass"
+                                        type="text"
+                                        placeholder="Enter the subclass name"
+                                        className="w-full rounded-2xl border border-dashed border-white/30 bg-black/20 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-rose-300 focus:outline-none"
+                                    />
+                                )}
                             </div>
-                        </div>
+                        )}
+
+                        {showFeatChoice && (
+                            <div className="space-y-2">
+                                <label htmlFor="feat" className="text-sm font-semibold">Feat (optional)</label>
+                                <select
+                                    id="feat"
+                                    name="feat"
+                                    defaultValue=""
+                                    className="w-full rounded-2xl border border-white/15 bg-black/30 px-4 py-3 text-sm text-white focus:border-rose-300 focus:outline-none"
+                                >
+                                    <option value="">Choose a feat</option>
+                                    {GLOBAL_FEAT_OPTIONS.map((feat) => (
+                                        <option key={feat.value} value={feat.value}>
+                                            {feat.label}
+                                        </option>
+                                    ))}
+                                </select>
+                                <p className="text-xs text-white/60">Spend this slot on a feat or split +2 ability points above.</p>
+                            </div>
+                        )}
+
+                        {abilitySlots > 0 ? (
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-semibold">Ability score improvements</span>
+                                    <span className="text-xs text-white/60">Select {abilitySlots} × +1 bonuses</span>
+                                </div>
+                                <div className={`grid gap-3 ${abilitySlots > 1 ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
+                                    {Array.from({ length: abilitySlots }).map((_, index) => (
+                                        <select
+                                            key={index}
+                                            name="abilityIncreases"
+                                            defaultValue=""
+                                            className="w-full rounded-2xl border border-white/15 bg-black/30 px-4 py-3 text-sm text-white focus:border-rose-300 focus:outline-none"
+                                        >
+                                            <option value="">No change</option>
+                                            {ABILITY_SCORE_PICKLIST.map((ability) => (
+                                                <option key={ability.value} value={ability.value}>
+                                                    {ability.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="rounded-2xl border border-dashed border-white/20 bg-black/20 px-4 py-3 text-sm text-white/60">
+                                No ability score improvements unlock at level {nextLevel}. You can still document spell swaps or other features in the notes.
+                            </div>
+                        )}
 
                         <div className="space-y-2">
                             <label htmlFor="notes" className="text-sm font-semibold">Notes</label>

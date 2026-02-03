@@ -145,18 +145,23 @@ export function parseLevelUpFormData(formData: FormData): LevelUpInput {
         throw new Error("Character id missing.");
     }
 
-    const abilityIncreases = [
-        parseAbilityIncreaseChoice(formData.get("abilityIncreasePrimary")),
-        parseAbilityIncreaseChoice(formData.get("abilityIncreaseSecondary")),
-    ].filter(Boolean) as AbilityIncreaseChoice[];
+    const abilityIncreaseInputs = formData
+        .getAll("abilityIncreases")
+        .filter((value) => value !== null && value !== undefined);
 
-    const trimmedAbilityIncreases = abilityIncreases.slice(0, 2);
+    if (abilityIncreaseInputs.length === 0) {
+        abilityIncreaseInputs.push(formData.get("abilityIncreasePrimary"), formData.get("abilityIncreaseSecondary"));
+    }
+
+    const abilityIncreases = abilityIncreaseInputs
+        .map((value) => parseAbilityIncreaseChoice(value))
+        .filter((choice): choice is AbilityIncreaseChoice => Boolean(choice));
 
     return {
         characterId,
         subclass: readString(formData.get("subclass")),
         feat: readString(formData.get("feat")),
-        abilityIncreases: trimmedAbilityIncreases,
+        abilityIncreases,
         notes: readString(formData.get("notes"), null, 800),
     };
 }

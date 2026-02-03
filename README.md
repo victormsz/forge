@@ -7,6 +7,7 @@ ForgeSheet is a mobile-first Next.js 16 app for crafting D&D 5.5 characters, log
 - **Characters & Spells** — Prisma models cover point-buy/random stat generation, spell targeting shapes (single, cone, circle, line, square), and affinity (friendly, hostile, all, environment).
 - **Mobile dashboard** — Landing experience is optimized for touch devices first, while still scaling up to desktop.
 - **PDF export (beta)** — Server-side PDF generation overlays your data on the legacy 5E JPEG sheet, ready for the table.
+- **Class-aware level ups** — `lib/characters/leveling/level-requirements.ts` centralizes subclass unlocks, ASIs, and feat slots per class/level so the UI automatically adapts.
 
 ## Tech Stack
 - Next.js 16 App Router + React 19

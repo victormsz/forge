@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { ABILITY_KEYS, type AbilityKey } from "@/lib/point-buy";
 import { calculateMaxHp, getHitDieValue } from "@/lib/characters/hit-dice";
 import { SPELL_AFFINITY_LABELS } from "@/lib/spells/labels";
+import { formatSubclassName } from "@/lib/characters/level-up-options";
 import {
     abilityModifier,
     buildSkillSummaries,
@@ -160,7 +161,11 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                             <div className="flex-1 h-px bg-gradient-to-r from-rose-200/30 to-transparent"></div>
                         </div>
                         <h1 className="text-4xl font-bold text-white sm:text-5xl truncate">{character.name}</h1>
-                        <p className="mt-2 text-lg text-white/80">{character.charClass ? `Level ${character.level} ${character.charClass}` : `Level ${character.level}`}</p>
+                        <p className="mt-2 text-lg text-white/80">
+                            {character.charClass 
+                                ? `Level ${character.level} ${character.charClass}${character.subclass ? ` (${formatSubclassName(character.subclass)})` : ''}` 
+                                : `Level ${character.level}`}
+                        </p>
                         <p className="mt-1 text-sm text-white/60">{ancestryLine}</p>
                     </div>
                     <div className="flex flex-wrap gap-3">

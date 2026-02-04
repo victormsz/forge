@@ -179,7 +179,23 @@ export class CharacterService {
             appliedAt: new Date().toISOString(),
         };
 
-        await prisma.character.update({ where: { id: input.characterId }, data: { level: nextLevel, levelUpChoices, abilityScores } });
+        // Update character with new level, ability scores, levelUpChoices, and subclass (if selected)
+        const updateData: {
+            level: number;
+            levelUpChoices: LevelUpChoicesMeta;
+            abilityScores: Record<AbilityKey, number>;
+            subclass?: string;
+        } = {
+            level: nextLevel,
+            levelUpChoices,
+            abilityScores,
+        };
+
+        if (subclassChoice) {
+            updateData.subclass = subclassChoice;
+        }
+
+        await prisma.character.update({ where: { id: input.characterId }, data: updateData });
         return { updated: true, level: nextLevel };
     }
 

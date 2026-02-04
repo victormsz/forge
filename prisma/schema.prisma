@@ -60,6 +60,7 @@ model Character {
   level             Int                      @default(1)
   ancestry          String?                  @map("race")
   charClass         String?
+  subclass          String?
   background        String?
   alignment         String?
   armorBonus        Int                      @default(0)

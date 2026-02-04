@@ -196,3 +196,9 @@ export const SUBCLASS_DESCRIPTIONS: Record<string, SubclassInfo> = {
 export function getSubclassDescription(subclassIndex: string): SubclassInfo | null {
     return SUBCLASS_DESCRIPTIONS[subclassIndex] ?? null;
 }
+
+export function formatSubclassName(subclassIndex: string | null): string {
+    if (!subclassIndex) return "";
+    const info = getSubclassDescription(subclassIndex);
+    return info ? info.name : subclassIndex;
+}

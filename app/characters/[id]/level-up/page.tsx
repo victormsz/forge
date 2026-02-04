@@ -2,8 +2,9 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { HitDiceRoller } from "@/components/characters/hit-dice-roller";
+import { SubclassSelector } from "@/components/characters/subclass-selector";
 import { levelUpCharacter } from "@/app/characters/actions";
-import { ABILITY_SCORE_PICKLIST, GLOBAL_FEAT_OPTIONS, getSubclassOptions } from "@/lib/characters/level-up-options";
+import { ABILITY_SCORE_PICKLIST, GLOBAL_FEAT_OPTIONS, getSubclassOptions, SUBCLASS_DESCRIPTIONS } from "@/lib/characters/level-up-options";
 import { MAX_CHARACTER_LEVEL } from "@/lib/characters/constants";
 import { getLevelRequirement } from "@/lib/characters/leveling/level-requirements";
 import { getHitDieValue } from "@/lib/characters/hit-dice";
@@ -195,35 +196,10 @@ export default async function LevelUpPage({ params, searchParams }: LevelUpPageP
                         <input type="hidden" name="characterId" value={character.id} />
 
                         {showSubclassChoice && (
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <label htmlFor="subclass" className="text-sm font-semibold">Subclass</label>
-                                    <span className="text-xs text-white/60">Required at this level</span>
-                                </div>
-                                {subclassOptions.length > 0 ? (
-                                    <select
-                                        id="subclass"
-                                        name="subclass"
-                                        defaultValue=""
-                                        className="w-full rounded-2xl border border-white/15 bg-black/30 px-4 py-3 text-sm text-white focus:border-rose-300 focus:outline-none"
-                                    >
-                                        <option value="">Select a subclass</option>
-                                        {subclassOptions.map((option) => (
-                                            <option key={option.value} value={option.value}>
-                                                {option.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                ) : (
-                                    <input
-                                        id="subclass"
-                                        name="subclass"
-                                        type="text"
-                                        placeholder="Enter the subclass name"
-                                        className="w-full rounded-2xl border border-dashed border-white/30 bg-black/20 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-rose-300 focus:outline-none"
-                                    />
-                                )}
-                            </div>
+                            <SubclassSelector
+                                subclassOptions={subclassOptions}
+                                subclassDescriptions={SUBCLASS_DESCRIPTIONS}
+                            />
                         )}
 
                         {showFeatChoice && (

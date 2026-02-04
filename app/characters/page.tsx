@@ -54,58 +54,83 @@ export default async function CharactersPage() {
 
     return (
         <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(250,232,214,0.15),_transparent_45%),_#050506] text-white">
-            <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-16 sm:px-6 lg:px-8">
-                <header className="space-y-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-rose-200">Roster</p>
-                    <h1 className="text-3xl font-semibold leading-tight text-white sm:text-4xl">Manage your party vault</h1>
-                    <p className="max-w-2xl text-sm text-white/70">
-                        Track every character, lock in ability generation methods, and keep spell geometry tidy. Export-ready layouts launch soon, but you can start sculpting now.
+            <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-12 sm:px-6 lg:px-8">
+                <header className="space-y-3">
+                    <div className="flex items-center gap-3">
+                        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-rose-200">Roster</p>
+                        <div className="flex-1 h-px bg-gradient-to-r from-rose-200/30 to-transparent"></div>
+                    </div>
+                    <h1 className="text-4xl font-bold leading-tight text-white sm:text-5xl">Your Characters</h1>
+                    <p className="max-w-2xl text-base text-white/80">
+                        Manage your party, track abilities and spells, level up characters, and export professional character sheets.
                     </p>
                 </header>
 
-                <section id="forge" className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-                    <h2 className="text-lg font-semibold">Create a character</h2>
-                    <p className="text-sm text-white/70">
-                        Launch the dedicated forge to walk through ability method, ancestry, and class with live previews and guided steps.
-                    </p>
-                    {actor.isGuest && (
-                        <p className="mt-3 text-xs text-white/60">Guest mode supports one hero. Delete your current character or sign in with Google/Discord to unlock unlimited slots, leveling, and spell/item tracking.</p>
-                    )}
-                    <div className="mt-6 flex flex-wrap gap-3">
-                        {guestLimitReached ? (
-                            <span
-                                aria-disabled="true"
-                                className="rounded-full border border-white/15 px-6 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-white/40"
-                            >
-                                Guest slot filled
-                            </span>
-                        ) : (
+                <section id="forge" className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/10 to-white/5 p-8 backdrop-blur-sm shadow-2xl">
+                    <div className="flex items-start justify-between gap-6">
+                        <div className="flex-1">
+                            <h2 className="text-2xl font-bold text-white">Create New Character</h2>
+                            <p className="mt-2 text-base text-white/80">
+                                Build your hero with guided steps through abilities, ancestry, class, and spells.
+                            </p>
+                            {actor.isGuest && (
+                                <div className="mt-4 rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3">
+                                    <p className="text-sm text-amber-200/90">
+                                        <strong>Guest limitation:</strong> Create one character. Sign in to unlock unlimited characters, leveling, and advanced features.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex flex-col gap-3">
+                            {guestLimitReached ? (
+                                <span
+                                    aria-disabled="true"
+                                    className="rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white/40 cursor-not-allowed"
+                                >
+                                    Character Limit Reached
+                                </span>
+                            ) : (
+                                <Link
+                                    href="/characters/create"
+                                    className="rounded-xl bg-gradient-to-r from-rose-500 to-rose-400 px-8 py-4 text-sm font-bold text-white shadow-lg transition hover:shadow-rose-400/40 hover:scale-[1.02] active:scale-[0.98]"
+                                >
+                                    Create Character
+                                </Link>
+                            )}
                             <Link
-                                href="/characters/create"
-                                className="rounded-full bg-rose-400 px-6 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-black transition hover:bg-rose-300"
+                                href="/dashboard"
+                                className="rounded-xl border border-white/30 bg-white/5 px-6 py-3 text-sm font-semibold text-white/90 transition hover:bg-white/10 hover:border-white/50"
                             >
-                                Start creation flow
+                                ← Dashboard
                             </Link>
-                        )}
-                        <Link
-                            href="/dashboard"
-                            className="rounded-full border border-white/20 px-6 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:border-white/40"
-                        >
-                            Back to dashboard
-                        </Link>
+                        </div>
                     </div>
                 </section>
 
-                <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {serialized.length === 0 ? (
-                        <div className="col-span-full rounded-3xl border border-dashed border-white/20 bg-black/40 p-8 text-center text-white/60">
-                            <p>No characters yet. Use the forge above to conjure your first hero.</p>
-                        </div>
-                    ) : (
-                        serialized.map((character) => (
-                            <CharacterCard key={character.id} character={character} disableLevelUp={actor.isGuest} />
-                        ))
-                    )}
+                <section>
+                    <div className="mb-6 flex items-center justify-between">
+                        <h2 className="text-xl font-bold text-white">Your Characters ({serialized.length})</h2>
+                        {serialized.length > 0 && (
+                            <p className="text-sm text-white/60">Last updated {serialized[0].updatedAt.toLocaleDateString()}</p>
+                        )}
+                    </div>
+                    <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                        {serialized.length === 0 ? (
+                            <div className="col-span-full rounded-2xl border-2 border-dashed border-white/20 bg-black/20 p-12 text-center">
+                                <div className="mx-auto max-w-sm space-y-4">
+                                    <div className="mx-auto h-20 w-20 rounded-full border-2 border-white/20 bg-white/5 flex items-center justify-center">
+                                        <span className="text-4xl">⚔️</span>
+                                    </div>
+                                    <p className="text-lg font-semibold text-white/80">No characters yet</p>
+                                    <p className="text-sm text-white/60">Create your first character to begin your adventure!</p>
+                                </div>
+                            </div>
+                        ) : (
+                            serialized.map((character) => (
+                                <CharacterCard key={character.id} character={character} disableLevelUp={actor.isGuest} />
+                            ))
+                        )}
+                    </div>
                 </section>
             </main>
         </div>

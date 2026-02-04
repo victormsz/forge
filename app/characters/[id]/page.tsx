@@ -2,12 +2,20 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 
-import type { LevelUpChoicesMeta } from "@/lib/characters/types";
+import type { CharacterProficiencies, LevelUpChoicesMeta } from "@/lib/characters/types";
 import { getCurrentActor } from "@/lib/current-actor";
 import { prisma } from "@/lib/prisma";
 import { ABILITY_KEYS, type AbilityKey } from "@/lib/point-buy";
 import { calculateMaxHp, getHitDieValue } from "@/lib/characters/hit-dice";
 import { SPELL_AFFINITY_LABELS } from "@/lib/spells/labels";
+import {
+    abilityModifier,
+    buildSkillSummaries,
+    computeProficiencyBonus,
+    formatModifier,
+    normalizeAbilityScores,
+    normalizeProficiencies,
+} from "@/lib/characters/statistics";
 
 export const metadata: Metadata = {
     title: "ForgeSheet | Character Sheet",
@@ -28,104 +36,9 @@ const generationLabels = {
     RANDOM: "Random Rolls",
 };
 
-const SKILL_CONFIG = [
-    { key: "acrobatics", label: "Acrobatics", ability: "dex" },
-    { key: "animal handling", label: "Animal Handling", ability: "wis" },
-    { key: "arcana", label: "Arcana", ability: "int" },
-    { key: "athletics", label: "Athletics", ability: "str" },
-    { key: "deception", label: "Deception", ability: "cha" },
-    { key: "history", label: "History", ability: "int" },
-    { key: "insight", label: "Insight", ability: "wis" },
-    { key: "intimidation", label: "Intimidation", ability: "cha" },
-    { key: "investigation", label: "Investigation", ability: "int" },
-    { key: "medicine", label: "Medicine", ability: "wis" },
-    { key: "nature", label: "Nature", ability: "int" },
-    { key: "perception", label: "Perception", ability: "wis" },
-    { key: "performance", label: "Performance", ability: "cha" },
-    { key: "persuasion", label: "Persuasion", ability: "cha" },
-    { key: "religion", label: "Religion", ability: "int" },
-    { key: "sleight of hand", label: "Sleight of Hand", ability: "dex" },
-    { key: "stealth", label: "Stealth", ability: "dex" },
-    { key: "survival", label: "Survival", ability: "wis" },
-] as const satisfies ReadonlyArray<{ key: string; label: string; ability: AbilityKey }>;
-
 type CharacterSheetPageProps = {
     params: Promise<{ id: string }>;
 };
-
-type ProficiencyBuckets = {
-    armor: string[];
-    weapons: string[];
-    tools: string[];
-    skills: string[];
-    languages: string[];
-};
-
-function normalizeAbilityScores(raw: unknown) {
-    const scores: Record<AbilityKey, number> = {
-        str: 10,
-        dex: 10,
-        con: 10,
-        int: 10,
-        wis: 10,
-        cha: 10,
-    };
-
-    if (raw && typeof raw === "object") {
-        ABILITY_KEYS.forEach((key) => {
-            const maybeValue = (raw as Record<string, unknown>)[key];
-            if (typeof maybeValue === "number") {
-                scores[key] = maybeValue;
-            }
-        });
-    }
-
-    return scores;
-}
-
-function normalizeProficiencies(raw: unknown): ProficiencyBuckets {
-    const buckets: ProficiencyBuckets = {
-        armor: [],
-        weapons: [],
-        tools: [],
-        skills: [],
-        languages: [],
-    };
-
-    if (!raw || typeof raw !== "object") {
-        return buckets;
-    }
-
-    const source = raw as Record<string, unknown>;
-
-    (Object.keys(buckets) as (keyof ProficiencyBuckets)[]).forEach((key) => {
-        const value = source[key];
-        if (Array.isArray(value)) {
-            buckets[key] = value.filter((entry): entry is string => typeof entry === "string");
-        }
-    });
-
-    return buckets;
-}
-
-function normalizeSkillName(value: string) {
-    return value.trim().toLowerCase();
-}
-
-function abilityModifier(score: number) {
-    return Math.floor((score - 10) / 2);
-}
-
-function formatModifier(modifierValue: number) {
-    return modifierValue >= 0 ? `+${modifierValue}` : modifierValue.toString();
-}
-
-function computeProficiencyBonus(level: number) {
-    if (level <= 0) {
-        return 2;
-    }
-    return Math.floor((level - 1) / 4) + 2;
-}
 
 function formatAbilityIncreases(choices: LevelUpChoicesMeta["abilityIncreases"]) {
     if (!Array.isArray(choices) || choices.length === 0) {
@@ -182,19 +95,8 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
     const hitDiceDisplay = `${character.level}d${hitDieValue}`;
     const maxHpEstimate = calculateMaxHp(character.level, hitDieValue, abilityModifiers.con);
 
-    const proficiencies = normalizeProficiencies(character.proficiencies);
-    const skillLookup = new Set(proficiencies.skills.map(normalizeSkillName));
-    const skillSummaries = SKILL_CONFIG.map((skill) => {
-        const proficient = skillLookup.has(skill.key);
-        const base = abilityModifiers[skill.ability];
-        const total = base + (proficient ? proficiencyBonus : 0);
-        return {
-            ...skill,
-            proficient,
-            total,
-            base,
-        };
-    });
+    const proficiencies: CharacterProficiencies = normalizeProficiencies(character.proficiencies);
+    const skillSummaries = buildSkillSummaries(proficiencies, abilityModifiers, proficiencyBonus);
     const spells = character.spells;
 
     const levelLog = character.levelUpChoices as LevelUpChoicesMeta | null;

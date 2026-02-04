@@ -16,8 +16,10 @@ import { prisma } from "@/lib/prisma";
 import { findReferenceSpellById, spellSupportsClass } from "@/lib/spells/reference";
 import { getSpellPreparationProfile } from "@/lib/spells/class-preparation";
 import { getSpellSlotSummary } from "@/lib/spells/slot-profiles";
+import { ABILITY_KEYS, DEFAULT_ABILITY_SCORES, type AbilityKey } from "@/lib/point-buy";
 
 const SLOT_ORDINALS = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"] as const;
+const MAX_LEVEL_UP_ABILITY_SCORE = 20;
 
 function formatSpellLevelLabel(level: number) {
     if (level <= 0) {
@@ -43,7 +45,7 @@ export class CharacterService {
     private async requireCharacter(characterId: string) {
         const character = await prisma.character.findUnique({
             where: { id: characterId },
-            select: { id: true, userId: true, level: true, charClass: true },
+            select: { id: true, userId: true, level: true, charClass: true, abilityScores: true },
         });
 
         if (!character) {
@@ -114,29 +116,60 @@ export class CharacterService {
             throw new Error("Subclass selection is required at this level.");
         }
 
-        if (requirements.abilityScoreIncrements === 0 && input.abilityIncreases.length > 0) {
-            throw new Error("Ability score improvements are not unlocked at this level.");
-        }
-
-        if (requirements.abilityScoreIncrements > 0 && input.abilityIncreases.length !== requirements.abilityScoreIncrements) {
-            throw new Error(`Select ${requirements.abilityScoreIncrements} ability score increases for this level.`);
-        }
-
         const hitDieValue = getHitDieValue(existing.charClass);
 
         if (typeof input.hitDiceRoll !== "number" || input.hitDiceRoll < 1 || input.hitDiceRoll > hitDieValue) {
             throw new Error(`Roll your d${hitDieValue} hit die before applying this level up.`);
         }
 
-        const abilityIncreases = requirements.abilityScoreIncrements > 0
+        if (requirements.abilityScoreIncrements === 0 && input.abilityIncreases.length > 0) {
+            throw new Error("Ability score improvements are not unlocked at this level.");
+        }
+
+        const requestedAbilityIncreases = requirements.abilityScoreIncrements > 0
             ? input.abilityIncreases.slice(0, requirements.abilityScoreIncrements)
             : [];
-        const featChoice = requirements.allowFeatChoice ? input.feat ?? null : null;
+        const featSelected = Boolean(requirements.allowFeatChoice && input.feat);
+
+        if (!requirements.allowFeatChoice && featSelected) {
+            throw new Error("Feat choices are not unlocked at this level.");
+        }
+
+        if (requirements.allowFeatChoice) {
+            if (featSelected && requestedAbilityIncreases.length > 0) {
+                throw new Error("Select either a feat or ability score improvements, not both.");
+            }
+            if (!featSelected && requirements.abilityScoreIncrements > 0 && requestedAbilityIncreases.length !== requirements.abilityScoreIncrements) {
+                throw new Error(`Select ${requirements.abilityScoreIncrements} ability score increases for this level.`);
+            }
+        } else if (requirements.abilityScoreIncrements > 0 && requestedAbilityIncreases.length !== requirements.abilityScoreIncrements) {
+            throw new Error(`Select ${requirements.abilityScoreIncrements} ability score increases for this level.`);
+        }
+
+        const appliedAbilityIncreases = featSelected ? [] : requestedAbilityIncreases;
+        const featChoice = requirements.allowFeatChoice && featSelected ? input.feat ?? null : null;
         const subclassChoice = input.subclass ?? null;
+
+        const storedAbilityScores = existing.abilityScores as Partial<Record<AbilityKey, number>> | null;
+        const abilityScores = ABILITY_KEYS.reduce<Record<AbilityKey, number>>((scores, ability) => {
+            const storedValue = storedAbilityScores?.[ability];
+            const baseValue = typeof storedValue === "number" ? storedValue : DEFAULT_ABILITY_SCORES[ability];
+            scores[ability] = baseValue;
+            return scores;
+        }, { ...DEFAULT_ABILITY_SCORES });
+
+        for (const choice of appliedAbilityIncreases) {
+            const currentScore = abilityScores[choice.ability];
+            const nextScore = currentScore + choice.amount;
+            if (nextScore > MAX_LEVEL_UP_ABILITY_SCORE) {
+                throw new Error(`${choice.ability.toUpperCase()} cannot exceed ${MAX_LEVEL_UP_ABILITY_SCORE}. Adjust your ability score improvements.`);
+            }
+            abilityScores[choice.ability] = nextScore;
+        }
 
         const levelUpChoices: LevelUpChoicesMeta = {
             ...input,
-            abilityIncreases,
+            abilityIncreases: appliedAbilityIncreases,
             feat: featChoice,
             subclass: subclassChoice,
             fromLevel: existing.level,
@@ -144,7 +177,7 @@ export class CharacterService {
             appliedAt: new Date().toISOString(),
         };
 
-        await prisma.character.update({ where: { id: input.characterId }, data: { level: nextLevel, levelUpChoices } });
+        await prisma.character.update({ where: { id: input.characterId }, data: { level: nextLevel, levelUpChoices, abilityScores } });
         return { updated: true, level: nextLevel };
     }
 

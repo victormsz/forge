@@ -46,9 +46,12 @@ export async function levelUpCharacter(formData: FormData) {
     const input = parseLevelUpFormData(formData);
 
     await service.levelUp(input);
+    revalidatePath(`/characters/${input.characterId}`);
+    revalidatePath(`/characters/${input.characterId}/spells`);
+    revalidatePath(`/characters/${input.characterId}/level-up`);
     revalidatePath("/characters");
     revalidatePath("/dashboard");
-    redirect("/characters");
+    redirect(`/characters/${input.characterId}`);
 }
 
 export async function addSpell(formData: FormData) {

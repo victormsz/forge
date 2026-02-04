@@ -76,6 +76,14 @@ export function SpellLibraryForm({ characterId, characterClass, references, maxS
     const allowedMaxSpellLevel = Math.max(0, Math.min(9, maxSpellLevel));
     const maxSpellLevelLabel = formatMaxSpellLevelLabel(allowedMaxSpellLevel);
 
+    const activeLevelFilter = levelFilter !== "all" && Number(levelFilter) > allowedMaxSpellLevel ? "all" : levelFilter;
+    const viewFormValues = useMemo(() => {
+        if (formValues.level <= allowedMaxSpellLevel) {
+            return formValues;
+        }
+        return { ...formValues, level: allowedMaxSpellLevel };
+    }, [formValues, allowedMaxSpellLevel]);
+
     const filteredReferences = useMemo(() => {
         const normalizedQuery = query.trim().toLowerCase();
         return references
@@ -84,31 +92,17 @@ export function SpellLibraryForm({ characterId, characterClass, references, maxS
                     return false;
                 }
                 const matchesQuery = normalizedQuery.length === 0 || spell.name.toLowerCase().includes(normalizedQuery);
-                const matchesLevel = levelFilter === "all" || spell.level.toString() === levelFilter;
+                const matchesLevel = activeLevelFilter === "all" || spell.level.toString() === activeLevelFilter;
                 return matchesQuery && matchesLevel;
             })
             .slice(0, MAX_REFERENCE_RESULTS);
-    }, [references, query, levelFilter, allowedMaxSpellLevel]);
+    }, [references, query, activeLevelFilter, allowedMaxSpellLevel]);
 
     const levelOptions = useMemo(
         () => LEVEL_FILTER_OPTIONS.filter((value) => value === "all" || Number(value) <= allowedMaxSpellLevel),
         [allowedMaxSpellLevel],
     );
 
-    useEffect(() => {
-        if (levelFilter !== "all" && Number(levelFilter) > allowedMaxSpellLevel) {
-            setLevelFilter("all");
-        }
-    }, [levelFilter, allowedMaxSpellLevel]);
-
-    useEffect(() => {
-        setFormValues((current) => {
-            if (current.level <= allowedMaxSpellLevel) {
-                return current;
-            }
-            return { ...current, level: allowedMaxSpellLevel };
-        });
-    }, [allowedMaxSpellLevel]);
 
     function handleReferenceSelect(spell: SpellReference) {
         if (spell.level > allowedMaxSpellLevel) {
@@ -153,7 +147,7 @@ export function SpellLibraryForm({ characterId, characterClass, references, maxS
         setFormValues((current) => ({ ...current, isCustom: false }));
     }
 
-    const canSubmit = formValues.isCustom || Boolean(selectedSpellId);
+    const canSubmit = viewFormValues.isCustom || Boolean(selectedSpellId);
 
     const emptyReferenceMessage = references.length === 0
         ? characterClass
@@ -171,13 +165,13 @@ export function SpellLibraryForm({ characterId, characterClass, references, maxS
                     <p className="text-sm text-white/70">Search the SRD library, load the details, then choose targeting rules.</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.3em] text-white/60">
-                    <span className={`rounded-full border px-3 py-1 text-[0.65rem] ${formValues.isCustom ? "border-amber-300/60 text-amber-200" : selectedSpellId ? "border-emerald-300/60 text-emerald-200" : "border-white/20 text-white/70"}`}>
-                        {formValues.isCustom ? "Custom entry" : selectedSpellId ? "SRD spell" : "Pick from SRD"}
+                    <span className={`rounded-full border px-3 py-1 text-[0.65rem] ${viewFormValues.isCustom ? "border-amber-300/60 text-amber-200" : selectedSpellId ? "border-emerald-300/60 text-emerald-200" : "border-white/20 text-white/70"}`}>
+                        {viewFormValues.isCustom ? "Custom entry" : selectedSpellId ? "SRD spell" : "Pick from SRD"}
                     </span>
                     <button type="button" onClick={resetForm} className="transition hover:text-white">
                         Reset form
                     </button>
-                    {formValues.isCustom ? (
+                    {viewFormValues.isCustom ? (
                         <button type="button" onClick={restoreLibraryMode} className="transition hover:text-white">
                             Use SRD entry
                         </button>
@@ -211,7 +205,7 @@ export function SpellLibraryForm({ characterId, characterClass, references, maxS
                         <label className="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-white/60">
                             <span>Level</span>
                             <select
-                                value={levelFilter}
+                                value={activeLevelFilter}
                                 onChange={(event) => setLevelFilter(event.target.value)}
                                 className="rounded-2xl border border-white/15 bg-black/40 px-3 py-2 text-white"
                             >
@@ -259,7 +253,7 @@ export function SpellLibraryForm({ characterId, characterClass, references, maxS
                     }}
                 >
                     <input type="hidden" name="characterId" value={characterId} />
-                    <input type="hidden" name="isCustom" value={formValues.isCustom ? "true" : "false"} />
+                    <input type="hidden" name="isCustom" value={viewFormValues.isCustom ? "true" : "false"} />
                     <input type="hidden" name="referenceId" value={selectedSpellId ?? ""} />
                     <div className="grid gap-3 sm:grid-cols-2">
                         <label className="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-white/60">
@@ -268,9 +262,9 @@ export function SpellLibraryForm({ characterId, characterClass, references, maxS
                                 required
                                 name="name"
                                 type="text"
-                                value={formValues.name}
+                                value={viewFormValues.name}
                                 onChange={(event) => handleFieldChange("name", event.target.value)}
-                                readOnly={!formValues.isCustom}
+                                readOnly={!viewFormValues.isCustom}
                                 className="rounded-2xl border border-white/15 bg-black/40 px-3 py-2 text-base text-white"
                             />
                         </label>
@@ -281,11 +275,11 @@ export function SpellLibraryForm({ characterId, characterClass, references, maxS
                                 type="number"
                                 min={0}
                                 max={allowedMaxSpellLevel}
-                                value={formValues.level}
+                                value={viewFormValues.level}
                                 onChange={(event) =>
                                     handleFieldChange("level", clampSpellLevelInput(Number(event.target.value), allowedMaxSpellLevel))
                                 }
-                                readOnly={!formValues.isCustom}
+                                readOnly={!viewFormValues.isCustom}
                                 className="rounded-2xl border border-white/15 bg-black/40 px-3 py-2 text-base text-white"
                             />
                         </label>
@@ -294,9 +288,9 @@ export function SpellLibraryForm({ characterId, characterClass, references, maxS
                             <input
                                 name="range"
                                 type="text"
-                                value={formValues.range}
+                                value={viewFormValues.range}
                                 onChange={(event) => handleFieldChange("range", event.target.value)}
-                                readOnly={!formValues.isCustom}
+                                readOnly={!viewFormValues.isCustom}
                                 className="rounded-2xl border border-white/15 bg-black/40 px-3 py-2 text-base text-white"
                             />
                         </label>
@@ -305,9 +299,9 @@ export function SpellLibraryForm({ characterId, characterClass, references, maxS
                             <input
                                 name="school"
                                 type="text"
-                                value={formValues.school}
+                                value={viewFormValues.school}
                                 onChange={(event) => handleFieldChange("school", event.target.value)}
-                                readOnly={!formValues.isCustom}
+                                readOnly={!viewFormValues.isCustom}
                                 className="rounded-2xl border border-white/15 bg-black/40 px-3 py-2 text-base text-white"
                             />
                         </label>
@@ -318,7 +312,7 @@ export function SpellLibraryForm({ characterId, characterClass, references, maxS
                             <span>Target shape</span>
                             <select
                                 name="shape"
-                                value={formValues.shape}
+                                value={viewFormValues.shape}
                                 onChange={(event) => handleFieldChange("shape", event.target.value)}
                                 className="rounded-2xl border border-white/15 bg-black/40 px-3 py-2 text-white"
                             >
@@ -333,7 +327,7 @@ export function SpellLibraryForm({ characterId, characterClass, references, maxS
                             <span>Affinity</span>
                             <select
                                 name="affinity"
-                                value={formValues.affinity}
+                                value={viewFormValues.affinity}
                                 onChange={(event) => handleFieldChange("affinity", event.target.value)}
                                 className="rounded-2xl border border-white/15 bg-black/40 px-3 py-2 text-white"
                             >
@@ -351,7 +345,7 @@ export function SpellLibraryForm({ characterId, characterClass, references, maxS
                         <input
                             name="damage"
                             type="text"
-                            value={formValues.damage}
+                            value={viewFormValues.damage}
                             onChange={(event) => handleFieldChange("damage", event.target.value)}
                             placeholder="8d6 fire, Dex save half"
                             className="rounded-2xl border border-white/15 bg-black/40 px-3 py-2 text-base text-white"
@@ -362,10 +356,10 @@ export function SpellLibraryForm({ characterId, characterClass, references, maxS
                         <span>Description</span>
                         <textarea
                             name="description"
-                            value={formValues.description}
+                            value={viewFormValues.description}
                             onChange={(event) => handleFieldChange("description", event.target.value)}
                             rows={6}
-                            readOnly={!formValues.isCustom}
+                            readOnly={!viewFormValues.isCustom}
                             className="rounded-3xl border border-white/15 bg-black/40 px-3 py-3 text-sm text-white"
                         />
                     </label>

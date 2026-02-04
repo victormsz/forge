@@ -162,8 +162,8 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                         </div>
                         <h1 className="text-4xl font-bold text-white sm:text-5xl truncate">{character.name}</h1>
                         <p className="mt-2 text-lg text-white/80">
-                            {character.charClass 
-                                ? `Level ${character.level} ${character.charClass}${character.subclass ? ` (${formatSubclassName(character.subclass)})` : ''}` 
+                            {character.charClass
+                                ? `Level ${character.level} ${character.charClass}${character.subclass ? ` (${formatSubclassName(character.subclass)})` : ''}`
                                 : `Level ${character.level}`}
                         </p>
                         <p className="mt-1 text-sm text-white/60">{ancestryLine}</p>

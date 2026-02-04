@@ -16,7 +16,7 @@ import {
     calculatePointBuyCost,
     getIncrementalPointCost,
 } from "@/lib/point-buy";
-import type { ClassOption } from "@/lib/classes/load-classes";
+import type { ClassOption, EquipmentOptionChoice } from "@/lib/classes/load-classes";
 import { getClassOptions } from "@/lib/classes/load-classes";
 import { getBackgroundBonuses } from "@/lib/characters/background-bonuses";
 
@@ -1572,8 +1572,8 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                                                         type="button"
                                                         onClick={() => setFormState((prev) => ({ ...prev, backgroundAbilityChoice: ability }))}
                                                         className={`flex-1 min-w-[140px] rounded-2xl border px-4 py-3 text-left transition ${isSelected
-                                                                ? "border-rose-300 bg-rose-300/10"
-                                                                : "border-white/15 bg-black/40 hover:border-white/30"
+                                                            ? "border-rose-300 bg-rose-300/10"
+                                                            : "border-white/15 bg-black/40 hover:border-white/30"
                                                             }`}
                                                     >
                                                         <p className="text-sm font-semibold text-white">
@@ -1829,13 +1829,18 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                         const equipmentOptions = selectedClass.startingEquipmentOptions || [];
 
                         // Helper to render equipment option
-                        const renderEquipmentOption = (option: any, optionIndex: number, choiceIndex: number) => {
+                        const renderEquipmentOption = (
+                            option: EquipmentOptionChoice,
+                            optionIndex: number,
+                            choiceIndex: number
+                        ) => {
                             if (option.option_type === "counted_reference") {
                                 const count = option.count || 1;
                                 const name = option.of?.name || "Unknown";
                                 return (
                                     <span key={`${optionIndex}-${choiceIndex}`}>
-                                        {count > 1 ? `${count}× ` : ""}{name}
+                                        {count > 1 ? `${count}× ` : ""}
+                                        {name}
                                     </span>
                                 );
                             }
@@ -1884,7 +1889,7 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                                         </div>
 
                                         {equipmentOptions.map((equipOption, optionIndex) => {
-                                            const options = equipOption.from?.options || [];
+                                            const options = equipOption.from.options ?? [];
                                             const selectedChoice = formState.equipmentChoices[optionIndex];
 
                                             return (
@@ -1893,7 +1898,7 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                                                         Choice {optionIndex + 1}: {equipOption.desc}
                                                     </p>
                                                     <div className="grid gap-3 sm:grid-cols-2">
-                                                        {options.map((choice: any, choiceIndex: number) => {
+                                                        {options.map((choice, choiceIndex) => {
                                                             const isSelected = selectedChoice === choiceIndex;
                                                             return (
                                                                 <button

@@ -32,12 +32,21 @@ export interface SpellcastingInfo {
     spell_slots_level_9?: number;
 }
 
+export type ClassSpecificValue =
+    | number
+    | boolean
+    | string
+    | null
+    | { dice_count: number; dice_value: number }
+    | Record<string, unknown>
+    | Array<unknown>;
+
 export interface LevelData {
     level: number;
     ability_score_bonuses: number;
     prof_bonus: number;
     features: ClassFeature[];
-    class_specific?: Record<string, any>;
+    class_specific?: Record<string, ClassSpecificValue>;
     spellcasting?: SpellcastingInfo;
     class: ClassReference;
     subclass?: SubclassReference;

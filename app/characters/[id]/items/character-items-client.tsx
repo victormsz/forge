@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { deleteItem } from "@/app/characters/actions";
 import { ItemLibraryForm } from "@/components/items/item-library-form";
+import type { ItemCategoryOption, ItemReference } from "@/lib/items/reference";
 
 type Item = {
     id: string;
@@ -19,26 +20,26 @@ type Item = {
     updatedAt: Date;
 };
 
-export function CharacterItemsPageClient({ 
-    character, 
-    dominantCategories, 
+export function CharacterItemsPageClient({
+    character,
+    dominantCategories,
     formattedWeight,
     referenceItems,
     categoryOptions,
     addItemAction
-}: { 
-    character: { 
-        id: string; 
-        name: string; 
-        level: number; 
-        charClass: string | null; 
+}: {
+    character: {
+        id: string;
+        name: string;
+        level: number;
+        charClass: string | null;
         items: Item[];
-    }; 
-    dominantCategories: [string, number][]; 
+    };
+    dominantCategories: [string, number][];
     formattedWeight: string;
-    referenceItems: any;
-    categoryOptions: any;
-    addItemAction: any;
+    referenceItems: ItemReference[];
+    categoryOptions: ItemCategoryOption[];
+    addItemAction: (formData: FormData) => Promise<void>;
 }) {
     const [selectedItem, setSelectedItem] = useState<Item | null>(null);
 
@@ -119,8 +120,8 @@ export function CharacterItemsPageClient({
                             ) : (
                                 <div className="mt-6 space-y-4">
                                     {character.items.map((item) => (
-                                        <article 
-                                            key={item.id} 
+                                        <article
+                                            key={item.id}
                                             className="rounded-2xl border border-white/10 bg-black/30 p-4 transition-all hover:border-white/30 hover:bg-black/40 cursor-pointer"
                                             onClick={() => setSelectedItem(item)}
                                         >
@@ -164,8 +165,8 @@ export function CharacterItemsPageClient({
                                                 <p className="mt-3 text-sm text-sky-200">{item.notes}</p>
                                             )}
                                             <p className="mt-3 text-xs uppercase tracking-[0.3em] text-white/50">Updated {item.updatedAt.toLocaleDateString()}</p>
-                                            <form 
-                                                action={deleteItem} 
+                                            <form
+                                                action={deleteItem}
                                                 className="mt-4 flex items-center justify-end gap-3"
                                                 onClick={(e) => e.stopPropagation()}
                                             >
@@ -196,11 +197,11 @@ export function CharacterItemsPageClient({
 
             {/* Item Detail Modal */}
             {selectedItem && (
-                <div 
+                <div
                     className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
                     onClick={() => setSelectedItem(null)}
                 >
-                    <div 
+                    <div
                         className="max-w-2xl w-full max-h-[80vh] overflow-y-auto rounded-3xl border border-white/20 bg-gradient-to-br from-neutral-900 to-neutral-950 p-6 shadow-2xl"
                         onClick={(e) => e.stopPropagation()}
                     >

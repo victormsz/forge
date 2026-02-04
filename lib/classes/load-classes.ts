@@ -2,20 +2,22 @@ import classesData from "@/db/2014/5e-SRD-Classes.json";
 import subclassesData from "@/db/2014/5e-SRD-Subclasses.json";
 import { getSubclassLevel } from "@/lib/characters/leveling/level-data";
 
+export interface ProficiencyChoiceOptionItem {
+    option_type: string;
+    item?: {
+        index: string;
+        name: string;
+        url: string;
+    };
+}
+
 export interface ProficiencyChoice {
     desc: string;
     choose: number;
     type: string;
     from: {
         option_set_type: string;
-        options: Array<{
-            option_type: string;
-            item?: {
-                index: string;
-                name: string;
-                url: string;
-            };
-        }>;
+        options: ProficiencyChoiceOptionItem[];
     };
 }
 
@@ -25,20 +27,54 @@ export interface Proficiency {
     url: string;
 }
 
+export interface EquipmentEntity {
+    index: string;
+    name: string;
+    url: string;
+}
+
 export interface EquipmentReference {
-    equipment: {
-        index: string;
-        name: string;
-        url: string;
-    };
+    equipment: EquipmentEntity;
     quantity: number;
+}
+
+export interface CountedReferenceOption {
+    option_type: "counted_reference";
+    count?: number;
+    of?: EquipmentEntity;
+}
+
+export interface EquipmentNestedChoice {
+    option_type: "choice";
+    choice?: {
+        desc?: string;
+        choose?: number;
+        type?: string;
+        from?: {
+            option_set_type: string;
+            options?: EquipmentOptionChoice[];
+        };
+    };
+}
+
+export type EquipmentOptionChoice =
+    | CountedReferenceOption
+    | EquipmentNestedChoice
+    | {
+        option_type: string;
+        [key: string]: unknown;
+    };
+
+export interface EquipmentOptionSource {
+    option_set_type: string;
+    options: EquipmentOptionChoice[];
 }
 
 export interface EquipmentOption {
     desc: string;
     choose: number;
     type: string;
-    from: any; // Complex nested structure
+    from: EquipmentOptionSource;
 }
 
 export interface ClassData {
@@ -54,6 +90,7 @@ export interface ClassData {
     }>;
     starting_equipment: EquipmentReference[];
     starting_equipment_options: EquipmentOption[];
+    subclasses?: Array<{ index: string; name: string; url: string }>;
 }
 
 export interface Subclass {
@@ -151,8 +188,8 @@ function categorizeProficiency(prof: Proficiency): { category: "armor" | "weapon
 
 export function getClassOptions(): ClassOption[] {
     // First, create a lookup map of detailed subclass info from Subclasses.json
-    const subclassDetailsMap = new Map<string, any>();
-    (subclassesData as any[]).forEach((subclass) => {
+    const subclassDetailsMap = new Map<string, Subclass>();
+    (subclassesData as Subclass[]).forEach((subclass) => {
         subclassDetailsMap.set(subclass.index, subclass);
     });
 
@@ -202,7 +239,7 @@ export function getClassOptions(): ClassOption[] {
         const subclassLevel = getSubclassLevel(classData.name);
         const subclasses: SubclassOption[] | undefined =
             subclassLevel === 1
-                ? (classData as any).subclasses?.map((subclassRef: any) => {
+                ? classData.subclasses?.map((subclassRef) => {
                     const details = subclassDetailsMap.get(subclassRef.index);
                     return {
                         index: subclassRef.index,

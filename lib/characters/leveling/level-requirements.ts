@@ -3,6 +3,7 @@ import {
     getSubclassLevel as getSubclassLevelFromData,
     getSubclassLevelData,
     type ClassFeature,
+    type ClassSpecificValue,
     type SpellcastingInfo,
 } from "./level-data";
 
@@ -21,7 +22,7 @@ export interface LevelRequirement {
     features: ClassFeature[];
     proficiencyBonus: number;
     spellcasting?: SpellcastingInfo;
-    classSpecific?: Record<string, any>;
+    classSpecific?: Record<string, ClassSpecificValue>;
 }
 
 /**

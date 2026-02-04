@@ -139,10 +139,10 @@ export default async function LevelUpPage({ params, searchParams }: LevelUpPageP
                                                 .split("_")
                                                 .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
                                                 .join(" ");
-                                            
+
                                             // Special formatting for certain values
                                             let displayValue: string;
-                                            
+
                                             if (key === "rage_count" && value === 9999) {
                                                 displayValue = "Unlimited";
                                             } else if (typeof value === "boolean") {

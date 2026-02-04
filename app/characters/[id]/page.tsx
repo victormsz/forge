@@ -227,120 +227,119 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                                         </div>
                                     ))}
                                 </div>
-<<<<<<< Updated upstream
 
-    <div>
-        <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/60">Combat Stats</h2>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {[
-                {
-                    label: "Armor Class",
-                    value: armorClass,
-                    detail: armorSegments,
-                    icon: "🛡️",
-                },
-                {
-                    label: "Initiative",
-                    value: formatModifier(abilityModifiers.dex),
-                    detail: "Dexterity modifier",
-                    icon: "⚡",
-                },
-                {
-                    label: "Speed",
-                    value: `${walkingSpeed} ft`,
-                    detail: "Walking speed",
-                    icon: "🏃",
-                },
-                {
-                    label: "Proficiency",
-                    value: `+${proficiencyBonus}`,
-                    detail: `Level ${character.level}`,
-                    icon: "⭐",
-                },
-                {
-                    label: "Hit Dice",
-                    value: hitDiceDisplay,
-                    detail: character.charClass || "Default d8",
-                    icon: "🎲",
-                },
-                {
-                    label: "Max HP",
-                    value: maxHpEstimate,
-                    detail: `Full die + avg rolls + CON mod`,
-                    icon: "❤️",
-                },
-            ].map((stat) => (
-                <div key={stat.label} className="rounded-2xl border border-white/15 bg-gradient-to-br from-black/40 to-black/20 p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="text-lg">{stat.icon}</span>
-                        <p className="text-[0.65rem] font-bold uppercase tracking-wider text-white/60">{stat.label}</p>
-                    </div>
-                    <p className="text-3xl font-bold text-white">{stat.value}</p>
-                    <p className="mt-1.5 text-xs text-white/60">{stat.detail}</p>
-                </div>
-            ))}
-        </div>
+                                <div>
+                                    <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/60">Combat Stats</h2>
+                                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                                        {[
+                                            {
+                                                label: "Armor Class",
+                                                value: armorClass,
+                                                detail: armorSegments,
+                                                icon: "🛡️",
+                                            },
+                                            {
+                                                label: "Initiative",
+                                                value: formatModifier(abilityModifiers.dex),
+                                                detail: "Dexterity modifier",
+                                                icon: "⚡",
+                                            },
+                                            {
+                                                label: "Speed",
+                                                value: `${walkingSpeed} ft`,
+                                                detail: "Walking speed",
+                                                icon: "🏃",
+                                            },
+                                            {
+                                                label: "Proficiency",
+                                                value: `+${proficiencyBonus}`,
+                                                detail: `Level ${character.level}`,
+                                                icon: "⭐",
+                                            },
+                                            {
+                                                label: "Hit Dice",
+                                                value: hitDiceDisplay,
+                                                detail: character.charClass || "Default d8",
+                                                icon: "🎲",
+                                            },
+                                            {
+                                                label: "Max HP",
+                                                value: maxHpEstimate,
+                                                detail: `Full die + avg rolls + CON mod`,
+                                                icon: "❤️",
+                                            },
+                                        ].map((stat) => (
+                                            <div key={stat.label} className="rounded-2xl border border-white/15 bg-gradient-to-br from-black/40 to-black/20 p-4">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="text-lg">{stat.icon}</span>
+                                                    <p className="text-[0.65rem] font-bold uppercase tracking-wider text-white/60">{stat.label}</p>
+                                                </div>
+                                                <p className="text-3xl font-bold text-white">{stat.value}</p>
+                                                <p className="mt-1.5 text-xs text-white/60">{stat.detail}</p>
+                                            </div>
+                                        ))}
+                                    </div>
 
-        <div>
-            <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/60">Skill Checks</h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-                {skillSummaries.map((skill) => (
-                    <div
-                        key={skill.key}
-                        className={`rounded-xl border px-4 py-3 transition ${skill.proficient
-                            ? "border-rose-400/60 bg-rose-400/15 shadow-lg shadow-rose-500/10"
-                            : "border-white/15 bg-gradient-to-br from-black/40 to-black/20"
-                            }`}
-                    >
-                        <div className="flex items-center justify-between text-[0.65rem] font-bold uppercase tracking-wider mb-2">
-                            <span className={skill.proficient ? "text-rose-300" : "text-white/60"}>{skill.label}</span>
-                            <span className="text-white/50">{skill.ability.toUpperCase()}</span>
+                                    <div>
+                                        <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/60">Skill Checks</h2>
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            {skillSummaries.map((skill) => (
+                                                <div
+                                                    key={skill.key}
+                                                    className={`rounded-xl border px-4 py-3 transition ${skill.proficient
+                                                        ? "border-rose-400/60 bg-rose-400/15 shadow-lg shadow-rose-500/10"
+                                                        : "border-white/15 bg-gradient-to-br from-black/40 to-black/20"
+                                                        }`}
+                                                >
+                                                    <div className="flex items-center justify-between text-[0.65rem] font-bold uppercase tracking-wider mb-2">
+                                                        <span className={skill.proficient ? "text-rose-300" : "text-white/60"}>{skill.label}</span>
+                                                        <span className="text-white/50">{skill.ability.toUpperCase()}</span>
+                                                    </div>
+                                                    <div className="flex items-baseline justify-between gap-3">
+                                                        <span className="text-2xl font-bold text-white">{formatModifier(skill.total)}</span>
+                                                        <span className="text-xs text-white/70">
+                                                            {skill.proficient ? `✓ +${proficiencyBonus}` : `${formatModifier(skill.base)}`}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div className="flex items-baseline justify-between gap-3">
-                            <span className="text-2xl font-bold text-white">{formatModifier(skill.total)}</span>
-                            <span className="text-xs text-white/70">
-                                {skill.proficient ? `✓ +${proficiencyBonus}` : `${formatModifier(skill.base)}`}
-                            </span>
+                    </article>
+
+                    <aside className="space-y-6">
+                        <div className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-sm">
+                            <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/70">Character Info</h2>
+                            <dl className="mt-4 space-y-3.5 text-sm">
+                                <div>
+                                    <dt className="text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Owner</dt>
+                                    <dd className="text-white">{actor.name ?? actor.email ?? "Adventurer"}</dd>
+                                </div>
+                                <div>
+                                    <dt className="text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Generation</dt>
+                                    <dd className="text-white">{generationLabels[character.generationMethod]}</dd>
+                                </div>
+                                <div>
+                                    <dt className="text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Created</dt>
+                                    <dd className="text-white">{character.createdAt.toLocaleDateString()}</dd>
+                                </div>
+                                <div>
+                                    <dt className="text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Last Updated</dt>
+                                    <dd className="text-white">{character.updatedAt.toLocaleDateString()}</dd>
+                                </div>
+                                <div className="pt-2 border-t border-white/10">
+                                    <dt className="text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Level Progress</dt>
+                                    <dd className="text-white font-semibold">{levelSummary}</dd>
+                                    <dd className="mt-1 text-xs text-white/60">{levelDetail}</dd>
+                                </div>
+                            </dl>
                         </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    </div>
-                            </div >
-                        </div >
-                    </article >
 
-        <aside className="space-y-6">
-            <div className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-sm">
-                <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/70">Character Info</h2>
-                <dl className="mt-4 space-y-3.5 text-sm">
-                    <div>
-                        <dt className="text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Owner</dt>
-                        <dd className="text-white">{actor.name ?? actor.email ?? "Adventurer"}</dd>
-                    </div>
-                    <div>
-                        <dt className="text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Generation</dt>
-                        <dd className="text-white">{generationLabels[character.generationMethod]}</dd>
-                    </div>
-                    <div>
-                        <dt className="text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Created</dt>
-                        <dd className="text-white">{character.createdAt.toLocaleDateString()}</dd>
-                    </div>
-                    <div>
-                        <dt className="text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Last Updated</dt>
-                        <dd className="text-white">{character.updatedAt.toLocaleDateString()}</dd>
-                    </div>
-                    <div className="pt-2 border-t border-white/10">
-                        <dt className="text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Level Progress</dt>
-                        <dd className="text-white font-semibold">{levelSummary}</dd>
-                        <dd className="mt-1 text-xs text-white/60">{levelDetail}</dd>
-                    </div>
-                </dl>
-            </div>
-
-        </aside>
-                </section >
+                    </aside>
+                </section>
 
                 <section className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-sm">
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -491,7 +490,7 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                         </span>
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
-                        {(Object.entries(proficiencies) as [keyof ProficiencyBuckets, string[]][]).map(([key, list]) => (
+                        {(Object.entries(proficiencies) as [keyof CharacterProficiencies, string[]][]).map(([key, list]) => (
                             <article key={key} className="rounded-xl border border-white/15 bg-gradient-to-br from-black/40 to-black/20 p-4">
                                 <p className="mb-3 text-sm font-bold uppercase tracking-wider text-white/60">{key.charAt(0).toUpperCase() + key.slice(1)}</p>
                                 {list.length ? (
@@ -505,209 +504,12 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                                 ) : (
                                     <p className="text-sm text-white/40">None</p>
                                 )}
-=======
-
-                                <div>
-                    <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/60">Combat Stats</h2>
-                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                        {[
-                            {
-                                label: "Armor Class",
-                                value: armorClass,
-                                detail: armorSegments,
-                            },
-                            {
-                                label: "Initiative",
-                                value: formatModifier(abilityModifiers.dex),
-                                detail: "Dexterity modifier",
-                            },
-                            {
-                                label: "Speed",
-                                value: `${walkingSpeed} ft`,
-                                detail: "Walking speed",
-                            },
-                            {
-                                label: "Proficiency",
-                                value: `+${proficiencyBonus}`,
-                                detail: `Level ${character.level}`,
-                            },
-                            {
-                                label: "Hit Dice",
-                                value: hitDiceDisplay,
-                                detail: character.charClass || "Default d8",
-                            },
-                            {
-                                label: "Max HP",
-                                value: maxHpEstimate,
-                                detail: `Full die + avg rolls + CON mod`,
-                            },
-                        ].map((stat) => (
-                            <div key={stat.label} className="rounded-2xl border border-white/15 bg-gradient-to-br from-black/40 to-black/20 p-4">
-                                <p className="text-[0.65rem] font-bold uppercase tracking-wider text-white/60 mb-2">{stat.label}</p>
-                                <p className="text-3xl font-bold text-white">{stat.value}</p>
-                                <p className="mt-1.5 text-xs text-white/60">{stat.detail}</p>
-                            </div>
+                            </article>
                         ))}
                     </div>
-
-                    <div>
-                        <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/60">Skill Checks</h2>
-                        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-                            {skillSummaries.map((skill) => (
-                                <div
-                                    key={skill.key}
-                                    className={`rounded-xl border px-3 py-2.5 transition ${skill.proficient
-                                        ? "border-rose-400/60 bg-rose-400/15 shadow-lg shadow-rose-500/10"
-                                        : "border-white/15 bg-gradient-to-br from-black/40 to-black/20"
-                                        }`}
-                                >
-                                    <div className="flex items-center justify-between text-[0.6rem] font-bold uppercase tracking-wider mb-1.5">
-                                        <span className={skill.proficient ? "text-rose-300" : "text-white/60"}>{skill.label}</span>
-                                        <span className="text-white/50">{skill.ability.toUpperCase()}</span>
-                                    </div>
-                                    <div className="flex items-baseline justify-between gap-2">
-                                        <span className="text-xl font-bold text-white">{formatModifier(skill.total)}</span>
-                                        <span className="text-[0.65rem] text-white/70">
-                                            {skill.proficient ? `Prof +${proficiencyBonus}` : `${formatModifier(skill.base)}`}
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
->>>>>>> Stashed changes
-            </article>
-
-            <aside className="space-y-6">
-                <div className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-sm">
-                    <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/70">Character Info</h2>
-                    <dl className="mt-4 space-y-3.5 text-sm">
-                        <div>
-                            <dt className="text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Owner</dt>
-                            <dd className="text-white">{actor.name ?? actor.email ?? "Adventurer"}</dd>
-                        </div>
-                        <div>
-                            <dt className="text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Generation</dt>
-                            <dd className="text-white">{generationLabels[character.generationMethod]}</dd>
-                        </div>
-                        <div>
-                            <dt className="text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Created</dt>
-                            <dd className="text-white">{character.createdAt.toLocaleDateString()}</dd>
-                        </div>
-                        <div>
-                            <dt className="text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Last Updated</dt>
-                            <dd className="text-white">{character.updatedAt.toLocaleDateString()}</dd>
-                        </div>
-                        <div className="pt-2 border-t border-white/10">
-                            <dt className="text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Level Progress</dt>
-                            <dd className="text-white font-semibold">{levelSummary}</dd>
-                            <dd className="mt-1 text-xs text-white/60">{levelDetail}</dd>
-                        </div>
-                    </dl>
-                </div>
-
-            </aside>
-                        </section>
-
-        <section className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-sm">
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-                <div>
-                    <h2 className="text-xl font-bold text-white">Spellbook</h2>
-                    <p className="mt-1 text-sm text-white/70">Known spells and abilities</p>
-                </div>
-                <div className="flex items-center gap-4">
-                    <span className="rounded-xl border border-blue-400/40 bg-blue-400/10 px-4 py-2 text-sm font-bold text-blue-300">
-                        {spells.length} Spells
-                    </span>
-                    <Link
-                        href={`/characters/${character.id}/spells`}
-                        className="text-sm font-semibold text-rose-300 hover:text-rose-200 transition"
-                    >
-                        Manage →
-                    </Link>
-                </div>
-            </div>
-            {spells.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-white/20 bg-black/20 p-8 text-center">
-                    <p className="text-white/60">No spells learned yet.</p>
-                    <Link
-                        href={`/characters/${character.id}/spells`}
-                        className="mt-3 inline-block text-sm font-semibold text-rose-300 hover:text-rose-200 transition"
-                    >
-                        Add your first spell →
-                    </Link>
-                </div>
-            ) : (
-                <div className="grid gap-4 sm:grid-cols-2">
-                    {spells.map((spell) => (
-                        <article key={spell.id} className="rounded-xl border border-white/15 bg-gradient-to-br from-black/40 to-black/20 p-4">
-                            <div className="flex items-start justify-between gap-3 mb-3">
-                                <div>
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className="rounded-lg bg-blue-400/20 px-2 py-0.5 text-xs font-bold text-blue-300">
-                                            Lvl {spell.level}
-                                        </span>
-                                        {spell.school && (
-                                            <span className="text-xs text-white/50">{spell.school}</span>
-                                        )}
-                                    </div>
-                                    <h3 className="text-lg font-bold text-white">{spell.name}</h3>
-                                </div>
-                            </div>
-                            <div className="flex flex-wrap gap-2 text-xs mb-3">
-                                <span className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-white/70">
-                                    {SPELL_AFFINITY_LABELS[spell.affinity]}
-                                </span>
-                                <span className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-white/70">
-                                    {spell.range ?? "Self"}
-                                </span>
-                                {spell.damage && (
-                                    <span className="rounded-lg border border-rose-400/30 bg-rose-400/10 px-2.5 py-1 text-rose-300">
-                                        {spell.damage}
-                                    </span>
-                                )}
-                            </div>
-                            {spell.description && (
-                                <p className="text-sm text-white/70 line-clamp-2">{spell.description}</p>
-                            )}
-                        </article>
-                    ))}
-                </div>
-            )}
-        </section>
-
-        <section className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-sm">
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-                <div>
-                    <h2 className="text-xl font-bold text-white">Proficiencies & Languages</h2>
-                    <p className="mt-1 text-sm text-white/70">Skills, weapons, armor, and languages</p>
-                </div>
-                <span className="rounded-xl border border-purple-400/40 bg-purple-400/10 px-4 py-2 text-sm font-bold text-purple-300">
-                    {Object.values(proficiencies).reduce((total, list) => total + list.length, 0)} Total
-                </span>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-                {(Object.entries(proficiencies) as [keyof ProficiencyBuckets, string[]][]).map(([key, list]) => (
-                    <article key={key} className="rounded-xl border border-white/15 bg-gradient-to-br from-black/40 to-black/20 p-4">
-                        <p className="mb-3 text-sm font-bold uppercase tracking-wider text-white/60">{key.charAt(0).toUpperCase() + key.slice(1)}</p>
-                        {list.length ? (
-                            <div className="flex flex-wrap gap-2">
-                                {list.map((item) => (
-                                    <span key={item} className="rounded-lg border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/80">
-                                        {item}
-                                    </span>
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="text-sm text-white/40">None</p>
-                        )}
-                    </article>
-                ))}
-            </div>
-        </section>
-                    </main >
-                </div >
-                );
+                </section>
+            </main>
+        </div>
+    );
 }
 

@@ -16,6 +16,8 @@ import {
     calculatePointBuyCost,
     getIncrementalPointCost,
 } from "@/lib/point-buy";
+import type { ClassOption } from "@/lib/classes/load-classes";
+import { getClassOptions } from "@/lib/classes/load-classes";
 
 type AbilityGenerationMethod = "POINT_BUY" | "RANDOM";
 
@@ -100,20 +102,7 @@ interface BackgroundOption extends BaseOption {
     proficiencies: ProficiencyBlock;
 }
 
-interface ClassOption extends BaseOption {
-    proficiencies: {
-        armor: string[];
-        weapons: string[];
-        tools: string[];
-        skills: {
-            fixed: string[];
-            choices?: {
-                count: number;
-                options: string[];
-            };
-        };
-    };
-}
+// ClassOption interface is now imported from @/lib/classes/load-classes
 
 function dedupeList(values: string[]) {
     return Array.from(new Set(values.filter((value) => value && value.trim().length > 0))).map((value) => value.trim());
@@ -240,20 +229,7 @@ const alignmentOptions = [
     { label: "Chaotic Evil", value: "Chaotic Evil", description: "Sows destruction for personal whim." },
 ];
 
-const classOptions = [
-    { label: "Barbarian", value: "Barbarian", description: "Rage-fueled frontline bruiser." },
-    { label: "Bard", value: "Bard", description: "Versatile support with spellcraft and song." },
-    { label: "Cleric", value: "Cleric", description: "Divine caster anchoring any party." },
-    { label: "Druid", value: "Druid", description: "Shapeshifter commanding primal magic." },
-    { label: "Fighter", value: "Fighter", description: "Weapon master with unmatched flexibility." },
-    { label: "Monk", value: "Monk", description: "Martial artist channeling ki." },
-    { label: "Paladin", value: "Paladin", description: "Oath-bound warrior with radiant smites." },
-    { label: "Ranger", value: "Ranger", description: "Skilled scout with nature magic." },
-    { label: "Rogue", value: "Rogue", description: "Stealth expert and crit fisher." },
-    { label: "Sorcerer", value: "Sorcerer", description: "Innate arcane talent, metamagic tricks." },
-    { label: "Warlock", value: "Warlock", description: "Pact mage with eldritch invocations." },
-    { label: "Wizard", value: "Wizard", description: "Prepared arcane scholar with vast spellbooks." },
-];
+const classOptions = getClassOptions();
 
 const abilityMeta: Record<AbilityKey, { label: string; summary: string }> = {
     str: { label: "Strength", summary: "Melee damage and athletics" },
@@ -1099,22 +1075,105 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                     )}
 
                     {currentStep.id === "class" && (
-                        <div className="mt-6 grid gap-3 md:grid-cols-3">
-                            {classOptions.map((option) => {
-                                const active = formState.charClass === option.value;
-                                return (
-                                    <button
-                                        type="button"
-                                        key={option.value}
-                                        onClick={() => setFormState((prev) => ({ ...prev, charClass: option.value }))}
-                                        className={`rounded-2xl border px-4 py-4 text-left transition ${active ? "border-rose-300 bg-rose-300/10" : "border-white/15 bg-black/30 hover:border-white/30"
-                                            }`}
-                                    >
-                                        <p className="text-sm font-semibold text-white">{option.label}</p>
-                                        <p className="mt-1 text-xs text-white/70">{option.description}</p>
-                                    </button>
-                                );
-                            })}
+                        <div className="mt-6 flex flex-col gap-6 lg:flex-row">
+                            <div className="grid gap-3 md:grid-cols-3 lg:w-2/3">
+                                {classOptions.map((option) => {
+                                    const active = formState.charClass === option.value;
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={option.value}
+                                            onClick={() => setFormState((prev) => ({ ...prev, charClass: option.value }))}
+                                            onMouseEnter={() => setHoveredBackground(option.value)}
+                                            onMouseLeave={() => setHoveredBackground(null)}
+                                            onFocus={() => setHoveredBackground(option.value)}
+                                            onBlur={() => setHoveredBackground(null)}
+                                            className={`rounded-2xl border px-4 py-4 text-left transition ${active ? "border-rose-300 bg-rose-300/10" : "border-white/15 bg-black/30 hover:border-white/30"
+                                                }`}
+                                        >
+                                            <p className="text-sm font-semibold text-white">{option.label}</p>
+                                            <p className="mt-1 text-xs text-white/70">{option.description}</p>
+                                            <div className="mt-2 flex items-center gap-2 text-[0.6rem] uppercase tracking-[0.3em] text-white/50">
+                                                <span>d{option.hitDie} HD</span>
+                                                <span>•</span>
+                                                <span>{option.savingThrows.join(", ")}</span>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <div className="lg:w-1/3">
+                                {(() => {
+                                    const selectedClass =
+                                        classOptions.find((option) => option.value === (hoveredBackground ?? formState.charClass)) ??
+                                        classOptions[0];
+                                    
+                                    const hasSkillChoices = selectedClass.proficiencies.skills.choices;
+                                    const hasFixedSkills = selectedClass.proficiencies.skills.fixed.length > 0;
+                                    const hasArmor = selectedClass.proficiencies.armor.length > 0;
+                                    const hasWeapons = selectedClass.proficiencies.weapons.length > 0;
+                                    const hasTools = selectedClass.proficiencies.tools.length > 0;
+                                    
+                                    return (
+                                        <div className="rounded-2xl border border-white/15 bg-black/30 p-5 space-y-4">
+                                            <div>
+                                                <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Class Spotlight</p>
+                                                <p className="mt-2 text-lg font-semibold text-white">{selectedClass.label}</p>
+                                                <p className="mt-2 text-sm text-white/70">{selectedClass.detail}</p>
+                                            </div>
+                                            
+                                            <div className="space-y-3 pt-3 border-t border-white/10">
+                                                <div>
+                                                    <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Hit Die</p>
+                                                    <p className="mt-1 text-xs text-white/70">1d{selectedClass.hitDie} per level</p>
+                                                </div>
+                                                
+                                                <div>
+                                                    <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Saving Throws</p>
+                                                    <p className="mt-1 text-xs text-white/70">{selectedClass.savingThrows.join(", ")}</p>
+                                                </div>
+                                                
+                                                {hasArmor && (
+                                                    <div>
+                                                        <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Armor</p>
+                                                        <p className="mt-1 text-xs text-white/70">{selectedClass.proficiencies.armor.join(", ")}</p>
+                                                    </div>
+                                                )}
+                                                
+                                                {hasWeapons && (
+                                                    <div>
+                                                        <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Weapons</p>
+                                                        <p className="mt-1 text-xs text-white/70">{selectedClass.proficiencies.weapons.join(", ")}</p>
+                                                    </div>
+                                                )}
+                                                
+                                                {hasTools && (
+                                                    <div>
+                                                        <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Tools</p>
+                                                        <p className="mt-1 text-xs text-white/70">{selectedClass.proficiencies.tools.join(", ")}</p>
+                                                    </div>
+                                                )}
+                                                
+                                                {(hasSkillChoices || hasFixedSkills) && (
+                                                    <div>
+                                                        <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Skills</p>
+                                                        {hasFixedSkills && (
+                                                            <p className="mt-1 text-xs text-white/70">{selectedClass.proficiencies.skills.fixed.join(", ")}</p>
+                                                        )}
+                                                        {hasSkillChoices && (
+                                                            <p className="mt-1 text-xs text-white/70">
+                                                                Choose {hasSkillChoices.count} from: {hasSkillChoices.options.join(", ")}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            <p className="mt-3 text-xs text-white/50">Hover or select a class to update.</p>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
                         </div>
                     )}
 

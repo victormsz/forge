@@ -126,7 +126,6 @@ const ancestryOptions: AncestryOption[] = [
         detail: "Elven lineages gift keen senses, a trance-like meditative rest, and timeless lore passed down in song.",
         proficiencies: {
             ...EMPTY_PROFICIENCIES,
-            weapons: ["Longswords", "Shortswords", "Shortbows", "Longbows"],
             skills: ["Perception"],
             languages: ["Common", "Elvish"],
         },
@@ -150,7 +149,6 @@ const ancestryOptions: AncestryOption[] = [
         detail: "Halflings blend optimism with supernatural luck, slipping past giants and calamity with a grin.",
         proficiencies: {
             ...EMPTY_PROFICIENCIES,
-            skills: ["Stealth"],
             languages: ["Common", "Halfling"],
         },
     },
@@ -165,15 +163,45 @@ const ancestryOptions: AncestryOption[] = [
         },
     },
     {
-        label: "Orc",
-        value: "Orc",
-        description: "Relentless strength, perfect for frontline heroes.",
-        detail: "Orcs carry ancestral fury that converts into raw power and tireless endurance during extended fights.",
+        label: "Gnome",
+        value: "Gnome",
+        description: "Inventive tinkerers with sharp minds.",
+        detail: "Gnomes combine curiosity with cunning, excelling at magic and mechanics with centuries of accumulated wisdom.",
+        proficiencies: {
+            ...EMPTY_PROFICIENCIES,
+            languages: ["Common", "Gnomish"],
+        },
+    },
+    {
+        label: "Half-Elf",
+        value: "Half-Elf",
+        description: "Charismatic blend of two worlds.",
+        detail: "Half-elves inherit elven grace and human ambition, thriving in social situations and adapting to any role.",
+        proficiencies: {
+            ...EMPTY_PROFICIENCIES,
+            skills: ["Choose any two skills"],
+            languages: ["Common", "Elvish", "One additional language of your choice"],
+        },
+    },
+    {
+        label: "Half-Orc",
+        value: "Half-Orc",
+        description: "Relentless strength and savage endurance.",
+        detail: "Half-orcs combine orcish might with human versatility, refusing to fall and striking devastating blows.",
         proficiencies: {
             ...EMPTY_PROFICIENCIES,
             skills: ["Intimidation"],
-            weapons: ["Martial weapons"],
-            languages: ["Common", "Orcish"],
+            languages: ["Common", "Orc"],
+        },
+    },
+    {
+        label: "Tiefling",
+        value: "Tiefling",
+        description: "Infernal heritage with innate magic.",
+        detail: "Tieflings carry devilish blood that grants fire resistance and dark spellcasting, often facing prejudice with defiance.",
+        proficiencies: {
+            ...EMPTY_PROFICIENCIES,
+            languages: ["Common", "Infernal"],
         },
     },
 ];
@@ -245,6 +273,7 @@ const baseSteps = [
     { id: "ancestry", title: "Choose Ancestry", description: "Pick the people and culture that shaped them." },
     { id: "background", title: "Select Background", description: "Ground them in a life before adventuring." },
     { id: "class", title: "Select Class", description: "Lock their primary toolkit for adventures." },
+    { id: "subclass", title: "Choose Subclass", description: "Select your specialization or divine domain." },
     { id: "alignment", title: "Set Alignment", description: "Capture their guiding ethos." },
 ];
 
@@ -303,6 +332,7 @@ interface WizardFormState {
     method: AbilityGenerationMethod;
     ancestry: string;
     charClass: string;
+    subclass: string;
     background: string;
     alignment: string;
     abilityScores: AbilityScores;
@@ -328,6 +358,7 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
         method: abilityOptions[0].value,
         ancestry: "",
         charClass: "",
+        subclass: "",
         background: "",
         alignment: "",
         abilityScores: { ...DEFAULT_ABILITY_SCORES },
@@ -583,7 +614,9 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
             return;
         }
         setStep((prev) => {
-            const nextIndex = Math.min(prev + 1, activeSteps.length - 1);
+            let nextIndex = Math.min(prev + 1, activeSteps.length - 1);
+
+            // Auto-roll dice pools when entering random abilities step
             if (
                 activeSteps[nextIndex]?.id === "random-abilities" &&
                 !manualEntryMode &&
@@ -591,6 +624,16 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
             ) {
                 rollAllPools();
             }
+
+            // Skip subclass step if the selected class has no subclasses
+            if (activeSteps[nextIndex]?.id === "subclass") {
+                const selectedClass = classOptions.find((c) => c.value === formState.charClass);
+                if (!selectedClass?.subclasses || selectedClass.subclasses.length === 0) {
+                    // Skip to next step
+                    nextIndex = Math.min(nextIndex + 1, activeSteps.length - 1);
+                }
+            }
+
             return nextIndex;
         });
     };
@@ -608,7 +651,20 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
             setManualScores(createManualScoreState());
         }
 
-        setStep((prev) => Math.max(prev - 1, 0));
+        setStep((prev) => {
+            let prevIndex = Math.max(prev - 1, 0);
+
+            // Skip subclass step backward if the selected class has no subclasses
+            if (activeSteps[prevIndex]?.id === "subclass") {
+                const selectedClass = classOptions.find((c) => c.value === formState.charClass);
+                if (!selectedClass?.subclasses || selectedClass.subclasses.length === 0) {
+                    // Skip to previous step
+                    prevIndex = Math.max(prevIndex - 1, 0);
+                }
+            }
+
+            return prevIndex;
+        });
     };
 
     const canAdvance = (() => {
@@ -627,6 +683,14 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                 return Boolean(formState.background);
             case "class":
                 return Boolean(formState.charClass);
+            case "subclass": {
+                const selectedClass = classOptions.find((c) => c.value === formState.charClass);
+                // If class has no subclasses, skip this step
+                if (!selectedClass?.subclasses || selectedClass.subclasses.length === 0) {
+                    return true;
+                }
+                return Boolean(formState.subclass);
+            }
             case "alignment":
                 return Boolean(formState.alignment);
             default:
@@ -634,11 +698,21 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
         }
     })();
 
-    const canSubmit =
-        formState.name.trim().length >= MIN_NAME_LENGTH &&
-        Boolean(formState.ancestry) &&
-        Boolean(formState.background) &&
-        Boolean(formState.charClass) &&
+    const canSubmit = (() => {
+        const selectedClass = classOptions.find((c) => c.value === formState.charClass);
+        const needsSubclass = selectedClass?.subclasses && selectedClass.subclasses.length > 0;
+
+        return (
+            formState.name.trim().length >= MIN_NAME_LENGTH &&
+            Boolean(formState.ancestry) &&
+            Boolean(formState.background) &&
+            Boolean(formState.charClass) &&
+            (!needsSubclass || Boolean(formState.subclass)) &&
+            Boolean(formState.alignment) &&
+            generationReady
+        );
+    })();
+    Boolean(formState.charClass) &&
         Boolean(formState.alignment) &&
         generationReady;
 
@@ -674,6 +748,7 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
             <input type="hidden" name="method" value={formState.method} />
             <input type="hidden" name="ancestry" value={formState.ancestry} />
             <input type="hidden" name="class" value={formState.charClass} />
+            <input type="hidden" name="subclass" value={formState.subclass} />
             <input type="hidden" name="background" value={formState.background} />
             <input type="hidden" name="alignment" value={formState.alignment} />
             <input type="hidden" name="abilityScores" value={JSON.stringify(formState.abilityScores)} />
@@ -700,6 +775,9 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                         <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
                             <p className="text-[0.6rem] uppercase tracking-[0.4em] text-white/60">Class</p>
                             <p className="mt-1 text-lg font-semibold text-white">{formState.charClass || "Pending"}</p>
+                            {formState.subclass && (
+                                <p className="mt-1 text-xs text-white/60">{formState.subclass}</p>
+                            )}
                         </div>
                         <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
                             <p className="text-[0.6rem] uppercase tracking-[0.4em] text-white/60">Background</p>
@@ -1083,7 +1161,7 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                                         <button
                                             type="button"
                                             key={option.value}
-                                            onClick={() => setFormState((prev) => ({ ...prev, charClass: option.value }))}
+                                            onClick={() => setFormState((prev) => ({ ...prev, charClass: option.value, subclass: "" }))}
                                             onMouseEnter={() => setHoveredBackground(option.value)}
                                             onMouseLeave={() => setHoveredBackground(null)}
                                             onFocus={() => setHoveredBackground(option.value)}
@@ -1176,6 +1254,73 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                             </div>
                         </div>
                     )}
+
+                    {currentStep.id === "subclass" && (() => {
+                        const selectedClass = classOptions.find((c) => c.value === formState.charClass);
+                        const subclasses = selectedClass?.subclasses || [];
+
+                        // If no subclasses available, skip this step
+                        if (subclasses.length === 0) {
+                            return (
+                                <div className="mt-6 rounded-2xl border border-white/15 bg-black/30 p-6 text-center">
+                                    <p className="text-sm text-white/70">This class has no level 1 subclass choices.</p>
+                                    <p className="mt-2 text-xs text-white/50">Click Next to continue.</p>
+                                </div>
+                            );
+                        }
+
+                        const flavorText = subclasses[0]?.flavorText || "Subclass";
+
+                        return (
+                            <div className="mt-6 flex flex-col gap-6 lg:flex-row">
+                                <div className="grid gap-3 md:grid-cols-2 lg:w-2/3">
+                                    {subclasses.map((option) => {
+                                        const active = formState.subclass === option.name;
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={option.index}
+                                                onClick={() => setFormState((prev) => ({ ...prev, subclass: option.name }))}
+                                                onMouseEnter={() => setHoveredBackground(option.name)}
+                                                onMouseLeave={() => setHoveredBackground(null)}
+                                                onFocus={() => setHoveredBackground(option.name)}
+                                                onBlur={() => setHoveredBackground(null)}
+                                                className={`rounded-2xl border px-4 py-4 text-left transition ${active ? "border-rose-300 bg-rose-300/10" : "border-white/15 bg-black/30 hover:border-white/30"
+                                                    }`}
+                                            >
+                                                <p className="text-sm font-semibold text-white">{option.name}</p>
+                                                <p className="mt-1 text-xs text-white/70">
+                                                    {option.description.length > 150
+                                                        ? `${option.description.substring(0, 150)}...`
+                                                        : option.description}
+                                                </p>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <div className="lg:w-1/3">
+                                    {(() => {
+                                        const hoveredSubclass = subclasses.find(
+                                            (s) => s.name === (hoveredBackground ?? formState.subclass)
+                                        ) ?? subclasses[0];
+
+                                        return (
+                                            <div className="rounded-2xl border border-white/15 bg-black/30 p-5 space-y-4">
+                                                <div>
+                                                    <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">{flavorText}</p>
+                                                    <p className="mt-2 text-lg font-semibold text-white">{hoveredSubclass.name}</p>
+                                                    <p className="mt-2 text-sm text-white/70 leading-relaxed">{hoveredSubclass.description}</p>
+                                                </div>
+                                                <p className="mt-3 text-xs text-white/50 pt-3 border-t border-white/10">
+                                                    Hover or select a {flavorText.toLowerCase()} to update.
+                                                </p>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {currentStep.id === "alignment" && (
                         <div className="mt-6 grid gap-3 md:grid-cols-3">

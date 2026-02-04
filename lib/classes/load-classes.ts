@@ -1,4 +1,5 @@
 import classesData from "@/db/2014/5e-SRD-Classes.json";
+import subclassesData from "@/db/2014/5e-SRD-Subclasses.json";
 
 export interface ProficiencyChoice {
     desc: string;
@@ -36,6 +37,20 @@ export interface ClassData {
     }>;
 }
 
+export interface Subclass {
+    index: string;
+    name: string;
+    desc: string[];
+    subclass_flavor: string;
+}
+
+export interface SubclassOption {
+    index: string;
+    name: string;
+    description: string;
+    flavorText: string;
+}
+
 export interface ClassOption {
     label: string;
     value: string;
@@ -55,6 +70,7 @@ export interface ClassOption {
         };
     };
     savingThrows: string[];
+    subclasses?: SubclassOption[];
 }
 
 const classDescriptions: Record<string, string> = {
@@ -113,6 +129,25 @@ function categorizeProficiency(prof: Proficiency): { category: "armor" | "weapon
 }
 
 export function getClassOptions(): ClassOption[] {
+    // Create a map of subclasses by class index
+    const subclassesByClass = new Map<string, SubclassOption[]>();
+
+    (subclassesData as any[]).forEach((subclass) => {
+        const classIndex = subclass.class?.index;
+        if (!classIndex) return;
+
+        if (!subclassesByClass.has(classIndex)) {
+            subclassesByClass.set(classIndex, []);
+        }
+
+        subclassesByClass.get(classIndex)!.push({
+            index: subclass.index,
+            name: subclass.name,
+            description: subclass.desc?.[0] || `The ${subclass.name} ${subclass.subclass_flavor}.`,
+            flavorText: subclass.subclass_flavor || "Subclass",
+        });
+    });
+
     return (classesData as ClassData[]).map((classData) => {
         const armorProfs: string[] = [];
         const weaponProfs: string[] = [];
@@ -154,6 +189,9 @@ export function getClassOptions(): ClassOption[] {
         // Extract saving throw names
         const savingThrows = classData.saving_throws.map((st) => st.name);
 
+        // Get subclasses for this class
+        const subclasses = subclassesByClass.get(classData.index);
+
         return {
             label: classData.name,
             value: classData.name,
@@ -170,6 +208,7 @@ export function getClassOptions(): ClassOption[] {
                 },
             },
             savingThrows,
+            subclasses,
         };
     });
 }

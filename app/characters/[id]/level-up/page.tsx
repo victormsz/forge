@@ -93,6 +93,83 @@ export default async function LevelUpPage({ params, searchParams }: LevelUpPageP
                                 </ul>
                             </div>
                         )}
+                        {requirement.spellcasting && (
+                            <div className="mt-4 rounded-2xl border border-blue-400/30 bg-blue-500/10 p-4">
+                                <h2 className="mb-3 text-sm font-semibold text-blue-200">Spellcasting at Level {nextLevel}</h2>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    {requirement.spellcasting.cantrips_known !== undefined && (
+                                        <div className="rounded-xl border border-blue-400/20 bg-black/20 p-3">
+                                            <dt className="text-xs uppercase tracking-wider text-blue-200/70">Cantrips Known</dt>
+                                            <dd className="mt-1 text-lg font-semibold text-blue-100">{requirement.spellcasting.cantrips_known}</dd>
+                                        </div>
+                                    )}
+                                    {requirement.spellcasting.spells_known !== undefined && (
+                                        <div className="rounded-xl border border-blue-400/20 bg-black/20 p-3">
+                                            <dt className="text-xs uppercase tracking-wider text-blue-200/70">Spells Known</dt>
+                                            <dd className="mt-1 text-lg font-semibold text-blue-100">{requirement.spellcasting.spells_known}</dd>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((level) => {
+                                        const slots = requirement.spellcasting?.[`spell_slots_level_${level}` as keyof typeof requirement.spellcasting];
+                                        if (slots === undefined || slots === 0) return null;
+                                        return (
+                                            <div key={level} className="rounded-lg border border-blue-400/20 bg-black/20 px-2 py-1.5 text-center">
+                                                <dt className="text-[10px] uppercase tracking-wider text-blue-200/60">Lvl {level}</dt>
+                                                <dd className="text-sm font-semibold text-blue-100">{slots}</dd>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                        {requirement.classSpecific && Object.keys(requirement.classSpecific).length > 0 && (
+                            <div className="mt-4 rounded-2xl border border-purple-400/30 bg-purple-500/10 p-4">
+                                <h2 className="mb-3 text-sm font-semibold text-purple-200">Class Resources at Level {nextLevel}</h2>
+                                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                    {Object.entries(requirement.classSpecific)
+                                        .filter(([key]) => {
+                                            // Filter out complex nested arrays that are better shown elsewhere
+                                            return !key.includes("creating_spell_slots");
+                                        })
+                                        .map(([key, value]) => {
+                                            // Format the key into a readable label
+                                            const label = key
+                                                .split("_")
+                                                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                                                .join(" ");
+                                            
+                                            // Special formatting for certain values
+                                            let displayValue: string;
+                                            
+                                            if (key === "rage_count" && value === 9999) {
+                                                displayValue = "Unlimited";
+                                            } else if (typeof value === "boolean") {
+                                                displayValue = value ? "Yes" : "No";
+                                            } else if (typeof value === "number" && value % 1 !== 0) {
+                                                displayValue = `CR ${value}`;
+                                            } else if (typeof value === "object" && value !== null) {
+                                                // Handle nested objects like sneak_attack
+                                                if ("dice_count" in value && "dice_value" in value) {
+                                                    displayValue = `${value.dice_count}d${value.dice_value}`;
+                                                } else {
+                                                    displayValue = JSON.stringify(value);
+                                                }
+                                            } else {
+                                                displayValue = String(value);
+                                            }
+
+                                            return (
+                                                <div key={key} className="rounded-xl border border-purple-400/20 bg-black/20 p-3">
+                                                    <dt className="text-xs uppercase tracking-wider text-purple-200/70">{label}</dt>
+                                                    <dd className="mt-1 text-lg font-semibold text-purple-100">{displayValue}</dd>
+                                                </div>
+                                            );
+                                        })}
+                                </div>
+                            </div>
+                        )}
                     </header>
 
                     <dl className="mt-6 grid gap-3 sm:grid-cols-3">

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { SpellTargetShape } from "@prisma/client";
 
 import type { LevelUpChoicesMeta } from "@/lib/characters/types";
 import { getCurrentActor } from "@/lib/current-actor";
@@ -197,21 +196,6 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
         };
     });
     const spells = character.spells;
-    const shapeTotals: Record<SpellTargetShape, number> = {
-        SINGLE: 0,
-        AOE_CIRCLE: 0,
-        CONE: 0,
-        LINE: 0,
-        SQUARE: 0,
-    };
-
-    spells.forEach((spell) => {
-        shapeTotals[spell.shape] += 1;
-    });
-
-    const shapeEntries = (Object.entries(shapeTotals) as [SpellTargetShape, number][])
-        .filter(([, count]) => count > 0)
-        .sort(([, a], [, b]) => b - a);
 
     const levelLog = character.levelUpChoices as LevelUpChoicesMeta | null;
     const abilityIncreaseSummary = levelLog ? formatAbilityIncreases(levelLog.abilityIncreases) : null;
@@ -403,24 +387,6 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                             </dl>
                         </div>
 
-                        <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-white/70">Spell geometry</h2>
-                                <span className="text-xs text-white/60">{spells.length} templates</span>
-                            </div>
-                            {shapeEntries.length ? (
-                                <div className="mt-4 space-y-3">
-                                    {shapeEntries.map(([shape, count]) => (
-                                        <div key={shape} className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm">
-                                            <span className="text-white/80">{SPELL_SHAPE_LABELS[shape]}</span>
-                                            <span className="text-white font-semibold">{count}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="mt-4 text-sm text-white/60">No spell templates yet. Add spells to populate geometry insights.</p>
-                            )}
-                        </div>
                     </aside>
                 </section>
 

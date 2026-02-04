@@ -9,12 +9,14 @@ import { getLevelRequirement } from "@/lib/characters/leveling/level-requirement
 import { getHitDieValue } from "@/lib/characters/hit-dice";
 import { getCurrentActor } from "@/lib/current-actor";
 import { prisma } from "@/lib/prisma";
+import { HIT_DICE_ROLL_REQUIRED_MESSAGE } from "@/lib/characters/form-parsers";
 
 interface LevelUpPageProps {
     params: { id: string };
+    searchParams?: { error?: string };
 }
 
-export default async function LevelUpPage({ params }: LevelUpPageProps) {
+export default async function LevelUpPage({ params, searchParams }: LevelUpPageProps) {
     const actor = await getCurrentActor();
 
     if (!actor) {
@@ -60,6 +62,7 @@ export default async function LevelUpPage({ params }: LevelUpPageProps) {
     const abilitySlots = requirement.abilityScoreIncrements;
     const showFeatChoice = requirement.allowFeatChoice;
     const showSubclassChoice = requirement.requiresSubclass;
+    const showHitDiceError = searchParams?.error === "missing-hit-die";
 
     return (
         <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(250,232,214,0.15),_transparent_45%),_#050506] py-16 text-white">
@@ -92,6 +95,14 @@ export default async function LevelUpPage({ params }: LevelUpPageProps) {
 
                 <section className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
                     <form action={levelUpCharacter} className="space-y-6">
+                        {showHitDiceError && (
+                            <div
+                                role="alert"
+                                className="rounded-2xl border border-rose-400/50 bg-rose-500/10 px-4 py-3 text-sm text-rose-100"
+                            >
+                                {HIT_DICE_ROLL_REQUIRED_MESSAGE}
+                            </div>
+                        )}
                         <input type="hidden" name="characterId" value={character.id} />
 
                         {showSubclassChoice && (

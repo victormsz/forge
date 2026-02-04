@@ -27,6 +27,15 @@ const allowedMethods = new Set<AbilityGenerationMethod>([AbilityGenerationMethod
 const allowedShapes = new Set<SpellTargetShape>(Object.values(SpellTargetShape));
 const allowedAffinities = new Set<SpellTargetAffinity>(Object.values(SpellTargetAffinity));
 
+export const HIT_DICE_ROLL_REQUIRED_MESSAGE = "Roll your hit die before applying this level up.";
+
+export class MissingHitDiceRollError extends Error {
+    constructor() {
+        super(HIT_DICE_ROLL_REQUIRED_MESSAGE);
+        this.name = "MissingHitDiceRollError";
+    }
+}
+
 interface AbilityScoreBounds {
     min?: number;
     max?: number;
@@ -220,7 +229,7 @@ export function parseLevelUpFormData(formData: FormData): LevelUpInput {
     const hitDiceRoll = parsePositiveInteger(formData.get("hitDiceRoll"));
 
     if (hitDiceRoll === null) {
-        throw new Error("Roll your hit die before applying this level up.");
+        throw new MissingHitDiceRollError();
     }
 
     return {

@@ -3,7 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { parseCreateCharacterFormData, parseLevelUpFormData, parseAddSpellFormData, parseDeleteSpellFormData, parseToggleSpellPreparationFormData } from "@/lib/characters/form-parsers";
+import {
+    parseCreateCharacterFormData,
+    parseLevelUpFormData,
+    parseAddSpellFormData,
+    parseDeleteSpellFormData,
+    parseToggleSpellPreparationFormData,
+    MissingHitDiceRollError,
+} from "@/lib/characters/form-parsers";
 import { CharacterService } from "@/lib/characters/services/character-service";
 import { getCurrentActor } from "@/lib/current-actor";
 
@@ -43,7 +50,19 @@ export async function deleteCharacter(formData: FormData) {
 export async function levelUpCharacter(formData: FormData) {
     const actor = ensureActor(await getCurrentActor(), "Authentication required to level up characters.");
     const service = new CharacterService(actor);
-    const input = parseLevelUpFormData(formData);
+
+    let input: ReturnType<typeof parseLevelUpFormData>;
+    try {
+        input = parseLevelUpFormData(formData);
+    } catch (error) {
+        if (error instanceof MissingHitDiceRollError) {
+            const characterId = formData.get("characterId");
+            if (typeof characterId === "string" && characterId.trim().length > 0) {
+                redirect(`/characters/${characterId}/level-up?error=missing-hit-die`);
+            }
+        }
+        throw error;
+    }
 
     await service.levelUp(input);
     revalidatePath(`/characters/${input.characterId}`);

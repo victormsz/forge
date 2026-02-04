@@ -91,6 +91,7 @@ model Spell {
   description String?
   damage      String?
   isCustom    Boolean             @default(true)
+  isPrepared  Boolean             @default(false)
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
 

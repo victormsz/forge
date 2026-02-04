@@ -2,11 +2,19 @@ import { AbilityGenerationMethod } from "@prisma/client";
 
 import { MAX_CHARACTER_LEVEL } from "@/lib/characters/constants";
 import { getHitDieValue } from "@/lib/characters/hit-dice";
-import type { LevelUpInput, CreateCharacterInput, LevelUpChoicesMeta } from "@/lib/characters/types";
+import type {
+    LevelUpInput,
+    CreateCharacterInput,
+    LevelUpChoicesMeta,
+    AddSpellInput,
+    ToggleSpellPreparationInput,
+} from "@/lib/characters/types";
 import { assertPointBuyWithinBudget } from "@/lib/characters/form-parsers";
 import { getLevelRequirement } from "@/lib/characters/leveling/level-requirements";
 import type { CurrentActor } from "@/lib/current-actor";
 import { prisma } from "@/lib/prisma";
+import { findReferenceSpellById, spellSupportsClass } from "@/lib/spells/reference";
+import { getSpellPreparationProfile } from "@/lib/spells/class-preparation";
 
 export class CharacterService {
     constructor(private readonly actor: CurrentActor) {
@@ -127,5 +135,119 @@ export class CharacterService {
 
         await prisma.character.update({ where: { id: input.characterId }, data: { level: nextLevel, levelUpChoices } });
         return { updated: true, level: nextLevel };
+    }
+
+    async addSpell(input: AddSpellInput) {
+        if (this.actor.isGuest) {
+            throw new Error("Sign in to track spells.");
+        }
+
+        const character = await this.requireCharacter(input.characterId);
+
+        let spellName = input.name;
+        let spellLevel = input.level;
+        let spellRange = input.range ?? "Self";
+        let spellSchool = input.school;
+        let spellDescription = input.description;
+        const prepProfile = getSpellPreparationProfile(character.charClass);
+        const autoPrepared = prepProfile.mode !== "PREPARES_DAILY";
+
+        if (!input.isCustom) {
+            if (!input.referenceId) {
+                throw new Error("Select a spell from the SRD list or convert it to a custom entry.");
+            }
+
+            const reference = findReferenceSpellById(input.referenceId);
+
+            if (!reference) {
+                throw new Error("The selected spell could not be found. Refresh the library and try again.");
+            }
+
+            if (!spellSupportsClass(reference, character.charClass)) {
+                throw new Error(`${character.charClass ?? "This class"} cannot prepare ${reference.name}. Use the custom option if you need an exception.`);
+            }
+
+            spellName = reference.name;
+            spellLevel = reference.level;
+            spellRange = reference.range ?? "Self";
+            spellSchool = reference.school;
+            spellDescription = reference.description;
+        }
+
+        await prisma.spell.create({
+            data: {
+                characterId: character.id,
+                name: spellName,
+                level: spellLevel,
+                shape: input.shape,
+                affinity: input.affinity,
+                range: spellRange,
+                school: spellSchool,
+                description: spellDescription,
+                damage: input.damage,
+                isCustom: input.isCustom,
+                isPrepared: autoPrepared,
+            },
+        });
+
+        return character.id;
+    }
+
+    async deleteSpell(spellId: string) {
+        if (this.actor.isGuest) {
+            throw new Error("Guest access cannot modify spells.");
+        }
+
+        const spell = await prisma.spell.findUnique({
+            where: { id: spellId },
+            select: {
+                id: true,
+                characterId: true,
+                character: { select: { userId: true } },
+            },
+        });
+
+        if (!spell) {
+            throw new Error("Spell not found or access denied.");
+        }
+
+        this.ensureOwnership(spell.character.userId);
+        await prisma.spell.delete({ where: { id: spellId } });
+        return spell.characterId;
+    }
+
+    async toggleSpellPreparation(input: ToggleSpellPreparationInput) {
+        if (this.actor.isGuest) {
+            throw new Error("Guest access cannot modify spells.");
+        }
+
+        const spell = await prisma.spell.findUnique({
+            where: { id: input.spellId },
+            select: {
+                id: true,
+                characterId: true,
+                character: {
+                    select: {
+                        userId: true,
+                        charClass: true,
+                    },
+                },
+            },
+        });
+
+        if (!spell) {
+            throw new Error("Spell not found or access denied.");
+        }
+
+        this.ensureOwnership(spell.character.userId);
+
+        const profile = getSpellPreparationProfile(spell.character.charClass);
+
+        if (profile.mode !== "PREPARES_DAILY") {
+            throw new Error("This class does not track prepared spells. Every known spell is already ready to cast.");
+        }
+
+        await prisma.spell.update({ where: { id: input.spellId }, data: { isPrepared: input.isPrepared } });
+        return spell.characterId;
     }
 }

@@ -1,4 +1,4 @@
-import type { AbilityGenerationMethod } from "@prisma/client";
+import type { AbilityGenerationMethod, SpellTargetAffinity, SpellTargetShape } from "@prisma/client";
 
 import type { AbilityKey, AbilityScores } from "@/lib/point-buy";
 
@@ -39,6 +39,26 @@ export interface LevelUpChoicesMeta extends LevelUpInput {
     fromLevel: number;
     toLevel: number;
     appliedAt: string;
+}
+
+export interface AddSpellInput {
+    characterId: string;
+    name: string;
+    level: number;
+    shape: SpellTargetShape;
+    affinity: SpellTargetAffinity;
+    range: string | null;
+    school: string | null;
+    description: string | null;
+    damage: string | null;
+    referenceId: string | null;
+    isCustom: boolean;
+}
+
+export interface ToggleSpellPreparationInput {
+    spellId: string;
+    characterId: string;
+    isPrepared: boolean;
 }
 
 export const EMPTY_PROFICIENCIES: CharacterProficiencies = {

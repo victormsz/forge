@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { SpellTargetAffinity, SpellTargetShape } from "@prisma/client";
+import { SpellTargetShape } from "@prisma/client";
 
 import type { LevelUpChoicesMeta } from "@/lib/characters/types";
 import { getCurrentActor } from "@/lib/current-actor";
 import { prisma } from "@/lib/prisma";
 import { ABILITY_KEYS, type AbilityKey } from "@/lib/point-buy";
 import { calculateMaxHp, getHitDieValue } from "@/lib/characters/hit-dice";
+import { SPELL_AFFINITY_LABELS, SPELL_SHAPE_LABELS } from "@/lib/spells/labels";
 
 export const metadata: Metadata = {
     title: "ForgeSheet | Character Sheet",
@@ -26,21 +27,6 @@ const abilityDetails: Record<AbilityKey, { label: string; blurb: string }> = {
 const generationLabels = {
     POINT_BUY: "Point Buy",
     RANDOM: "Random Rolls",
-};
-
-const shapeLabels: Record<SpellTargetShape, string> = {
-    SINGLE: "Single Target",
-    AOE_CIRCLE: "Area · Circle",
-    CONE: "Cone",
-    LINE: "Line",
-    SQUARE: "Square",
-};
-
-const affinityLabels: Record<SpellTargetAffinity, string> = {
-    FRIENDLY: "Friendly",
-    HOSTILE: "Hostile",
-    ALL: "All Creatures",
-    ENVIRONMENT: "Environment",
 };
 
 const SKILL_CONFIG = [
@@ -271,6 +257,12 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                             Back to roster
                         </Link>
                         <Link
+                            href={`/characters/${character.id}/spells`}
+                            className="rounded-full border border-white/20 px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:border-rose-200"
+                        >
+                            Manage spells
+                        </Link>
+                        <Link
                             href={`/characters/${character.id}/level-up`}
                             className="rounded-full border border-emerald-300/60 px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-200 transition hover:bg-emerald-400/10"
                         >
@@ -362,8 +354,8 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                                         <div
                                             key={skill.key}
                                             className={`rounded-2xl border px-4 py-3 ${skill.proficient
-                                                    ? "border-rose-300/60 bg-rose-300/10"
-                                                    : "border-white/10 bg-black/30"
+                                                ? "border-rose-300/60 bg-rose-300/10"
+                                                : "border-white/10 bg-black/30"
                                                 }`}
                                         >
                                             <div className="flex items-center justify-between text-[0.6rem] uppercase tracking-[0.3em] text-white/60">
@@ -420,7 +412,7 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                                 <div className="mt-4 space-y-3">
                                     {shapeEntries.map(([shape, count]) => (
                                         <div key={shape} className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm">
-                                            <span className="text-white/80">{shapeLabels[shape]}</span>
+                                            <span className="text-white/80">{SPELL_SHAPE_LABELS[shape]}</span>
                                             <span className="text-white font-semibold">{count}</span>
                                         </div>
                                     ))}
@@ -452,11 +444,11 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                                             <h3 className="text-xl font-semibold text-white">{spell.name}</h3>
                                         </div>
                                         <span className="rounded-full border border-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white/80">
-                                            {shapeLabels[spell.shape]}
+                                            {SPELL_SHAPE_LABELS[spell.shape]}
                                         </span>
                                     </div>
                                     <div className="mt-3 flex flex-wrap gap-3 text-xs text-white/70">
-                                        <span className="rounded-full border border-white/10 px-3 py-1">{affinityLabels[spell.affinity]}</span>
+                                        <span className="rounded-full border border-white/10 px-3 py-1">{SPELL_AFFINITY_LABELS[spell.affinity]}</span>
                                         <span className="rounded-full border border-white/10 px-3 py-1">Range: {spell.range ?? "Self"}</span>
                                         {spell.school && (
                                             <span className="rounded-full border border-white/10 px-3 py-1">{spell.school}</span>

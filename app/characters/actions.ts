@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { parseCreateCharacterFormData, parseLevelUpFormData } from "@/lib/characters/form-parsers";
+import { parseCreateCharacterFormData, parseLevelUpFormData, parseAddSpellFormData, parseDeleteSpellFormData, parseToggleSpellPreparationFormData } from "@/lib/characters/form-parsers";
 import { CharacterService } from "@/lib/characters/services/character-service";
 import { getCurrentActor } from "@/lib/current-actor";
 
@@ -49,4 +49,40 @@ export async function levelUpCharacter(formData: FormData) {
     revalidatePath("/characters");
     revalidatePath("/dashboard");
     redirect("/characters");
+}
+
+export async function addSpell(formData: FormData) {
+    const actor = ensureActor(await getCurrentActor(), "Authentication required to track spells.");
+    const service = new CharacterService(actor);
+    const input = parseAddSpellFormData(formData);
+
+    const characterId = await service.addSpell(input);
+    revalidatePath(`/characters/${characterId}`);
+    revalidatePath(`/characters/${characterId}/spells`);
+    revalidatePath("/characters");
+    revalidatePath("/dashboard");
+}
+
+export async function deleteSpell(formData: FormData) {
+    const actor = ensureActor(await getCurrentActor(), "Authentication required to modify spells.");
+    const service = new CharacterService(actor);
+    const { spellId } = parseDeleteSpellFormData(formData);
+
+    const characterId = await service.deleteSpell(spellId);
+    revalidatePath(`/characters/${characterId}`);
+    revalidatePath(`/characters/${characterId}/spells`);
+    revalidatePath("/characters");
+    revalidatePath("/dashboard");
+}
+
+export async function toggleSpellPreparation(formData: FormData) {
+    const actor = ensureActor(await getCurrentActor(), "Authentication required to manage prepared spells.");
+    const service = new CharacterService(actor);
+    const input = parseToggleSpellPreparationFormData(formData);
+
+    const characterId = await service.toggleSpellPreparation(input);
+    revalidatePath(`/characters/${characterId}`);
+    revalidatePath(`/characters/${characterId}/spells`);
+    revalidatePath("/characters");
+    revalidatePath("/dashboard");
 }

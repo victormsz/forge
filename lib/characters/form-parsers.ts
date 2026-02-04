@@ -1,4 +1,4 @@
-import { AbilityGenerationMethod } from "@prisma/client";
+import { AbilityGenerationMethod, SpellTargetAffinity, SpellTargetShape } from "@prisma/client";
 
 import {
     ABILITY_KEYS,
@@ -19,9 +19,13 @@ import {
     type CharacterProficiencies,
     type CreateCharacterInput,
     type LevelUpInput,
+    type AddSpellInput,
+    type ToggleSpellPreparationInput,
 } from "@/lib/characters/types";
 
 const allowedMethods = new Set<AbilityGenerationMethod>([AbilityGenerationMethod.POINT_BUY, AbilityGenerationMethod.RANDOM]);
+const allowedShapes = new Set<SpellTargetShape>(Object.values(SpellTargetShape));
+const allowedAffinities = new Set<SpellTargetAffinity>(Object.values(SpellTargetAffinity));
 
 interface AbilityScoreBounds {
     min?: number;
@@ -40,6 +44,25 @@ function readString(value: FormDataEntryValue | null, fallback: string | null = 
     }
 
     return trimmed.slice(0, maxLength);
+}
+
+function readBoolean(value: FormDataEntryValue | null, fallback = false) {
+    if (typeof value === "string") {
+        const normalized = value.trim().toLowerCase();
+        if (normalized === "true" || normalized === "1" || normalized === "yes") {
+            return true;
+        }
+        if (normalized === "false" || normalized === "0" || normalized === "no") {
+            return false;
+        }
+    }
+    if (typeof value === "number") {
+        return value !== 0;
+    }
+    if (typeof value === "boolean") {
+        return value;
+    }
+    return fallback;
 }
 
 function parseAbilityScores(input: FormDataEntryValue | null, bounds?: AbilityScoreBounds): AbilityScores {
@@ -125,6 +148,31 @@ function parsePositiveInteger(input: FormDataEntryValue | null) {
     return integer > 0 ? integer : null;
 }
 
+function parseSpellLevel(input: FormDataEntryValue | null) {
+    if (typeof input !== "string" && typeof input !== "number") {
+        return 0;
+    }
+    const numeric = typeof input === "number" ? input : Number(input);
+    if (!Number.isFinite(numeric)) {
+        return 0;
+    }
+    return Math.min(9, Math.max(0, Math.trunc(numeric)));
+}
+
+function parseSpellShape(input: FormDataEntryValue | null): SpellTargetShape {
+    if (typeof input === "string" && allowedShapes.has(input as SpellTargetShape)) {
+        return input as SpellTargetShape;
+    }
+    return SpellTargetShape.SINGLE;
+}
+
+function parseSpellAffinity(input: FormDataEntryValue | null): SpellTargetAffinity {
+    if (typeof input === "string" && allowedAffinities.has(input as SpellTargetAffinity)) {
+        return input as SpellTargetAffinity;
+    }
+    return SpellTargetAffinity.HOSTILE;
+}
+
 export function parseCreateCharacterFormData(formData: FormData): CreateCharacterInput {
     const methodInput = formData.get("method");
     const generationMethod = allowedMethods.has(methodInput as AbilityGenerationMethod)
@@ -182,6 +230,59 @@ export function parseLevelUpFormData(formData: FormData): LevelUpInput {
         abilityIncreases,
         notes: readString(formData.get("notes"), null, 800),
         hitDiceRoll,
+    };
+}
+
+export function parseAddSpellFormData(formData: FormData): AddSpellInput {
+    const characterId = readString(formData.get("characterId"));
+    const name = readString(formData.get("name"));
+
+    if (!characterId) {
+        throw new Error("Character id missing.");
+    }
+
+    if (!name) {
+        throw new Error("Spell name is required.");
+    }
+
+    return {
+        characterId,
+        name,
+        level: parseSpellLevel(formData.get("level")),
+        shape: parseSpellShape(formData.get("shape")),
+        affinity: parseSpellAffinity(formData.get("affinity")),
+        range: readString(formData.get("range"), "Self", 120),
+        school: readString(formData.get("school"), null, 120),
+        description: readString(formData.get("description"), null, 2000),
+        damage: readString(formData.get("damage"), null, 120),
+        referenceId: readString(formData.get("referenceId")),
+        isCustom: readBoolean(formData.get("isCustom"), false),
+    };
+}
+
+export function parseDeleteSpellFormData(formData: FormData) {
+    const spellId = readString(formData.get("spellId"));
+    if (!spellId) {
+        throw new Error("Spell id missing.");
+    }
+    return {
+        spellId,
+        characterId: readString(formData.get("characterId")),
+    };
+}
+
+export function parseToggleSpellPreparationFormData(formData: FormData): ToggleSpellPreparationInput {
+    const spellId = readString(formData.get("spellId"));
+    const characterId = readString(formData.get("characterId"));
+
+    if (!spellId || !characterId) {
+        throw new Error("Spell context missing.");
+    }
+
+    return {
+        spellId,
+        characterId,
+        isPrepared: readBoolean(formData.get("isPrepared"), false),
     };
 }
 

@@ -69,11 +69,11 @@ export function LevelUpForm({
 
                     {/* Feat Options as Cards */}
                     <div className="grid gap-3 sm:grid-cols-2">
-                        {/* No Feat Option */}
+                        {/* Ability Score Improvement Option */}
                         <div
                             className={`cursor-pointer rounded-2xl border p-4 transition-all ${selectedFeat === ""
-                                    ? "border-rose-400 bg-rose-500/20 shadow-lg"
-                                    : "border-white/15 bg-black/30 hover:border-white/30"
+                                ? "border-rose-400 bg-rose-500/20 shadow-lg"
+                                : "border-white/15 bg-black/30 hover:border-white/30"
                                 }`}
                             onClick={() => setSelectedFeat("")}
                         >
@@ -86,7 +86,7 @@ export function LevelUpForm({
                                     onChange={() => setSelectedFeat("")}
                                     className="h-4 w-4"
                                 />
-                                <span className="font-medium text-sm">No Feat</span>
+                                <span className="font-medium text-sm">Ability Score Improvement</span>
                             </div>
                             <p className="mt-1 text-xs text-white/60">
                                 Use ability score improvements instead
@@ -104,8 +104,8 @@ export function LevelUpForm({
                                 <div
                                     key={feat.value}
                                     className={`cursor-pointer rounded-2xl border p-4 transition-all ${isSelected
-                                            ? "border-rose-400 bg-rose-500/20 shadow-lg"
-                                            : "border-white/15 bg-black/30 hover:border-white/30"
+                                        ? "border-rose-400 bg-rose-500/20 shadow-lg"
+                                        : "border-white/15 bg-black/30 hover:border-white/30"
                                         }`}
                                     onClick={() => setSelectedFeat(feat.value)}
                                     onMouseEnter={() => setHoveredFeat(feat.value)}

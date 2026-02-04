@@ -19,6 +19,9 @@ import { findReferenceSpellById, spellSupportsClass } from "@/lib/spells/referen
 import { getSpellPreparationProfile } from "@/lib/spells/class-preparation";
 import { getSpellSlotSummary } from "@/lib/spells/slot-profiles";
 import { ABILITY_KEYS, DEFAULT_ABILITY_SCORES, type AbilityKey } from "@/lib/point-buy";
+import { applyAncestryBonuses } from "@/lib/characters/ancestry-bonuses";
+import { applyBackgroundBonus } from "@/lib/characters/background-bonuses";
+import { getClassOptions, type EquipmentReference } from "@/lib/classes/load-classes";
 
 const SLOT_ORDINALS = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"] as const;
 const MAX_LEVEL_UP_ABILITY_SCORE = 20;
@@ -74,19 +77,99 @@ export class CharacterService {
             assertPointBuyWithinBudget(input.abilityScores);
         }
 
-        await prisma.character.create({
-            data: {
-                name: input.name,
-                userId: this.actor.userId,
-                generationMethod: input.generationMethod,
-                abilityScores: input.abilityScores,
-                ancestry: input.ancestry,
-                charClass: input.charClass,
-                background: input.background,
-                alignment: input.alignment,
-                proficiencies: input.proficiencies,
-            },
+        // Apply racial/ancestry bonuses to ability scores
+        let finalAbilityScores = applyAncestryBonuses(
+            input.abilityScores,
+            input.ancestry,
+            input.ancestryAbilityChoices
+        );
+
+        // Apply background ability bonus
+        finalAbilityScores = applyBackgroundBonus(
+            finalAbilityScores,
+            input.background,
+            input.backgroundAbilityChoice ?? null
+        );
+
+        // Load class data to get starting equipment
+        const classOptions = getClassOptions();
+        const classData = classOptions.find((c) => c.value === input.charClass);
+        
+        // Build starting equipment list
+        const startingItems: Array<{ name: string; quantity: number }> = [];
+        
+        if (classData) {
+            // Add automatic starting equipment
+            classData.startingEquipment.forEach((item) => {
+                startingItems.push({
+                    name: item.equipment.name,
+                    quantity: item.quantity,
+                });
+            });
+            
+            // Add selected equipment from choices
+            const equipmentOptions = classData.startingEquipmentOptions || [];
+            Object.entries(input.equipmentChoices).forEach(([optionIndexStr, choiceIndex]) => {
+                const optionIndex = parseInt(optionIndexStr, 10);
+                const equipmentOption = equipmentOptions[optionIndex];
+                
+                if (equipmentOption?.from?.options) {
+                    const selectedChoice = equipmentOption.from.options[choiceIndex];
+                    
+                    if (selectedChoice) {
+                        // Handle different option types
+                        if (selectedChoice.option_type === "counted_reference") {
+                            const count = selectedChoice.count || 1;
+                            const itemName = selectedChoice.of?.name;
+                            
+                            if (itemName) {
+                                startingItems.push({
+                                    name: itemName,
+                                    quantity: count,
+                                });
+                            }
+                        } else if (selectedChoice.option_type === "choice") {
+                            // For nested choices (e.g., "any martial weapon"), we'll skip for now
+                            // as they require user to make a specific selection
+                            // This would need UI enhancement to handle
+                        }
+                    }
+                }
+            });
+        }
+
+        // Create character and items in a transaction
+        const character = await prisma.$transaction(async (tx) => {
+            const newCharacter = await tx.character.create({
+                data: {
+                    name: input.name,
+                    userId: this.actor.userId,
+                    generationMethod: input.generationMethod,
+                    abilityScores: finalAbilityScores,
+                    ancestry: input.ancestry,
+                    charClass: input.charClass,
+                    background: input.background,
+                    alignment: input.alignment,
+                    proficiencies: input.proficiencies,
+                },
+            });
+            
+            // Create starting equipment items
+            if (startingItems.length > 0) {
+                await tx.item.createMany({
+                    data: startingItems.map((item) => ({
+                        characterId: newCharacter.id,
+                        name: item.name,
+                        quantity: item.quantity,
+                        isCustom: false,
+                    })),
+                });
+            }
+            
+            return newCharacter;
         });
+        
+        return character;
     }
 
     async deleteCharacter(characterId: string) {

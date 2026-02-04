@@ -18,6 +18,7 @@ import {
 } from "@/lib/point-buy";
 import type { ClassOption } from "@/lib/classes/load-classes";
 import { getClassOptions } from "@/lib/classes/load-classes";
+import { getBackgroundBonuses } from "@/lib/characters/background-bonuses";
 
 type AbilityGenerationMethod = "POINT_BUY" | "RANDOM";
 
@@ -206,42 +207,74 @@ const ancestryOptions: AncestryOption[] = [
     },
 ];
 
-const backgroundOptions = [
+const backgroundOptions: BackgroundOption[] = [
     {
-        label: "Soldier",
-        value: "Soldier",
-        description: "Campaign-hardened veteran.",
-        detail: "You drilled in formations, know army jargon, and can still call in favors from your old unit.",
+        label: "Acolyte",
+        value: "Acolyte",
+        description: "Raised by the temple.",
+        detail: "You know liturgies, sacred calendars, and have pull within your faith's hierarchy for shelter or aid.\n\n**Ability Score Increases:** Choose one from INT, WIS, or CHA\n**Feat:** Magic Initiate (Cleric) - Learn cleric cantrips and 1st-level spells\n\n**Proficiencies:**\n• **Skills:** Insight, Religion\n• **Tools:** Calligrapher's Supplies\n\n**Starting Equipment Choice:**\n• **Option A:** Holy symbol, prayer book, calligrapher's supplies, 10 parchment, robe, 8 gp\n• **Option B:** 50 gp to buy your own equipment\n\n**Background Feature:** Command respect among faithful, receive free healing at temples, and call upon priests for assistance when near your temple.",
+        proficiencies: {
+            ...EMPTY_PROFICIENCIES,
+            skills: ["Insight", "Religion"],
+            tools: ["Calligrapher's Supplies"],
+        },
+    },
+    {
+        label: "Criminal",
+        value: "Criminal",
+        description: "Cunning outlaw with underworld ties.",
+        detail: "You lived outside the law, developing skills in deception, stealth, and the darker trades of civilization.\n\n**Ability Score Increases:** Choose one from DEX, CON, or INT\n**Feat:** Alert - +5 to initiative, can't be surprised while conscious\n\n**Proficiencies:**\n• **Skills:** Sleight of Hand, Stealth\n• **Tools:** Thieves' Tools\n\n**Starting Equipment Choice:**\n• **Option A:** 2 daggers, thieves' tools, crowbar, 2 pouches, traveler's clothes, 16 gp\n• **Option B:** 50 gp to buy your own equipment\n\n**Background Feature:** Connections in the criminal underworld provide you with reliable contacts for fencing goods, gathering information, or finding safe houses.",
+        proficiencies: {
+            ...EMPTY_PROFICIENCIES,
+            skills: ["Sleight of Hand", "Stealth"],
+            tools: ["Thieves' Tools"],
+        },
     },
     {
         label: "Sage",
         value: "Sage",
         description: "Archivist of esoteric lore.",
-        detail: "Years in libraries honed your memory for obscure myths, planar theory, and ancient scripts.",
+        detail: "Years in libraries honed your memory for obscure myths, planar theory, and ancient scripts.\n\n**Ability Score Increases:** Choose one from CON, INT, or WIS\n**Feat:** Magic Initiate (Wizard) - Learn wizard cantrips and 1st-level spells\n\n**Proficiencies:**\n• **Skills:** Arcana, History\n• **Tools:** Calligrapher's Supplies\n\n**Starting Equipment Choice:**\n• **Option A:** Quarterstaff, calligrapher's supplies, history book, 8 parchment, robe, 8 gp\n• **Option B:** 50 gp to buy your own equipment\n\n**Background Feature:** Your extensive studies grant you access to libraries and repositories of knowledge. You know where to find information and can often recall obscure facts.",
+        proficiencies: {
+            ...EMPTY_PROFICIENCIES,
+            skills: ["Arcana", "History"],
+            tools: ["Calligrapher's Supplies"],
+        },
+    },
+    {
+        label: "Soldier",
+        value: "Soldier",
+        description: "Campaign-hardened veteran.",
+        detail: "You drilled in formations, know army jargon, and can still call in favors from your old unit.\n\n**Ability Score Increases:** Choose one from STR, DEX, or CON\n**Feat:** Savage Attacker - Reroll weapon damage dice once per turn\n\n**Proficiencies:**\n• **Skills:** Athletics, Intimidation\n• **Tools:** Choose one gaming set (dice, dragonchess, playing cards, or three-dragon ante)\n\n**Starting Equipment Choice:**\n• **Option A:** Spear, shortbow, 20 arrows, gaming set, healer's kit, quiver, traveler's clothes, 14 gp\n• **Option B:** 50 gp to buy your own equipment\n\n**Background Feature:** Your military rank earns you respect. You can leverage your military connections to access fortresses, requisition simple equipment, or gain audiences with officers.",
+        proficiencies: {
+            ...EMPTY_PROFICIENCIES,
+            skills: ["Athletics", "Intimidation"],
+            tools: ["One gaming set of your choice"],
+        },
     },
     {
         label: "Outlander",
         value: "Outlander",
         description: "Warden of the wilds.",
-        detail: "You can always find food and know hidden trails thanks to seasons spent tracking beasts and storms.",
+        detail: "You can always find food and know hidden trails thanks to seasons spent tracking beasts and storms.\n\n**Proficiencies:**\n• **Skills:** Athletics, Survival\n• **Tools:** One musical instrument\n• **Languages:** One of your choice\n\n**Background Feature:** You have excellent memory for maps and geography. You can find food and water for yourself and up to five others each day in the wilderness.",
+        proficiencies: {
+            ...EMPTY_PROFICIENCIES,
+            skills: ["Athletics", "Survival"],
+            tools: ["One musical instrument"],
+            languages: ["One additional language"],
+        },
     },
     {
         label: "Noble",
         value: "Noble",
         description: "Court-savvy aristocrat.",
-        detail: "Diplomacy, etiquette, and heraldry are second nature, and household retainers still recognize your crest.",
-    },
-    {
-        label: "Acolyte",
-        value: "Acolyte",
-        description: "Raised by the temple.",
-        detail: "You know liturgies, sacred calendars, and have pull within your faith's hierarchy for shelter or aid.",
-    },
-    {
-        label: "Urchin",
-        value: "Urchin",
-        description: "Streetwise survivor.",
-        detail: "City alleys taught you smuggler cant, secret paths through markets, and how to vanish in a crowd.",
+        detail: "Diplomacy, etiquette, and heraldry are second nature, and household retainers still recognize your crest.\n\n**Proficiencies:**\n• **Skills:** History, Persuasion\n• **Tools:** One gaming set\n• **Languages:** One of your choice\n\n**Background Feature:** Your noble birth grants you a position of privilege. People assume you have the right to be wherever you are. You can secure audiences with nobility and gain favor in high society.",
+        proficiencies: {
+            ...EMPTY_PROFICIENCIES,
+            skills: ["History", "Persuasion"],
+            tools: ["One gaming set"],
+            languages: ["One additional language"],
+        },
     },
 ];
 
@@ -339,6 +372,8 @@ interface WizardFormState {
     abilityScores: AbilityScores;
     selectedSkills: string[];
     equipmentChoices: Record<number, number>; // Maps equipment option index to selected choice index
+    ancestryAbilityChoices: Partial<Record<AbilityKey, number>>;
+    backgroundAbilityChoice: string;
 }
 
 function SubmitButton({ disabled }: { disabled: boolean }) {
@@ -365,6 +400,8 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
         background: "",
         alignment: "",
         abilityScores: { ...DEFAULT_ABILITY_SCORES },
+        ancestryAbilityChoices: {},
+        backgroundAbilityChoice: "",
         selectedSkills: [],
         equipmentChoices: {},
     }));
@@ -484,6 +521,25 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
         }
         return selectedClass.proficiencies.skills.choices;
     }, [formState.charClass]);
+
+    // Auto-select first valid background ability choice when background changes
+    useEffect(() => {
+        if (formState.background) {
+            const bgBonuses = getBackgroundBonuses(formState.background);
+            if (bgBonuses && bgBonuses.choices.length > 0) {
+                const firstChoice = bgBonuses.choices[0];
+                setFormState((prev) => {
+                    if (prev.backgroundAbilityChoice !== firstChoice) {
+                        return {
+                            ...prev,
+                            backgroundAbilityChoice: firstChoice,
+                        };
+                    }
+                    return prev;
+                });
+            }
+        }
+    }, [formState.background]);
 
     const resetAbilityScoresToDefault = useCallback(() => {
         setFormState((prev) => ({ ...prev, abilityScores: { ...DEFAULT_ABILITY_SCORES } }));
@@ -857,6 +913,9 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
             <input type="hidden" name="alignment" value={formState.alignment} />
             <input type="hidden" name="abilityScores" value={JSON.stringify(formState.abilityScores)} />
             <input type="hidden" name="selectedSkills" value={JSON.stringify(formState.selectedSkills)} />
+            <input type="hidden" name="equipmentChoices" value={JSON.stringify(formState.equipmentChoices)} />
+            <input type="hidden" name="ancestryAbilityChoices" value={JSON.stringify(formState.ancestryAbilityChoices)} />
+            <input type="hidden" name="backgroundAbilityChoice" value={formState.backgroundAbilityChoice} />
             <div className="space-y-6">
                 <section className="rounded-3xl border border-white/10 bg-gradient-to-b from-white/10 to-white/0 p-6 shadow-lg">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -1381,12 +1440,100 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                                     const insight =
                                         backgroundOptions.find((option) => option.value === (hoveredBackground ?? formState.background)) ??
                                         backgroundOptions[0];
+                                    const detailParts = insight.detail.split('\n\n');
+
                                     return (
-                                        <div className="rounded-2xl border border-white/15 bg-black/30 p-5">
-                                            <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Origin Spotlight</p>
+                                        <div className="rounded-2xl border border-white/15 bg-black/30 p-5 overflow-y-auto max-h-[600px]">
+                                            <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Background Details</p>
                                             <p className="mt-2 text-lg font-semibold text-white">{insight.label}</p>
-                                            <p className="mt-2 text-sm text-white/70">{insight.detail}</p>
-                                            <p className="mt-3 text-xs text-white/50">Hover or focus a background to update.</p>
+
+                                            <div className="mt-3 space-y-3">
+                                                {detailParts.map((part, idx) => {
+                                                    if (part.startsWith('**')) {
+                                                        // Format stat blocks
+                                                        const lines = part.split('\n');
+                                                        return (
+                                                            <div key={idx} className="text-xs space-y-1">
+                                                                {lines.map((line, lineIdx) => {
+                                                                    const match = line.match(/\*\*(.*?):\*\*(.*)/);
+                                                                    if (match) {
+                                                                        return (
+                                                                            <div key={lineIdx} className="flex gap-2">
+                                                                                <span className="font-semibold text-rose-300 min-w-[130px]">{match[1]}:</span>
+                                                                                <span className="text-white/80">{match[2].trim()}</span>
+                                                                            </div>
+                                                                        );
+                                                                    }
+                                                                    return null;
+                                                                })}
+                                                            </div>
+                                                        );
+                                                    } else if (part.includes('•')) {
+                                                        // Format proficiency lists
+                                                        const lines = part.split('\n').filter(l => l.trim());
+                                                        return (
+                                                            <div key={idx} className="text-xs space-y-1.5">
+                                                                {lines.map((line, lineIdx) => {
+                                                                    if (line.includes('•')) {
+                                                                        const match = line.match(/• \*\*(.*?):\*\*(.*)/);
+                                                                        if (match) {
+                                                                            return (
+                                                                                <div key={lineIdx} className="flex gap-2">
+                                                                                    <span className="text-white/50">•</span>
+                                                                                    <div>
+                                                                                        <span className="font-semibold text-white">{match[1]}: </span>
+                                                                                        <span className="text-white/70">{match[2].trim()}</span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            );
+                                                                        }
+                                                                        return (
+                                                                            <div key={lineIdx} className="flex gap-2">
+                                                                                <span className="text-white/50">•</span>
+                                                                                <span className="text-white/70">{line.replace('•', '').trim()}</span>
+                                                                            </div>
+                                                                        );
+                                                                    }
+                                                                    return null;
+                                                                })}
+                                                            </div>
+                                                        );
+                                                    } else {
+                                                        // Regular paragraph
+                                                        return (
+                                                            <p key={idx} className="text-sm text-white/70 leading-relaxed">
+                                                                {part}
+                                                            </p>
+                                                        );
+                                                    }
+                                                })}
+                                            </div>
+
+                                            {insight.proficiencies && (
+                                                <div className="mt-4 pt-4 border-t border-white/10 space-y-2">
+                                                    <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Additional Info</p>
+                                                    {insight.proficiencies.skills.length > 0 && (
+                                                        <div className="text-xs">
+                                                            <span className="font-semibold text-rose-300">Skill Proficiencies: </span>
+                                                            <span className="text-white/70">{insight.proficiencies.skills.join(', ')}</span>
+                                                        </div>
+                                                    )}
+                                                    {insight.proficiencies.tools.length > 0 && (
+                                                        <div className="text-xs">
+                                                            <span className="font-semibold text-rose-300">Tool Proficiencies: </span>
+                                                            <span className="text-white/70">{insight.proficiencies.tools.join(', ')}</span>
+                                                        </div>
+                                                    )}
+                                                    {insight.proficiencies.languages.length > 0 && (
+                                                        <div className="text-xs">
+                                                            <span className="font-semibold text-rose-300">Languages: </span>
+                                                            <span className="text-white/70">{insight.proficiencies.languages.join(', ')}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            <p className="mt-4 text-xs text-white/40 italic">Hover or focus a background to update.</p>
                                         </div>
                                     );
                                 })()}
@@ -1712,8 +1859,8 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                                                                         }));
                                                                     }}
                                                                     className={`rounded-xl border px-4 py-3 text-left text-sm transition ${isSelected
-                                                                            ? "border-rose-300 bg-rose-300/10 text-white"
-                                                                            : "border-white/15 bg-black/30 text-white/70 hover:border-white/30"
+                                                                        ? "border-rose-300 bg-rose-300/10 text-white"
+                                                                        : "border-white/15 bg-black/30 text-white/70 hover:border-white/30"
                                                                         }`}
                                                                 >
                                                                     <div className="flex items-start gap-2">

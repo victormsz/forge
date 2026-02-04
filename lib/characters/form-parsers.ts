@@ -238,6 +238,40 @@ export function parseCreateCharacterFormData(formData: FormData): CreateCharacte
             : { min: MIN_ABILITY_SCORE, max: MAX_ABILITY_SCORE },
     );
 
+    // Parse equipment choices
+    let equipmentChoices: Record<number, number> = {};
+    const equipmentChoicesInput = formData.get("equipmentChoices");
+    if (equipmentChoicesInput && typeof equipmentChoicesInput === "string") {
+        try {
+            const parsed = JSON.parse(equipmentChoicesInput);
+            if (parsed && typeof parsed === "object") {
+                equipmentChoices = parsed;
+            }
+        } catch {
+            // If parsing fails, just use empty object
+        }
+    }
+
+    // Parse ancestry ability choices (for Half-Elf +1 bonuses)
+    let ancestryAbilityChoices: Partial<Record<AbilityKey, number>> = {};
+    const ancestryChoicesInput = formData.get("ancestryAbilityChoices");
+    if (ancestryChoicesInput && typeof ancestryChoicesInput === "string") {
+        try {
+            const parsed = JSON.parse(ancestryChoicesInput);
+            if (parsed && typeof parsed === "object") {
+                ancestryAbilityChoices = parsed;
+            }
+        } catch {
+            // If parsing fails, just use empty object
+        }
+    }
+
+    // Parse background ability choice
+    const backgroundChoice = readString(formData.get("backgroundAbilityChoice"));
+    const backgroundAbilityChoice = backgroundChoice && ABILITY_KEYS.includes(backgroundChoice as AbilityKey)
+        ? (backgroundChoice as AbilityKey)
+        : null;
+
     return {
         name: readString(formData.get("name"), "New Adventurer", 120)!,
         generationMethod,
@@ -247,6 +281,9 @@ export function parseCreateCharacterFormData(formData: FormData): CreateCharacte
         alignment: readString(formData.get("alignment")),
         abilityScores,
         proficiencies: parseProficiencies(formData.get("proficiencies")),
+        equipmentChoices,
+        ancestryAbilityChoices,
+        backgroundAbilityChoice,
     };
 }
 

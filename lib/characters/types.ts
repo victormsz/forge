@@ -10,6 +10,10 @@ export interface CharacterProficiencies {
     languages: string[];
 }
 
+export interface EquipmentChoices {
+    [optionIndex: number]: number; // Maps equipment option index to selected choice index
+}
+
 export interface CreateCharacterInput {
     name: string;
     generationMethod: AbilityGenerationMethod;
@@ -19,6 +23,9 @@ export interface CreateCharacterInput {
     alignment: string | null;
     abilityScores: AbilityScores;
     proficiencies: CharacterProficiencies;
+    equipmentChoices: EquipmentChoices;
+    ancestryAbilityChoices?: Partial<Record<AbilityKey, number>>;
+    backgroundAbilityChoice?: AbilityKey | null;
 }
 
 export interface AbilityIncreaseChoice {

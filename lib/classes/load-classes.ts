@@ -129,23 +129,10 @@ function categorizeProficiency(prof: Proficiency): { category: "armor" | "weapon
 }
 
 export function getClassOptions(): ClassOption[] {
-    // Create a map of subclasses by class index
-    const subclassesByClass = new Map<string, SubclassOption[]>();
-
+    // First, create a lookup map of detailed subclass info from Subclasses.json
+    const subclassDetailsMap = new Map<string, any>();
     (subclassesData as any[]).forEach((subclass) => {
-        const classIndex = subclass.class?.index;
-        if (!classIndex) return;
-
-        if (!subclassesByClass.has(classIndex)) {
-            subclassesByClass.set(classIndex, []);
-        }
-
-        subclassesByClass.get(classIndex)!.push({
-            index: subclass.index,
-            name: subclass.name,
-            description: subclass.desc?.[0] || `The ${subclass.name} ${subclass.subclass_flavor}.`,
-            flavorText: subclass.subclass_flavor || "Subclass",
-        });
+        subclassDetailsMap.set(subclass.index, subclass);
     });
 
     return (classesData as ClassData[]).map((classData) => {
@@ -189,9 +176,16 @@ export function getClassOptions(): ClassOption[] {
         // Extract saving throw names
         const savingThrows = classData.saving_throws.map((st) => st.name);
 
-        // Get subclasses for this class
-        const subclasses = subclassesByClass.get(classData.index);
-
+        // Get subclasses from the class data and enrich with details from Subclasses.json
+        const subclasses: SubclassOption[] | undefined = (classData as any).subclasses?.map((subclassRef: any) => {
+            const details = subclassDetailsMap.get(subclassRef.index);
+            return {
+                index: subclassRef.index,
+                name: subclassRef.name,
+                description: details?.desc?.[0] || `The ${subclassRef.name} subclass.`,
+                flavorText: details?.subclass_flavor || "Subclass",
+            };
+        });
         return {
             label: classData.name,
             value: classData.name,

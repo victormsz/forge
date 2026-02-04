@@ -336,6 +336,7 @@ interface WizardFormState {
     background: string;
     alignment: string;
     abilityScores: AbilityScores;
+    selectedSkills: string[];
 }
 
 function SubmitButton({ disabled }: { disabled: boolean }) {
@@ -362,6 +363,7 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
         background: "",
         alignment: "",
         abilityScores: { ...DEFAULT_ABILITY_SCORES },
+        selectedSkills: [],
     }));
     const [rolledSets, setRolledSets] = useState<RolledSet[]>([]);
     const [rollAssignments, setRollAssignments] = useState<RollAssignments>({});
@@ -429,6 +431,56 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
 
     const methodLabel = abilityOptions.find((option) => option.value === formState.method)?.label ?? abilityOptions[0].label;
     const progress = ((step + 1) / activeSteps.length) * 100;
+
+    // Calculate combined proficiencies from all sources
+    const combinedProficiencies = useMemo(() => {
+        const result: ProficiencyBlock = {
+            armor: [],
+            weapons: [],
+            tools: [],
+            skills: [],
+            languages: [],
+        };
+
+        // Add ancestry proficiencies
+        const selectedAncestry = ancestryOptions.find((a) => a.value === formState.ancestry);
+        if (selectedAncestry) {
+            result.armor.push(...selectedAncestry.proficiencies.armor);
+            result.weapons.push(...selectedAncestry.proficiencies.weapons);
+            result.tools.push(...selectedAncestry.proficiencies.tools);
+            result.skills.push(...selectedAncestry.proficiencies.skills);
+            result.languages.push(...selectedAncestry.proficiencies.languages);
+        }
+
+        // Add class proficiencies
+        const selectedClass = classOptions.find((c) => c.value === formState.charClass);
+        if (selectedClass) {
+            result.armor.push(...selectedClass.proficiencies.armor);
+            result.weapons.push(...selectedClass.proficiencies.weapons);
+            result.tools.push(...selectedClass.proficiencies.tools);
+            result.skills.push(...selectedClass.proficiencies.skills.fixed);
+            // Add selected skills from class choices
+            result.skills.push(...formState.selectedSkills);
+        }
+
+        // Deduplicate all proficiencies
+        result.armor = dedupeList(result.armor);
+        result.weapons = dedupeList(result.weapons);
+        result.tools = dedupeList(result.tools);
+        result.skills = dedupeList(result.skills);
+        result.languages = dedupeList(result.languages);
+
+        return result;
+    }, [formState.ancestry, formState.charClass, formState.selectedSkills]);
+
+    // Calculate available skill choices from class
+    const availableSkillChoices = useMemo(() => {
+        const selectedClass = classOptions.find((c) => c.value === formState.charClass);
+        if (!selectedClass?.proficiencies.skills.choices) {
+            return null;
+        }
+        return selectedClass.proficiencies.skills.choices;
+    }, [formState.charClass]);
 
     const resetAbilityScoresToDefault = useCallback(() => {
         setFormState((prev) => ({ ...prev, abilityScores: { ...DEFAULT_ABILITY_SCORES } }));
@@ -681,8 +733,18 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                 return Boolean(formState.ancestry);
             case "background":
                 return Boolean(formState.background);
-            case "class":
-                return Boolean(formState.charClass);
+            case "class": {
+                if (!formState.charClass) {
+                    return false;
+                }
+                // Check if skill selections are complete
+                const selectedClass = classOptions.find((c) => c.value === formState.charClass);
+                const skillChoices = selectedClass?.proficiencies.skills.choices;
+                if (skillChoices) {
+                    return formState.selectedSkills.length === skillChoices.count;
+                }
+                return true;
+            }
             case "subclass": {
                 const selectedClass = classOptions.find((c) => c.value === formState.charClass);
                 // If class has no subclasses, skip this step
@@ -701,6 +763,8 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
     const canSubmit = (() => {
         const selectedClass = classOptions.find((c) => c.value === formState.charClass);
         const needsSubclass = selectedClass?.subclasses && selectedClass.subclasses.length > 0;
+        const skillChoices = selectedClass?.proficiencies.skills.choices;
+        const needsSkillSelection = skillChoices && formState.selectedSkills.length !== skillChoices.count;
 
         return (
             formState.name.trim().length >= MIN_NAME_LENGTH &&
@@ -709,12 +773,10 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
             Boolean(formState.charClass) &&
             (!needsSubclass || Boolean(formState.subclass)) &&
             Boolean(formState.alignment) &&
-            generationReady
+            generationReady &&
+            !needsSkillSelection
         );
     })();
-    Boolean(formState.charClass) &&
-        Boolean(formState.alignment) &&
-        generationReady;
 
     const adjustAbilityScore = (ability: AbilityKey, delta: 1 | -1) => {
         if (!isPointBuy) {
@@ -752,6 +814,7 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
             <input type="hidden" name="background" value={formState.background} />
             <input type="hidden" name="alignment" value={formState.alignment} />
             <input type="hidden" name="abilityScores" value={JSON.stringify(formState.abilityScores)} />
+            <input type="hidden" name="selectedSkills" value={JSON.stringify(formState.selectedSkills)} />
             <div className="space-y-6">
                 <section className="rounded-3xl border border-white/10 bg-gradient-to-b from-white/10 to-white/0 p-6 shadow-lg">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -799,6 +862,49 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                             </div>
                         ))}
                     </div>
+
+                    {(combinedProficiencies.skills.length > 0 ||
+                        combinedProficiencies.armor.length > 0 ||
+                        combinedProficiencies.weapons.length > 0 ||
+                        combinedProficiencies.tools.length > 0 ||
+                        combinedProficiencies.languages.length > 0) && (
+                            <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4">
+                                <p className="text-[0.6rem] uppercase tracking-[0.4em] text-white/60 mb-3">Proficiencies & Skills</p>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    {combinedProficiencies.skills.length > 0 && (
+                                        <div>
+                                            <p className="text-xs font-semibold text-rose-200 mb-1">Skills</p>
+                                            <p className="text-xs text-white/70 leading-relaxed">{combinedProficiencies.skills.join(", ")}</p>
+                                        </div>
+                                    )}
+                                    {combinedProficiencies.armor.length > 0 && (
+                                        <div>
+                                            <p className="text-xs font-semibold text-rose-200 mb-1">Armor</p>
+                                            <p className="text-xs text-white/70 leading-relaxed">{combinedProficiencies.armor.join(", ")}</p>
+                                        </div>
+                                    )}
+                                    {combinedProficiencies.weapons.length > 0 && (
+                                        <div>
+                                            <p className="text-xs font-semibold text-rose-200 mb-1">Weapons</p>
+                                            <p className="text-xs text-white/70 leading-relaxed">{combinedProficiencies.weapons.join(", ")}</p>
+                                        </div>
+                                    )}
+                                    {combinedProficiencies.tools.length > 0 && (
+                                        <div>
+                                            <p className="text-xs font-semibold text-rose-200 mb-1">Tools</p>
+                                            <p className="text-xs text-white/70 leading-relaxed">{combinedProficiencies.tools.join(", ")}</p>
+                                        </div>
+                                    )}
+                                    {combinedProficiencies.languages.length > 0 && (
+                                        <div>
+                                            <p className="text-xs font-semibold text-rose-200 mb-1">Languages</p>
+                                            <p className="text-xs text-white/70 leading-relaxed">{combinedProficiencies.languages.join(", ")}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                     <div className="mt-6 h-2 w-full rounded-full bg-white/10">
                         <div className="h-full rounded-full bg-rose-400 transition-all" style={{ width: `${progress}%` }} />
                     </div>
@@ -1161,7 +1267,7 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                                         <button
                                             type="button"
                                             key={option.value}
-                                            onClick={() => setFormState((prev) => ({ ...prev, charClass: option.value, subclass: "" }))}
+                                            onClick={() => setFormState((prev) => ({ ...prev, charClass: option.value, subclass: "", selectedSkills: [] }))}
                                             onMouseEnter={() => setHoveredBackground(option.value)}
                                             onMouseLeave={() => setHoveredBackground(null)}
                                             onFocus={() => setHoveredBackground(option.value)}
@@ -1251,6 +1357,64 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                                         </div>
                                     );
                                 })()}
+                            </div>
+                        </div>
+                    )}
+
+                    {currentStep.id === "class" && availableSkillChoices && (
+                        <div className="mt-6 rounded-2xl border border-white/15 bg-black/30 p-6">
+                            <div className="mb-4">
+                                <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Skill Proficiencies</p>
+                                <p className="mt-1 text-sm text-white/70">
+                                    Choose {availableSkillChoices.count} skill{availableSkillChoices.count !== 1 ? 's' : ''} from the options below
+                                </p>
+                                <p className="mt-1 text-xs text-white/50">
+                                    {formState.selectedSkills.length} / {availableSkillChoices.count} selected
+                                </p>
+                            </div>
+                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                {availableSkillChoices.options.map((skill) => {
+                                    const isSelected = formState.selectedSkills.includes(skill);
+                                    const canSelect = isSelected || formState.selectedSkills.length < availableSkillChoices.count;
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={skill}
+                                            onClick={() => {
+                                                if (isSelected) {
+                                                    setFormState((prev) => ({
+                                                        ...prev,
+                                                        selectedSkills: prev.selectedSkills.filter((s) => s !== skill),
+                                                    }));
+                                                } else if (canSelect) {
+                                                    setFormState((prev) => ({
+                                                        ...prev,
+                                                        selectedSkills: [...prev.selectedSkills, skill],
+                                                    }));
+                                                }
+                                            }}
+                                            disabled={!canSelect && !isSelected}
+                                            className={`rounded-xl border px-3 py-2 text-left text-sm transition ${isSelected
+                                                    ? "border-rose-300 bg-rose-300/10 text-white"
+                                                    : canSelect
+                                                        ? "border-white/15 bg-black/30 text-white/70 hover:border-white/30"
+                                                        : "border-white/5 bg-black/20 text-white/30 cursor-not-allowed"
+                                                }`}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <div className={`h-4 w-4 rounded border flex items-center justify-center ${isSelected ? "border-rose-300 bg-rose-300" : "border-white/30"
+                                                    }`}>
+                                                    {isSelected && (
+                                                        <svg className="h-3 w-3 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                    )}
+                                                </div>
+                                                <span className="font-medium">{skill}</span>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}

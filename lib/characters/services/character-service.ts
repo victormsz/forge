@@ -15,6 +15,17 @@ import type { CurrentActor } from "@/lib/current-actor";
 import { prisma } from "@/lib/prisma";
 import { findReferenceSpellById, spellSupportsClass } from "@/lib/spells/reference";
 import { getSpellPreparationProfile } from "@/lib/spells/class-preparation";
+import { getSpellSlotSummary } from "@/lib/spells/slot-profiles";
+
+const SLOT_ORDINALS = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"] as const;
+
+function formatSpellLevelLabel(level: number) {
+    if (level <= 0) {
+        return "cantrips";
+    }
+    const ordinal = SLOT_ORDINALS[level - 1] ?? `${level}th`;
+    return `${ordinal}-level`;
+}
 
 export class CharacterService {
     constructor(private readonly actor: CurrentActor) {
@@ -172,6 +183,17 @@ export class CharacterService {
             spellRange = reference.range ?? "Self";
             spellSchool = reference.school;
             spellDescription = reference.description;
+        }
+
+        const slotSummary = getSpellSlotSummary(character.charClass, character.level);
+        const maxSpellLevel = slotSummary.maxSpellLevel;
+
+        if (spellLevel > maxSpellLevel) {
+            const classLabel = character.charClass ?? "This class";
+            if (maxSpellLevel <= 0) {
+                throw new Error(`${classLabel} has not unlocked spell slots yet. Limit additions to cantrips for now.`);
+            }
+            throw new Error(`${classLabel} can currently add up to ${formatSpellLevelLabel(maxSpellLevel)} spells.`);
         }
 
         await prisma.spell.create({

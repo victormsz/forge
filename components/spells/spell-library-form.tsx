@@ -6,6 +6,8 @@ import { useFormStatus } from "react-dom";
 import type { SpellReference } from "@/lib/spells/reference";
 
 const MAX_REFERENCE_RESULTS = 25;
+const SLOT_ORDINALS = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"] as const;
+const LEVEL_FILTER_OPTIONS = ["all", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
 
 type SelectOption = {
     value: string;
@@ -16,6 +18,7 @@ interface SpellLibraryFormProps {
     characterId: string;
     characterClass: string | null;
     references: SpellReference[];
+    maxSpellLevel: number;
     shapeOptions: SelectOption[];
     affinityOptions: SelectOption[];
     action: (formData: FormData) => Promise<void>;
@@ -35,6 +38,21 @@ interface FormValues {
 
 const LOCKED_FIELDS: ReadonlyArray<keyof FormValues> = ["name", "level", "range", "school", "description"];
 
+function formatMaxSpellLevelLabel(level: number) {
+    if (level <= 0) {
+        return "Cantrips (0-level)";
+    }
+    const ordinal = SLOT_ORDINALS[level - 1] ?? `${level}th`;
+    return `${ordinal}-level spells`;
+}
+
+function clampSpellLevelInput(value: number, maxLevel: number) {
+    if (!Number.isFinite(value)) {
+        return 0;
+    }
+    return Math.min(maxLevel, Math.max(0, Math.trunc(value)));
+}
+
 function createDefaults(shapeOptions: SelectOption[], affinityOptions: SelectOption[]): FormValues {
     return {
         name: "",
@@ -49,31 +67,57 @@ function createDefaults(shapeOptions: SelectOption[], affinityOptions: SelectOpt
     };
 }
 
-export function SpellLibraryForm({ characterId, characterClass, references, shapeOptions, affinityOptions, action }: SpellLibraryFormProps) {
+export function SpellLibraryForm({ characterId, characterClass, references, maxSpellLevel, shapeOptions, affinityOptions, action }: SpellLibraryFormProps) {
     const [query, setQuery] = useState("");
     const [levelFilter, setLevelFilter] = useState("all");
     const [selectedSpellId, setSelectedSpellId] = useState<string | null>(null);
     const [formValues, setFormValues] = useState<FormValues>(() => createDefaults(shapeOptions, affinityOptions));
     const [shouldResetAfterSubmit, setShouldResetAfterSubmit] = useState(false);
+    const allowedMaxSpellLevel = Math.max(0, Math.min(9, maxSpellLevel));
+    const maxSpellLevelLabel = formatMaxSpellLevelLabel(allowedMaxSpellLevel);
 
     const filteredReferences = useMemo(() => {
         const normalizedQuery = query.trim().toLowerCase();
         return references
             .filter((spell) => {
+                if (spell.level > allowedMaxSpellLevel) {
+                    return false;
+                }
                 const matchesQuery = normalizedQuery.length === 0 || spell.name.toLowerCase().includes(normalizedQuery);
                 const matchesLevel = levelFilter === "all" || spell.level.toString() === levelFilter;
                 return matchesQuery && matchesLevel;
             })
             .slice(0, MAX_REFERENCE_RESULTS);
-    }, [references, query, levelFilter]);
+    }, [references, query, levelFilter, allowedMaxSpellLevel]);
 
-    const levelOptions = useMemo(() => ["all", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], []);
+    const levelOptions = useMemo(
+        () => LEVEL_FILTER_OPTIONS.filter((value) => value === "all" || Number(value) <= allowedMaxSpellLevel),
+        [allowedMaxSpellLevel],
+    );
+
+    useEffect(() => {
+        if (levelFilter !== "all" && Number(levelFilter) > allowedMaxSpellLevel) {
+            setLevelFilter("all");
+        }
+    }, [levelFilter, allowedMaxSpellLevel]);
+
+    useEffect(() => {
+        setFormValues((current) => {
+            if (current.level <= allowedMaxSpellLevel) {
+                return current;
+            }
+            return { ...current, level: allowedMaxSpellLevel };
+        });
+    }, [allowedMaxSpellLevel]);
 
     function handleReferenceSelect(spell: SpellReference) {
+        if (spell.level > allowedMaxSpellLevel) {
+            return;
+        }
         setFormValues((current) => ({
             ...current,
             name: spell.name,
-            level: spell.level,
+            level: clampSpellLevelInput(spell.level, allowedMaxSpellLevel),
             range: spell.range ?? "Self",
             school: spell.school ?? "",
             description: spell.description ?? "",
@@ -110,6 +154,14 @@ export function SpellLibraryForm({ characterId, characterClass, references, shap
     }
 
     const canSubmit = formValues.isCustom || Boolean(selectedSpellId);
+
+    const emptyReferenceMessage = references.length === 0
+        ? characterClass
+            ? allowedMaxSpellLevel <= 0
+                ? `${characterClass} has no spell slots yet. Add cantrips or switch to custom mode until you level up.`
+                : `${characterClass} doesn't have SRD spells in this dataset. Switch to custom mode to add exceptions.`
+            : "No SRD spells available. Switch to custom mode to add entries."
+        : "No spells match the current search or level filter.";
 
     return (
         <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
@@ -154,6 +206,7 @@ export function SpellLibraryForm({ characterId, characterClass, references, shap
                             <span className="text-[0.65rem] text-white/50">
                                 {characterClass ? `${characterClass} spell list` : "All SRD spells"}
                             </span>
+                            <span className="text-[0.65rem] text-white/50">Max spell level: {maxSpellLevelLabel}</span>
                         </div>
                         <label className="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-white/60">
                             <span>Level</span>
@@ -174,11 +227,7 @@ export function SpellLibraryForm({ characterId, characterClass, references, shap
                     <div className="space-y-3">
                         {filteredReferences.length === 0 ? (
                             <p className="rounded-2xl border border-dashed border-white/10 bg-black/30 px-4 py-6 text-sm text-white/60">
-                                {references.length === 0
-                                    ? characterClass
-                                        ? `${characterClass} doesn't have SRD spells in this dataset. Switch to custom mode to add exceptions.`
-                                        : "No SRD spells available. Switch to custom mode to add entries."
-                                    : "No spells match the current search or level filter."}
+                                {emptyReferenceMessage}
                             </p>
                         ) : (
                             filteredReferences.map((spell) => (
@@ -231,9 +280,11 @@ export function SpellLibraryForm({ characterId, characterClass, references, shap
                                 name="level"
                                 type="number"
                                 min={0}
-                                max={9}
+                                max={allowedMaxSpellLevel}
                                 value={formValues.level}
-                                onChange={(event) => handleFieldChange("level", Number(event.target.value))}
+                                onChange={(event) =>
+                                    handleFieldChange("level", clampSpellLevelInput(Number(event.target.value), allowedMaxSpellLevel))
+                                }
                                 readOnly={!formValues.isCustom}
                                 className="rounded-2xl border border-white/15 bg-black/40 px-3 py-2 text-base text-white"
                             />

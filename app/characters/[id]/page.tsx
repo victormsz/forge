@@ -7,7 +7,7 @@ import { getCurrentActor } from "@/lib/current-actor";
 import { prisma } from "@/lib/prisma";
 import { ABILITY_KEYS, type AbilityKey } from "@/lib/point-buy";
 import { calculateMaxHp, getHitDieValue } from "@/lib/characters/hit-dice";
-import { SPELL_AFFINITY_LABELS, SPELL_SHAPE_LABELS } from "@/lib/spells/labels";
+import { SPELL_AFFINITY_LABELS } from "@/lib/spells/labels";
 
 export const metadata: Metadata = {
     title: "ForgeSheet | Character Sheet",
@@ -409,9 +409,6 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                                             <p className="text-xs uppercase tracking-[0.35em] text-white/50">Level {spell.level}</p>
                                             <h3 className="text-xl font-semibold text-white">{spell.name}</h3>
                                         </div>
-                                        <span className="rounded-full border border-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white/80">
-                                            {SPELL_SHAPE_LABELS[spell.shape]}
-                                        </span>
                                     </div>
                                     <div className="mt-3 flex flex-wrap gap-3 text-xs text-white/70">
                                         <span className="rounded-full border border-white/10 px-3 py-1">{SPELL_AFFINITY_LABELS[spell.affinity]}</span>

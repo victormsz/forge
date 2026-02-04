@@ -8,6 +8,7 @@ export interface SpellSlotSummary {
     pact?: { slots: number; spellLevel: number } | null;
     note?: string;
     emptyState: string;
+    maxSpellLevel: number;
 }
 
 type ProgressionType = "full" | "half" | "artificer" | "third" | "warlock" | "none";
@@ -211,6 +212,7 @@ function buildStandardSummary(
     const slots = row
         .map((value, index) => ({ spellLevel: index + 1, slots: value }))
         .filter((entry) => entry.slots > 0);
+    const maxSpellLevel = slots.length > 0 ? slots[slots.length - 1].spellLevel : 0;
 
     const unlockMessage = cappedLevel < firstSlotLevel
         ? `${classLabel} unlocks spell slots at level ${firstSlotLevel}.`
@@ -224,12 +226,14 @@ function buildStandardSummary(
         pact: null,
         note,
         emptyState: unlockMessage,
+        maxSpellLevel,
     };
 }
 
 function buildWarlockSummary(classLabel: string, level: number): SpellSlotSummary {
     const cappedLevel = clampLevel(level);
     const pact = WARLOCK_PACT_TABLE[cappedLevel - 1] ?? null;
+    const maxSpellLevel = pact?.slotLevel ?? 0;
 
     return {
         variant: "warlock",
@@ -239,6 +243,7 @@ function buildWarlockSummary(classLabel: string, level: number): SpellSlotSummar
         pact,
         note: "Mystic Arcanum spells are once-per-long-rest and should be tracked manually.",
         emptyState: `${classLabel} unlocks Pact Magic at level 1.`,
+        maxSpellLevel,
     };
 }
 
@@ -294,6 +299,7 @@ export function getSpellSlotSummary(className: string | null | undefined, level:
                 pact: null,
                 note: undefined,
                 emptyState: `${classLabel} does not track spell slots.`,
+                maxSpellLevel: 0,
             };
     }
 }

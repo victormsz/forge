@@ -73,9 +73,12 @@ export default async function CharacterSpellsPage({ params }: CharacterSpellsPag
         notFound();
     }
 
-    const filteredReferences = character.charClass
+    const slotSummary = getSpellSlotSummary(character.charClass, character.level);
+    const maxSpellLevel = slotSummary.maxSpellLevel;
+    const classFilteredReferences = character.charClass
         ? referenceSpells.filter((spell) => spellSupportsClass(spell, character.charClass))
         : referenceSpells;
+    const cappedReferences = classFilteredReferences.filter((spell) => spell.level <= maxSpellLevel);
 
     const prepProfile = getSpellPreparationProfile(character.charClass);
     const canTogglePreparation = prepProfile.mode === "PREPARES_DAILY";
@@ -83,7 +86,6 @@ export default async function CharacterSpellsPage({ params }: CharacterSpellsPag
         ? character.spells.filter((spell) => spell.isPrepared)
         : character.spells;
     const knownSpells = character.spells;
-    const slotSummary = getSpellSlotSummary(character.charClass, character.level);
     const hasSlotResources = slotSummary.slots.length > 0 || Boolean(slotSummary.pact && slotSummary.pact.slots > 0);
 
     return (
@@ -290,7 +292,8 @@ export default async function CharacterSpellsPage({ params }: CharacterSpellsPag
                     <SpellLibraryForm
                         characterId={character.id}
                         characterClass={character.charClass}
-                        references={filteredReferences}
+                        references={cappedReferences}
+                        maxSpellLevel={maxSpellLevel}
                         shapeOptions={shapeOptions}
                         affinityOptions={affinityOptions}
                         action={addSpell}

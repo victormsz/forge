@@ -29,7 +29,12 @@ export default async function CharactersPage() {
 
     const characters = await prisma.character.findMany({
         where: { userId: actor.userId },
-        orderBy: { updatedAt: "desc" },
+        // Keep roster positions stable so characters don't jump around after updates.
+        orderBy: [
+            { createdAt: "asc" },
+            { name: "asc" },
+            { id: "asc" },
+        ],
         include: { spells: { select: { id: true } } },
     });
 

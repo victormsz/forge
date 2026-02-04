@@ -192,3 +192,29 @@ export function getFeaturesUpToLevel(className: string | null | undefined, level
 
     return features;
 }
+
+/**
+ * Get all subclass features for a class up to a specific level
+ */
+export function getSubclassFeaturesUpToLevel(
+    className: string | null | undefined,
+    subclassName: string | null | undefined,
+    level: number
+): ClassFeature[] {
+    if (!className || !subclassName) {
+        return [];
+    }
+
+    const normalizedClassName = className.trim().toLowerCase();
+    const normalizedSubclassName = subclassName.trim().toLowerCase();
+
+    return typedLevelData
+        .filter(
+            (data) =>
+                data.class.name.toLowerCase() === normalizedClassName &&
+                data.subclass?.name.toLowerCase() === normalizedSubclassName &&
+                data.level <= level
+        )
+        .sort((a, b) => a.level - b.level)
+        .flatMap((data) => data.features);
+}

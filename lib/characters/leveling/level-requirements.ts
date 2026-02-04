@@ -1,4 +1,10 @@
-import { getLevelData, getSubclassLevel as getSubclassLevelFromData, type ClassFeature, type SpellcastingInfo } from "./level-data";
+import {
+    getLevelData,
+    getSubclassLevel as getSubclassLevelFromData,
+    getSubclassLevelData,
+    type ClassFeature,
+    type SpellcastingInfo,
+} from "./level-data";
 
 export interface LevelCustomPrompt {
     id: string;
@@ -25,9 +31,18 @@ function isAbilityScoreImprovement(feature: ClassFeature): boolean {
     return feature.name.toLowerCase().includes("ability score improvement");
 }
 
-export function getLevelRequirement(className: string | null | undefined, level: number): LevelRequirement {
+export function getLevelRequirement(
+    className: string | null | undefined,
+    subclassName: string | null | undefined,
+    level: number
+): LevelRequirement {
     const levelData = getLevelData(className, level);
     const subclassLevel = getSubclassLevelFromData(className);
+    const subclassData = subclassName ? getSubclassLevelData(className, subclassName, level) : null;
+    const combinedFeatures = [
+        ...(levelData?.features ?? []),
+        ...(subclassData?.features ?? []),
+    ];
 
     if (!levelData) {
         // Fallback for missing data
@@ -36,7 +51,7 @@ export function getLevelRequirement(className: string | null | undefined, level:
             abilityScoreIncrements: 0,
             allowFeatChoice: false,
             customPrompts: [],
-            features: [],
+            features: combinedFeatures,
             proficiencyBonus: 2,
         };
     }
@@ -54,7 +69,7 @@ export function getLevelRequirement(className: string | null | undefined, level:
         abilityScoreIncrements,
         allowFeatChoice,
         customPrompts: [],
-        features: levelData.features,
+        features: combinedFeatures,
         proficiencyBonus: levelData.prof_bonus,
         spellcasting: levelData.spellcasting,
         classSpecific: levelData.class_specific,

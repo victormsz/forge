@@ -7,6 +7,7 @@ import { levelUpCharacter } from "@/app/characters/actions";
 import { ABILITY_SCORE_PICKLIST, GLOBAL_FEAT_OPTIONS, getSubclassOptions, SUBCLASS_DESCRIPTIONS } from "@/lib/characters/level-up-options";
 import { MAX_CHARACTER_LEVEL } from "@/lib/characters/constants";
 import { getLevelRequirement } from "@/lib/characters/leveling/level-requirements";
+import { withFeatureDescriptions } from "@/lib/characters/leveling/feature-data";
 import { getHitDieValue } from "@/lib/characters/hit-dice";
 import { getCurrentActor } from "@/lib/current-actor";
 import { prisma } from "@/lib/prisma";
@@ -38,6 +39,7 @@ export default async function LevelUpPage({ params, searchParams }: LevelUpPageP
             name: true,
             level: true,
             charClass: true,
+            subclass: true,
             abilityScores: true,
         },
     });
@@ -52,7 +54,7 @@ export default async function LevelUpPage({ params, searchParams }: LevelUpPageP
         redirect("/characters");
     }
 
-    const requirement = getLevelRequirement(character.charClass, nextLevel);
+    const requirement = getLevelRequirement(character.charClass, character.subclass, nextLevel);
     const abilityScores = (character.abilityScores as Record<string, number>) ?? {};
     const abilityDisplay = ABILITY_SCORE_PICKLIST.map((entry) => ({
         ...entry,
@@ -67,6 +69,7 @@ export default async function LevelUpPage({ params, searchParams }: LevelUpPageP
     const showFeatChoice = requirement.allowFeatChoice;
     const showSubclassChoice = requirement.requiresSubclass;
     const showHitDiceError = search?.error === "missing-hit-die";
+    const featureDetails = withFeatureDescriptions(requirement.features);
 
     return (
         <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(250,232,214,0.15),_transparent_45%),_#050506] py-16 text-white">
@@ -85,16 +88,27 @@ export default async function LevelUpPage({ params, searchParams }: LevelUpPageP
                         <p className="text-sm text-white/70">
                             You are moving from level {character.level} to level {nextLevel}. The form below highlights only the options that unlock for this class and level so every advancement stays rules-accurate.
                         </p>
-                        {requirement.features.length > 0 && (
+                        {featureDetails.length > 0 && (
                             <div className="mt-4 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-4">
                                 <h2 className="mb-2 text-sm font-semibold text-emerald-200">New Features at Level {nextLevel}</h2>
-                                <ul className="space-y-1">
-                                    {requirement.features.map((feature) => (
-                                        <li key={feature.index} className="text-sm text-emerald-100/90">
-                                            • {feature.name}
-                                        </li>
+                                <div className="space-y-3">
+                                    {featureDetails.map((feature) => (
+                                        <div key={feature.index} className="rounded-xl border border-emerald-400/20 bg-black/20 p-3">
+                                            <p className="text-sm font-semibold text-emerald-100/90">{feature.name}</p>
+                                            {feature.desc.length > 0 ? (
+                                                <div className="mt-2 space-y-1 text-xs text-emerald-100/80">
+                                                    {feature.desc.map((line, index) => (
+                                                        <p key={`${feature.index}-${index}`} className="leading-relaxed">
+                                                            {line}
+                                                        </p>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="mt-2 text-xs text-emerald-100/60">Description not available.</p>
+                                            )}
+                                        </div>
                                     ))}
-                                </ul>
+                                </div>
                             </div>
                         )}
                         {requirement.spellcasting && (

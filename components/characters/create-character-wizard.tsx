@@ -811,7 +811,15 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
             case "ancestry":
                 return Boolean(formState.ancestry);
             case "background":
-                return Boolean(formState.background);
+                if (!formState.background) {
+                    return false;
+                }
+                // Check if background ability choice is made when required
+                const bgBonuses = getBackgroundBonuses(formState.background);
+                if (bgBonuses && bgBonuses.choices.length > 0) {
+                    return Boolean(formState.backgroundAbilityChoice);
+                }
+                return true;
             case "class": {
                 if (!formState.charClass) {
                     return false;
@@ -1414,130 +1422,172 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                     )}
 
                     {currentStep.id === "background" && (
-                        <div className="mt-6 flex flex-col gap-6 lg:flex-row">
-                            <div className="grid flex-1 gap-3 md:grid-cols-2">
-                                {backgroundOptions.map((option) => {
-                                    const active = formState.background === option.value;
-                                    return (
-                                        <button
-                                            type="button"
-                                            key={option.value}
-                                            onClick={() => setFormState((prev) => ({ ...prev, background: option.value }))}
-                                            onMouseEnter={() => setHoveredBackground(option.value)}
-                                            onMouseLeave={() => setHoveredBackground(null)}
-                                            onFocus={() => setHoveredBackground(option.value)}
-                                            className={`rounded-2xl border px-4 py-4 text-left transition ${active ? "border-rose-300 bg-rose-300/10" : "border-white/15 bg-black/30 hover:border-white/30"
-                                                }`}
-                                        >
-                                            <p className="text-sm font-semibold text-white">{option.label}</p>
-                                            <p className="mt-1 text-xs text-white/70">{option.description}</p>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                            <div className="lg:w-1/3">
-                                {(() => {
-                                    const insight =
-                                        backgroundOptions.find((option) => option.value === (hoveredBackground ?? formState.background)) ??
-                                        backgroundOptions[0];
-                                    const detailParts = insight.detail.split('\n\n');
+                        <div className="mt-6 space-y-6">
+                            <div className="flex flex-col gap-6 lg:flex-row">
+                                <div className="grid flex-1 gap-3 md:grid-cols-2">
+                                    {backgroundOptions.map((option) => {
+                                        const active = formState.background === option.value;
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={option.value}
+                                                onClick={() => setFormState((prev) => ({ ...prev, background: option.value }))}
+                                                onMouseEnter={() => setHoveredBackground(option.value)}
+                                                onMouseLeave={() => setHoveredBackground(null)}
+                                                onFocus={() => setHoveredBackground(option.value)}
+                                                className={`rounded-2xl border px-4 py-4 text-left transition ${active ? "border-rose-300 bg-rose-300/10" : "border-white/15 bg-black/30 hover:border-white/30"
+                                                    }`}
+                                            >
+                                                <p className="text-sm font-semibold text-white">{option.label}</p>
+                                                <p className="mt-1 text-xs text-white/70">{option.description}</p>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <div className="lg:w-1/3">
+                                    {(() => {
+                                        const insight =
+                                            backgroundOptions.find((option) => option.value === (hoveredBackground ?? formState.background)) ??
+                                            backgroundOptions[0];
+                                        const detailParts = insight.detail.split('\n\n');
 
-                                    return (
-                                        <div className="rounded-2xl border border-white/15 bg-black/30 p-5 overflow-y-auto max-h-[600px]">
-                                            <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Background Details</p>
-                                            <p className="mt-2 text-lg font-semibold text-white">{insight.label}</p>
+                                        return (
+                                            <div className="rounded-2xl border border-white/15 bg-black/30 p-5 overflow-y-auto max-h-[600px]">
+                                                <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Background Details</p>
+                                                <p className="mt-2 text-lg font-semibold text-white">{insight.label}</p>
 
-                                            <div className="mt-3 space-y-3">
-                                                {detailParts.map((part, idx) => {
-                                                    if (part.startsWith('**')) {
-                                                        // Format stat blocks
-                                                        const lines = part.split('\n');
-                                                        return (
-                                                            <div key={idx} className="text-xs space-y-1">
-                                                                {lines.map((line, lineIdx) => {
-                                                                    const match = line.match(/\*\*(.*?):\*\*(.*)/);
-                                                                    if (match) {
-                                                                        return (
-                                                                            <div key={lineIdx} className="flex gap-2">
-                                                                                <span className="font-semibold text-rose-300 min-w-[130px]">{match[1]}:</span>
-                                                                                <span className="text-white/80">{match[2].trim()}</span>
-                                                                            </div>
-                                                                        );
-                                                                    }
-                                                                    return null;
-                                                                })}
-                                                            </div>
-                                                        );
-                                                    } else if (part.includes('•')) {
-                                                        // Format proficiency lists
-                                                        const lines = part.split('\n').filter(l => l.trim());
-                                                        return (
-                                                            <div key={idx} className="text-xs space-y-1.5">
-                                                                {lines.map((line, lineIdx) => {
-                                                                    if (line.includes('•')) {
-                                                                        const match = line.match(/• \*\*(.*?):\*\*(.*)/);
+                                                <div className="mt-3 space-y-3">
+                                                    {detailParts.map((part, idx) => {
+                                                        if (part.startsWith('**')) {
+                                                            // Format stat blocks
+                                                            const lines = part.split('\n');
+                                                            return (
+                                                                <div key={idx} className="text-xs space-y-1">
+                                                                    {lines.map((line, lineIdx) => {
+                                                                        const match = line.match(/\*\*(.*?):\*\*(.*)/);
                                                                         if (match) {
                                                                             return (
                                                                                 <div key={lineIdx} className="flex gap-2">
-                                                                                    <span className="text-white/50">•</span>
-                                                                                    <div>
-                                                                                        <span className="font-semibold text-white">{match[1]}: </span>
-                                                                                        <span className="text-white/70">{match[2].trim()}</span>
-                                                                                    </div>
+                                                                                    <span className="font-semibold text-rose-300 min-w-[130px]">{match[1]}:</span>
+                                                                                    <span className="text-white/80">{match[2].trim()}</span>
                                                                                 </div>
                                                                             );
                                                                         }
-                                                                        return (
-                                                                            <div key={lineIdx} className="flex gap-2">
-                                                                                <span className="text-white/50">•</span>
-                                                                                <span className="text-white/70">{line.replace('•', '').trim()}</span>
-                                                                            </div>
-                                                                        );
-                                                                    }
-                                                                    return null;
-                                                                })}
-                                                            </div>
-                                                        );
-                                                    } else {
-                                                        // Regular paragraph
-                                                        return (
-                                                            <p key={idx} className="text-sm text-white/70 leading-relaxed">
-                                                                {part}
-                                                            </p>
-                                                        );
-                                                    }
-                                                })}
-                                            </div>
-
-                                            {insight.proficiencies && (
-                                                <div className="mt-4 pt-4 border-t border-white/10 space-y-2">
-                                                    <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Additional Info</p>
-                                                    {insight.proficiencies.skills.length > 0 && (
-                                                        <div className="text-xs">
-                                                            <span className="font-semibold text-rose-300">Skill Proficiencies: </span>
-                                                            <span className="text-white/70">{insight.proficiencies.skills.join(', ')}</span>
-                                                        </div>
-                                                    )}
-                                                    {insight.proficiencies.tools.length > 0 && (
-                                                        <div className="text-xs">
-                                                            <span className="font-semibold text-rose-300">Tool Proficiencies: </span>
-                                                            <span className="text-white/70">{insight.proficiencies.tools.join(', ')}</span>
-                                                        </div>
-                                                    )}
-                                                    {insight.proficiencies.languages.length > 0 && (
-                                                        <div className="text-xs">
-                                                            <span className="font-semibold text-rose-300">Languages: </span>
-                                                            <span className="text-white/70">{insight.proficiencies.languages.join(', ')}</span>
-                                                        </div>
-                                                    )}
+                                                                        return null;
+                                                                    })}
+                                                                </div>
+                                                            );
+                                                        } else if (part.includes('•')) {
+                                                            // Format proficiency lists
+                                                            const lines = part.split('\n').filter(l => l.trim());
+                                                            return (
+                                                                <div key={idx} className="text-xs space-y-1.5">
+                                                                    {lines.map((line, lineIdx) => {
+                                                                        if (line.includes('•')) {
+                                                                            const match = line.match(/• \*\*(.*?):\*\*(.*)/);
+                                                                            if (match) {
+                                                                                return (
+                                                                                    <div key={lineIdx} className="flex gap-2">
+                                                                                        <span className="text-white/50">•</span>
+                                                                                        <div>
+                                                                                            <span className="font-semibold text-white">{match[1]}: </span>
+                                                                                            <span className="text-white/70">{match[2].trim()}</span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                );
+                                                                            }
+                                                                            return (
+                                                                                <div key={lineIdx} className="flex gap-2">
+                                                                                    <span className="text-white/50">•</span>
+                                                                                    <span className="text-white/70">{line.replace('•', '').trim()}</span>
+                                                                                </div>
+                                                                            );
+                                                                        }
+                                                                        return null;
+                                                                    })}
+                                                                </div>
+                                                            );
+                                                        } else {
+                                                            // Regular paragraph
+                                                            return (
+                                                                <p key={idx} className="text-sm text-white/70 leading-relaxed">
+                                                                    {part}
+                                                                </p>
+                                                            );
+                                                        }
+                                                    })}
                                                 </div>
-                                            )}
 
-                                            <p className="mt-4 text-xs text-white/40 italic">Hover or focus a background to update.</p>
-                                        </div>
-                                    );
-                                })()}
+                                                {insight.proficiencies && (
+                                                    <div className="mt-4 pt-4 border-t border-white/10 space-y-2">
+                                                        <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Additional Info</p>
+                                                        {insight.proficiencies.skills.length > 0 && (
+                                                            <div className="text-xs">
+                                                                <span className="font-semibold text-rose-300">Skill Proficiencies: </span>
+                                                                <span className="text-white/70">{insight.proficiencies.skills.join(', ')}</span>
+                                                            </div>
+                                                        )}
+                                                        {insight.proficiencies.tools.length > 0 && (
+                                                            <div className="text-xs">
+                                                                <span className="font-semibold text-rose-300">Tool Proficiencies: </span>
+                                                                <span className="text-white/70">{insight.proficiencies.tools.join(', ')}</span>
+                                                            </div>
+                                                        )}
+                                                        {insight.proficiencies.languages.length > 0 && (
+                                                            <div className="text-xs">
+                                                                <span className="font-semibold text-rose-300">Languages: </span>
+                                                                <span className="text-white/70">{insight.proficiencies.languages.join(', ')}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                <p className="mt-4 text-xs text-white/40 italic">Hover or focus a background to update.</p>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
                             </div>
+
+                            {formState.background && (() => {
+                                const bgBonuses = getBackgroundBonuses(formState.background);
+                                if (!bgBonuses || bgBonuses.choices.length <= 1) {
+                                    return null;
+                                }
+
+                                return (
+                                    <div className="rounded-2xl border border-white/15 bg-black/30 p-5">
+                                        <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Ability Score Increase</p>
+                                        <p className="mt-2 text-sm text-white/70">
+                                            Choose which ability score to increase by +{bgBonuses.amount}:
+                                        </p>
+                                        <div className="mt-4 flex flex-wrap gap-3">
+                                            {bgBonuses.choices.map((ability) => {
+                                                const isSelected = formState.backgroundAbilityChoice === ability;
+                                                const meta = abilityMeta[ability];
+
+                                                return (
+                                                    <button
+                                                        key={ability}
+                                                        type="button"
+                                                        onClick={() => setFormState((prev) => ({ ...prev, backgroundAbilityChoice: ability }))}
+                                                        className={`flex-1 min-w-[140px] rounded-2xl border px-4 py-3 text-left transition ${isSelected
+                                                                ? "border-rose-300 bg-rose-300/10"
+                                                                : "border-white/15 bg-black/40 hover:border-white/30"
+                                                            }`}
+                                                    >
+                                                        <p className="text-sm font-semibold text-white">
+                                                            {meta.label}
+                                                            {isSelected && <span className="ml-2 text-rose-300">✓</span>}
+                                                        </p>
+                                                        <p className="mt-1 text-xs text-white/60">{meta.summary}</p>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
                     )}
 

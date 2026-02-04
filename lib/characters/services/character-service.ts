@@ -50,7 +50,7 @@ export class CharacterService {
     private async requireCharacter(characterId: string) {
         const character = await prisma.character.findUnique({
             where: { id: characterId },
-            select: { id: true, userId: true, level: true, charClass: true, abilityScores: true },
+            select: { id: true, userId: true, level: true, charClass: true, subclass: true, abilityScores: true },
         });
 
         if (!character) {
@@ -94,10 +94,10 @@ export class CharacterService {
         // Load class data to get starting equipment
         const classOptions = getClassOptions();
         const classData = classOptions.find((c) => c.value === input.charClass);
-        
+
         // Build starting equipment list
         const startingItems: Array<{ name: string; quantity: number }> = [];
-        
+
         if (classData) {
             // Add automatic starting equipment
             classData.startingEquipment.forEach((item) => {
@@ -106,22 +106,22 @@ export class CharacterService {
                     quantity: item.quantity,
                 });
             });
-            
+
             // Add selected equipment from choices
             const equipmentOptions = classData.startingEquipmentOptions || [];
             Object.entries(input.equipmentChoices).forEach(([optionIndexStr, choiceIndex]) => {
                 const optionIndex = parseInt(optionIndexStr, 10);
                 const equipmentOption = equipmentOptions[optionIndex];
-                
+
                 if (equipmentOption?.from?.options) {
                     const selectedChoice = equipmentOption.from.options[choiceIndex];
-                    
+
                     if (selectedChoice) {
                         // Handle different option types
                         if (selectedChoice.option_type === "counted_reference") {
                             const count = selectedChoice.count || 1;
                             const itemName = selectedChoice.of?.name;
-                            
+
                             if (itemName) {
                                 startingItems.push({
                                     name: itemName,
@@ -153,7 +153,7 @@ export class CharacterService {
                     proficiencies: input.proficiencies,
                 },
             });
-            
+
             // Create starting equipment items
             if (startingItems.length > 0) {
                 await tx.item.createMany({
@@ -165,10 +165,10 @@ export class CharacterService {
                     })),
                 });
             }
-            
+
             return newCharacter;
         });
-        
+
         return character;
     }
 
@@ -195,7 +195,7 @@ export class CharacterService {
             return { updated: false, level: existing.level };
         }
 
-        const requirements = getLevelRequirement(existing.charClass, nextLevel);
+        const requirements = getLevelRequirement(existing.charClass, existing.subclass, nextLevel);
 
         if (requirements.requiresSubclass && !input.subclass) {
             throw new Error("Subclass selection is required at this level.");

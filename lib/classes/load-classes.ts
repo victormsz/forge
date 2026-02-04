@@ -1,5 +1,6 @@
 import classesData from "@/db/2014/5e-SRD-Classes.json";
 import subclassesData from "@/db/2014/5e-SRD-Subclasses.json";
+import { getSubclassLevel } from "@/lib/characters/leveling/level-data";
 
 export interface ProficiencyChoice {
     desc: string;
@@ -197,15 +198,20 @@ export function getClassOptions(): ClassOption[] {
         const savingThrows = classData.saving_throws.map((st) => st.name);
 
         // Get subclasses from the class data and enrich with details from Subclasses.json
-        const subclasses: SubclassOption[] | undefined = (classData as any).subclasses?.map((subclassRef: any) => {
-            const details = subclassDetailsMap.get(subclassRef.index);
-            return {
-                index: subclassRef.index,
-                name: subclassRef.name,
-                description: details?.desc?.[0] || `The ${subclassRef.name} subclass.`,
-                flavorText: details?.subclass_flavor || "Subclass",
-            };
-        });
+        // Only include subclasses if they are available at level 1 (for character creation)
+        const subclassLevel = getSubclassLevel(classData.name);
+        const subclasses: SubclassOption[] | undefined =
+            subclassLevel === 1
+                ? (classData as any).subclasses?.map((subclassRef: any) => {
+                    const details = subclassDetailsMap.get(subclassRef.index);
+                    return {
+                        index: subclassRef.index,
+                        name: subclassRef.name,
+                        description: details?.desc?.[0] || `The ${subclassRef.name} subclass.`,
+                        flavorText: details?.subclass_flavor || "Subclass",
+                    };
+                })
+                : undefined;
         return {
             label: classData.name,
             value: classData.name,

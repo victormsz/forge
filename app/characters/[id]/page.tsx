@@ -9,6 +9,8 @@ import { ABILITY_KEYS, type AbilityKey } from "@/lib/point-buy";
 import { calculateMaxHp, getHitDieValue } from "@/lib/characters/hit-dice";
 import { SPELL_AFFINITY_LABELS } from "@/lib/spells/labels";
 import { formatSubclassName } from "@/lib/characters/level-up-options";
+import { getFeaturesUpToLevel, getSubclassFeaturesUpToLevel } from "@/lib/characters/leveling/level-data";
+import { withFeatureDescriptions } from "@/lib/characters/leveling/feature-data";
 import {
     abilityModifier,
     buildSkillSummaries,
@@ -146,6 +148,21 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
     if (levelLog?.feat) {
         feats.push(levelLog.feat);
     }
+
+    const classFeatures = getFeaturesUpToLevel(character.charClass, character.level);
+    const subclassFeatures = character.subclass
+        ? getSubclassFeaturesUpToLevel(character.charClass, character.subclass, character.level)
+        : [];
+    const featureDetails = (() => {
+        const seen = new Set<string>();
+        return withFeatureDescriptions([...classFeatures, ...subclassFeatures]).filter((feature) => {
+            if (seen.has(feature.index)) {
+                return false;
+            }
+            seen.add(feature.index);
+            return true;
+        });
+    })();
 
     const ancestryLine = [character.ancestry, character.background, character.alignment]
         .filter(Boolean)
@@ -518,6 +535,43 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                             </article>
                         ))}
                     </div>
+                </section>
+
+                <section className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                        <div>
+                            <h2 className="text-xl font-bold text-white">Class Features</h2>
+                            <p className="mt-1 text-sm text-white/70">Abilities gained from your class and subclass</p>
+                        </div>
+                        <span className="rounded-xl border border-emerald-400/40 bg-emerald-400/10 px-4 py-2 text-sm font-bold text-emerald-300">
+                            {featureDetails.length} {featureDetails.length === 1 ? "Feature" : "Features"}
+                        </span>
+                    </div>
+                    {featureDetails.length === 0 ? (
+                        <div className="rounded-xl border border-dashed border-white/20 bg-black/20 p-8 text-center">
+                            <p className="text-white/60">No class features tracked yet.</p>
+                            <p className="mt-2 text-sm text-white/50">Choose a class to unlock your feature list.</p>
+                        </div>
+                    ) : (
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            {featureDetails.map((feature) => (
+                                <article key={feature.index} className="rounded-xl border border-emerald-400/20 bg-gradient-to-br from-emerald-400/10 to-emerald-400/5 p-5">
+                                    <h3 className="text-lg font-bold text-white">{feature.name}</h3>
+                                    {feature.desc.length > 0 ? (
+                                        <div className="mt-2 space-y-1 text-sm text-white/70">
+                                            {feature.desc.map((line, index) => (
+                                                <p key={`${feature.index}-${index}`} className="leading-relaxed">
+                                                    {line}
+                                                </p>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="mt-2 text-sm text-white/50">Description not available.</p>
+                                    )}
+                                </article>
+                            ))}
+                        </div>
+                    )}
                 </section>
 
                 <section className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-sm">

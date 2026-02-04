@@ -75,6 +75,7 @@ model Character {
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   spells Spell[]
+  items  Item[]
 
   @@index([userId])
 }
@@ -94,6 +95,26 @@ model Spell {
   isPrepared  Boolean             @default(false)
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@index([characterId])
+}
+
+model Item {
+  id          String   @id @default(cuid())
+  characterId String
+  name        String
+  category    String?
+  cost        String?
+  weight      Float?
+  quantity    Int      @default(1)
+  description String?
+  notes       String?
+  referenceId String?
+  isCustom    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
 

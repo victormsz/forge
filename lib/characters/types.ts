@@ -61,6 +61,19 @@ export interface ToggleSpellPreparationInput {
     isPrepared: boolean;
 }
 
+export interface AddItemInput {
+    characterId: string;
+    name: string;
+    category: string | null;
+    cost: string | null;
+    weight: number | null;
+    quantity: number;
+    description: string | null;
+    notes: string | null;
+    referenceId: string | null;
+    isCustom: boolean;
+}
+
 export const EMPTY_PROFICIENCIES: CharacterProficiencies = {
     armor: [],
     weapons: [],

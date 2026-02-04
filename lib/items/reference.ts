@@ -1,0 +1,315 @@
+import equipmentPayload from "@/db/2024/5e-SRD-Equipment.json";
+
+export interface ItemReference {
+    id: string;
+    slug: string;
+    name: string;
+    categories: string[];
+    categoryIds: string[];
+    costLabel: string | null;
+    weight: number | null;
+    description: string | null;
+    properties: string[];
+    detailTags: string[];
+    damageLabel: string | null;
+    rangeLabel: string | null;
+    bundleQuantity: number | null;
+    imageUrl: string | null;
+    sourceUrl: string | null;
+}
+
+export interface ItemCategoryOption {
+    id: string;
+    label: string;
+    count: number;
+}
+
+interface RawEquipmentRecord {
+    index?: string | null;
+    name?: string | null;
+    equipment_categories?: Array<{ index?: string | null; name?: string | null }> | null;
+    gear_category?: { index?: string | null; name?: string | null } | null;
+    cost?: { quantity?: number | string | null; unit?: string | null } | null;
+    weight?: number | string | null;
+    quantity?: number | string | null;
+    description?: string | null;
+    properties?: Array<{ name?: string | null }> | null;
+    damage?: {
+        damage_dice?: string | null;
+        damage_type?: { name?: string | null } | null;
+    } | null;
+    two_handed_damage?: {
+        damage_dice?: string | null;
+        damage_type?: { name?: string | null } | null;
+    } | null;
+    range?: {
+        normal?: number | string | null;
+        long?: number | string | null;
+    } | null;
+    armor_class?: {
+        base?: number | string | null;
+        dex_bonus?: boolean | null;
+        max_bonus?: number | string | null;
+    } | null;
+    stealth_disadvantage?: boolean | null;
+    str_minimum?: number | string | null;
+    mastery?: { name?: string | null } | null;
+    ability?: { name?: string | null } | null;
+    url?: string | null;
+    image?: string | null;
+}
+
+const rawEquipment: RawEquipmentRecord[] = Array.isArray(equipmentPayload)
+    ? (equipmentPayload as RawEquipmentRecord[])
+    : [];
+
+const normalizedItems: ItemReference[] = rawEquipment
+    .map((record) => normalizeItem(record))
+    .filter((item): item is ItemReference => Boolean(item));
+
+const categoryIndex = buildCategoryIndex(normalizedItems);
+
+export function getReferenceItems() {
+    return normalizedItems;
+}
+
+export function findReferenceItemById(id: string) {
+    return normalizedItems.find((item) => item.id === id) ?? null;
+}
+
+export function getItemCategoryOptions(): ItemCategoryOption[] {
+    return Array.from(categoryIndex.values()).sort((a, b) => b.count - a.count);
+}
+
+function normalizeItem(entry: RawEquipmentRecord): ItemReference | null {
+    const name = sanitizeText(entry.name);
+
+    if (!name) {
+        return null;
+    }
+
+    const slug = (entry.index ?? slugify(name)).toLowerCase();
+    const categories = extractCategoryNames(entry);
+    const categoryIds = extractCategoryIds(entry);
+    const costLabel = formatCost(entry.cost);
+    const weight = parseWeight(entry.weight);
+    const description = sanitizeLongText(entry.description);
+    const properties = extractProperties(entry.properties);
+    const damageLabel = formatDamage(entry.damage, entry.two_handed_damage);
+    const rangeLabel = formatRange(entry.range);
+    const bundleQuantity = parseInteger(entry.quantity);
+    const detailTags = buildDetailTags(entry, damageLabel, rangeLabel, bundleQuantity, properties);
+
+    return {
+        id: slug,
+        slug,
+        name,
+        categories,
+        categoryIds,
+        costLabel,
+        weight,
+        description,
+        properties,
+        detailTags,
+        damageLabel,
+        rangeLabel,
+        bundleQuantity,
+        imageUrl: sanitizeText(entry.image),
+        sourceUrl: sanitizeText(entry.url),
+    };
+}
+
+function extractCategoryNames(entry: RawEquipmentRecord) {
+    const categories = Array.isArray(entry.equipment_categories)
+        ? entry.equipment_categories
+        : entry.gear_category
+            ? [entry.gear_category]
+            : [];
+    return categories
+        .map((category) => sanitizeText(category?.name))
+        .filter((category): category is string => Boolean(category));
+}
+
+function extractCategoryIds(entry: RawEquipmentRecord) {
+    const categories = Array.isArray(entry.equipment_categories)
+        ? entry.equipment_categories
+        : entry.gear_category
+            ? [entry.gear_category]
+            : [];
+    return categories
+        .map((category) => sanitizeText(category?.index))
+        .filter((category): category is string => Boolean(category));
+}
+
+function extractProperties(properties: RawEquipmentRecord["properties"]) {
+    if (!Array.isArray(properties)) {
+        return [];
+    }
+    return properties
+        .map((property) => sanitizeText(property?.name))
+        .filter((property): property is string => Boolean(property));
+}
+
+function buildDetailTags(
+    entry: RawEquipmentRecord,
+    damageLabel: string | null,
+    rangeLabel: string | null,
+    bundleQuantity: number | null,
+    properties: string[],
+) {
+    const tags = new Set<string>();
+
+    if (damageLabel) {
+        tags.add(damageLabel);
+    }
+    if (rangeLabel) {
+        tags.add(rangeLabel);
+    }
+    if (bundleQuantity && bundleQuantity > 1) {
+        tags.add(`Bundle of ${bundleQuantity}`);
+    }
+    if (entry.mastery?.name) {
+        tags.add(`Mastery: ${entry.mastery.name}`);
+    }
+    if (entry.ability?.name) {
+        tags.add(`Ability: ${entry.ability.name}`);
+    }
+    if (entry.armor_class?.base) {
+        const acSegments = formatArmorClass(entry.armor_class);
+        if (acSegments) {
+            tags.add(acSegments);
+        }
+    }
+    if (entry.stealth_disadvantage) {
+        tags.add("Stealth disadvantage");
+    }
+    const strengthRequirement = parseInteger(entry.str_minimum);
+    if (strengthRequirement) {
+        tags.add(`STR ${strengthRequirement}+ required`);
+    }
+    properties.forEach((property) => tags.add(property));
+
+    return Array.from(tags).slice(0, 8);
+}
+
+function formatDamage(
+    primary: RawEquipmentRecord["damage"],
+    versatile: RawEquipmentRecord["two_handed_damage"],
+) {
+    const primaryLabel = formatDamageEntry(primary);
+    const versatileLabel = formatDamageEntry(versatile);
+
+    if (primaryLabel && versatileLabel) {
+        return `${primaryLabel} (two-handed ${versatileLabel})`;
+    }
+    return primaryLabel ?? versatileLabel;
+}
+
+function formatDamageEntry(entry: RawEquipmentRecord["damage"]) {
+    if (!entry || !entry.damage_dice) {
+        return null;
+    }
+    const type = sanitizeText(entry.damage_type?.name);
+    return type ? `${entry.damage_dice} ${type}` : entry.damage_dice;
+}
+
+function formatRange(range: RawEquipmentRecord["range"]) {
+    if (!range) {
+        return null;
+    }
+    const normal = parseInteger(range.normal);
+    const long = parseInteger(range.long);
+    if (normal && long) {
+        return `Range ${normal}/${long} ft`;
+    }
+    if (normal) {
+        return `Range ${normal} ft`;
+    }
+    return null;
+}
+
+function formatArmorClass(ac: RawEquipmentRecord["armor_class"]) {
+    if (!ac) {
+        return null;
+    }
+    const base = parseInteger(ac.base);
+    if (!base) {
+        return null;
+    }
+    const dexBonus = ac.dex_bonus ? "+ DEX" : "";
+    const maxBonus = parseInteger(ac.max_bonus);
+    const maxSegment = dexBonus && maxBonus ? ` (max +${maxBonus})` : "";
+    return `AC ${base}${dexBonus}${maxSegment}`;
+}
+
+function formatCost(cost: RawEquipmentRecord["cost"]) {
+    if (!cost) {
+        return null;
+    }
+    const quantity = typeof cost.quantity === "number" ? cost.quantity : Number(cost.quantity);
+    const unit = sanitizeText(cost.unit);
+    if (!Number.isFinite(quantity) || !unit) {
+        return null;
+    }
+    return `${quantity} ${unit}`;
+}
+
+function parseWeight(value: RawEquipmentRecord["weight"]) {
+    if (typeof value === "number") {
+        return value;
+    }
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+        return null;
+    }
+    return Math.round(numeric * 100) / 100;
+}
+
+function parseInteger(value: unknown) {
+    const numeric = typeof value === "number" ? value : Number(value);
+    if (!Number.isFinite(numeric)) {
+        return null;
+    }
+    const integer = Math.trunc(numeric);
+    return integer > 0 ? integer : null;
+}
+
+function sanitizeText(value: unknown) {
+    if (typeof value !== "string") {
+        return null;
+    }
+    const trimmed = value.trim();
+    return trimmed.length ? trimmed : null;
+}
+
+function sanitizeLongText(value: unknown) {
+    const text = sanitizeText(value);
+    if (!text) {
+        return null;
+    }
+    return text.length > 1800 ? `${text.slice(0, 1797)}...` : text;
+}
+
+function slugify(value: string) {
+    return value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/gi, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 48);
+}
+
+function buildCategoryIndex(items: ItemReference[]) {
+    const index = new Map<string, ItemCategoryOption>();
+    for (const item of items) {
+        item.categoryIds.forEach((id, idx) => {
+            const label = item.categories[idx] ?? id;
+            const existing = index.get(id);
+            if (existing) {
+                existing.count += 1;
+            } else {
+                index.set(id, { id, label, count: 1 });
+            }
+        });
+    }
+    return index;
+}

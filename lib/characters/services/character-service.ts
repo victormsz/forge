@@ -8,11 +8,13 @@ import type {
     LevelUpChoicesMeta,
     AddSpellInput,
     ToggleSpellPreparationInput,
+    AddItemInput,
 } from "@/lib/characters/types";
 import { assertPointBuyWithinBudget } from "@/lib/characters/form-parsers";
 import { getLevelRequirement } from "@/lib/characters/leveling/level-requirements";
 import type { CurrentActor } from "@/lib/current-actor";
 import { prisma } from "@/lib/prisma";
+import { findReferenceItemById } from "@/lib/items/reference";
 import { findReferenceSpellById, spellSupportsClass } from "@/lib/spells/reference";
 import { getSpellPreparationProfile } from "@/lib/spells/class-preparation";
 import { getSpellSlotSummary } from "@/lib/spells/slot-profiles";
@@ -304,5 +306,79 @@ export class CharacterService {
 
         await prisma.spell.update({ where: { id: input.spellId }, data: { isPrepared: input.isPrepared } });
         return spell.characterId;
+    }
+
+    async addItem(input: AddItemInput) {
+        if (this.actor.isGuest) {
+            throw new Error("Sign in to manage inventory.");
+        }
+
+        const character = await this.requireCharacter(input.characterId);
+
+        let itemName = input.name;
+        let itemCategory = input.category;
+        let itemCost = input.cost;
+        let itemWeight = input.weight;
+        let itemDescription = input.description;
+
+        if (!input.isCustom) {
+            if (!input.referenceId) {
+                throw new Error("Select an item from the SRD list or convert it to a custom entry.");
+            }
+
+            const reference = findReferenceItemById(input.referenceId);
+
+            if (!reference) {
+                throw new Error("The selected item could not be found. Refresh the library and try again.");
+            }
+
+            itemName = reference.name;
+            itemCategory = reference.categories[0] ?? itemCategory;
+            itemCost = reference.costLabel ?? itemCost;
+            itemWeight = typeof reference.weight === "number" ? reference.weight : itemWeight;
+            itemDescription = reference.description ?? itemDescription;
+        }
+
+        const quantity = Math.min(999, Math.max(1, input.quantity));
+
+        await prisma.item.create({
+            data: {
+                characterId: character.id,
+                name: itemName,
+                category: itemCategory,
+                cost: itemCost,
+                weight: itemWeight,
+                quantity,
+                description: itemDescription,
+                notes: input.notes,
+                referenceId: input.isCustom ? null : input.referenceId,
+                isCustom: input.isCustom,
+            },
+        });
+
+        return character.id;
+    }
+
+    async deleteItem(itemId: string) {
+        if (this.actor.isGuest) {
+            throw new Error("Guest access cannot modify inventory.");
+        }
+
+        const item = await prisma.item.findUnique({
+            where: { id: itemId },
+            select: {
+                id: true,
+                characterId: true,
+                character: { select: { userId: true } },
+            },
+        });
+
+        if (!item) {
+            throw new Error("Item not found or access denied.");
+        }
+
+        this.ensureOwnership(item.character.userId);
+        await prisma.item.delete({ where: { id: itemId } });
+        return item.characterId;
     }
 }

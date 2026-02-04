@@ -21,6 +21,7 @@ import {
     type LevelUpInput,
     type AddSpellInput,
     type ToggleSpellPreparationInput,
+    type AddItemInput,
 } from "@/lib/characters/types";
 
 const allowedMethods = new Set<AbilityGenerationMethod>([AbilityGenerationMethod.POINT_BUY, AbilityGenerationMethod.RANDOM]);
@@ -182,6 +183,48 @@ function parseSpellAffinity(input: FormDataEntryValue | null): SpellTargetAffini
     return SpellTargetAffinity.HOSTILE;
 }
 
+function parseWeightValue(input: FormDataEntryValue | null) {
+    if (typeof input === "number") {
+        return clampWeight(input);
+    }
+    if (typeof input === "string" && input.trim().length > 0) {
+        const numeric = Number(input);
+        if (Number.isFinite(numeric)) {
+            return clampWeight(numeric);
+        }
+    }
+    return null;
+}
+
+function clampWeight(value: number) {
+    if (!Number.isFinite(value)) {
+        return null;
+    }
+    const bounded = Math.min(1000, Math.max(0, value));
+    return Math.round(bounded * 100) / 100;
+}
+
+function parseQuantityValue(input: FormDataEntryValue | null) {
+    if (typeof input === "number") {
+        return clampQuantity(input);
+    }
+    if (typeof input === "string" && input.trim().length > 0) {
+        const numeric = Number(input);
+        if (Number.isFinite(numeric)) {
+            return clampQuantity(numeric);
+        }
+    }
+    return 1;
+}
+
+function clampQuantity(value: number) {
+    if (!Number.isFinite(value)) {
+        return 1;
+    }
+    const integer = Math.trunc(value);
+    return Math.min(999, Math.max(1, integer));
+}
+
 export function parseCreateCharacterFormData(formData: FormData): CreateCharacterInput {
     const methodInput = formData.get("method");
     const generationMethod = allowedMethods.has(methodInput as AbilityGenerationMethod)
@@ -292,6 +335,43 @@ export function parseToggleSpellPreparationFormData(formData: FormData): ToggleS
         spellId,
         characterId,
         isPrepared: readBoolean(formData.get("isPrepared"), false),
+    };
+}
+
+export function parseAddItemFormData(formData: FormData): AddItemInput {
+    const characterId = readString(formData.get("characterId"));
+    const name = readString(formData.get("name"));
+
+    if (!characterId) {
+        throw new Error("Character id missing.");
+    }
+
+    if (!name) {
+        throw new Error("Item name is required.");
+    }
+
+    return {
+        characterId,
+        name,
+        category: readString(formData.get("category"), null, 120),
+        cost: readString(formData.get("cost"), null, 120),
+        weight: parseWeightValue(formData.get("weight")),
+        quantity: parseQuantityValue(formData.get("quantity")),
+        description: readString(formData.get("description"), null, 2000),
+        notes: readString(formData.get("notes"), null, 800),
+        referenceId: readString(formData.get("referenceId")),
+        isCustom: readBoolean(formData.get("isCustom"), false),
+    };
+}
+
+export function parseDeleteItemFormData(formData: FormData) {
+    const itemId = readString(formData.get("itemId"));
+    if (!itemId) {
+        throw new Error("Item id missing.");
+    }
+    return {
+        itemId,
+        characterId: readString(formData.get("characterId")),
     };
 }
 

@@ -9,7 +9,8 @@ import {
     parseAddSpellFormData,
     parseDeleteSpellFormData,
     parseToggleSpellPreparationFormData,
-    MissingHitDiceRollError,
+    parseAddItemFormData,
+    parseDeleteItemFormData,
 } from "@/lib/characters/form-parsers";
 import { CharacterService } from "@/lib/characters/services/character-service";
 import { getCurrentActor } from "@/lib/current-actor";
@@ -50,19 +51,7 @@ export async function deleteCharacter(formData: FormData) {
 export async function levelUpCharacter(formData: FormData) {
     const actor = ensureActor(await getCurrentActor(), "Authentication required to level up characters.");
     const service = new CharacterService(actor);
-
-    let input: ReturnType<typeof parseLevelUpFormData>;
-    try {
-        input = parseLevelUpFormData(formData);
-    } catch (error) {
-        if (error instanceof MissingHitDiceRollError) {
-            const characterId = formData.get("characterId");
-            if (typeof characterId === "string" && characterId.trim().length > 0) {
-                redirect(`/characters/${characterId}/level-up?error=missing-hit-die`);
-            }
-        }
-        throw error;
-    }
+    const input = parseLevelUpFormData(formData);
 
     await service.levelUp(input);
     revalidatePath(`/characters/${input.characterId}`);
@@ -105,6 +94,30 @@ export async function toggleSpellPreparation(formData: FormData) {
     const characterId = await service.toggleSpellPreparation(input);
     revalidatePath(`/characters/${characterId}`);
     revalidatePath(`/characters/${characterId}/spells`);
+    revalidatePath("/characters");
+    revalidatePath("/dashboard");
+}
+
+export async function addItem(formData: FormData) {
+    const actor = ensureActor(await getCurrentActor(), "Authentication required to track inventory.");
+    const service = new CharacterService(actor);
+    const input = parseAddItemFormData(formData);
+
+    const characterId = await service.addItem(input);
+    revalidatePath(`/characters/${characterId}`);
+    revalidatePath(`/characters/${characterId}/items`);
+    revalidatePath("/characters");
+    revalidatePath("/dashboard");
+}
+
+export async function deleteItem(formData: FormData) {
+    const actor = ensureActor(await getCurrentActor(), "Authentication required to modify inventory.");
+    const service = new CharacterService(actor);
+    const { itemId } = parseDeleteItemFormData(formData);
+
+    const characterId = await service.deleteItem(itemId);
+    revalidatePath(`/characters/${characterId}`);
+    revalidatePath(`/characters/${characterId}/items`);
     revalidatePath("/characters");
     revalidatePath("/dashboard");
 }

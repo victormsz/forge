@@ -14,11 +14,13 @@ import { HIT_DICE_ROLL_REQUIRED_MESSAGE } from "@/lib/characters/form-parsers";
 import { LevelUpForm } from "@/components/characters/level-up-form";
 
 interface LevelUpPageProps {
-    params: { id: string };
-    searchParams?: { error?: string };
+    params: Promise<{ id: string }>;
+    searchParams?: Promise<{ error?: string }>;
 }
 
 export default async function LevelUpPage({ params, searchParams }: LevelUpPageProps) {
+    const { id } = await params;
+    const search = await searchParams;
     const actor = await getCurrentActor();
 
     if (!actor) {
@@ -30,7 +32,7 @@ export default async function LevelUpPage({ params, searchParams }: LevelUpPageP
     }
 
     const character = await prisma.character.findFirst({
-        where: { id: params.id, userId: actor.userId },
+        where: { id: id, userId: actor.userId },
         select: {
             id: true,
             name: true,
@@ -64,7 +66,7 @@ export default async function LevelUpPage({ params, searchParams }: LevelUpPageP
     const abilitySlots = requirement.abilityScoreIncrements;
     const showFeatChoice = requirement.allowFeatChoice;
     const showSubclassChoice = requirement.requiresSubclass;
-    const showHitDiceError = searchParams?.error === "missing-hit-die";
+    const showHitDiceError = search?.error === "missing-hit-die";
 
     return (
         <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(250,232,214,0.15),_transparent_45%),_#050506] py-16 text-white">

@@ -2,19 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { AbilityGenerationMethod, SpellTargetShape } from "@prisma/client";
+import { AbilityGenerationMethod } from "@prisma/client";
 
 import { CharacterCard } from "@/components/characters/character-card";
 import { getCurrentActor } from "@/lib/current-actor";
 import { prisma } from "@/lib/prisma";
-
-const shapeLabels: Record<SpellTargetShape, string> = {
-    SINGLE: "Single Target",
-    AOE_CIRCLE: "Area · Circle",
-    CONE: "Cone",
-    LINE: "Line",
-    SQUARE: "Square / Cube",
-};
 
 const EMPTY_PROFICIENCIES = {
     armor: [] as string[],
@@ -57,23 +49,11 @@ export default async function DashboardPage() {
         [AbilityGenerationMethod.RANDOM]: 0,
     };
 
-    const shapeTotals: Record<SpellTargetShape, number> = {
-        SINGLE: 0,
-        AOE_CIRCLE: 0,
-        CONE: 0,
-        LINE: 0,
-        SQUARE: 0,
-    };
-
     let totalSpells = 0;
 
     characters.forEach((character) => {
         methodTotals[character.generationMethod] += 1;
         totalSpells += character.spells.length;
-
-        character.spells.forEach((spell) => {
-            shapeTotals[spell.shape] += 1;
-        });
     });
 
     const latestCharacter = characters[0] ?? null;
@@ -106,10 +86,6 @@ export default async function DashboardPage() {
             detail: latestCharacter ? latestCharacter.updatedAt.toLocaleDateString() : "Forge a hero to start tracking",
         },
     ];
-
-    const shapeEntries = (Object.entries(shapeTotals) as [SpellTargetShape, number][])
-        .filter(([, count]) => count > 0)
-        .sort(([, a], [, b]) => b - a);
 
     const rosterPreview = characters.slice(0, 3).map((character) => ({
         id: character.id,
@@ -166,54 +142,36 @@ export default async function DashboardPage() {
                     ))}
                 </section>
 
-                <section className="grid gap-6 lg:grid-cols-2">
-                    <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-                        <h2 className="text-lg font-semibold text-white">Latest character activity</h2>
-                        {latestCharacter ? (
-                            <div className="mt-4">
-                                <CharacterCard
-                                    character={{
-                                        id: latestCharacter.id,
-                                        name: latestCharacter.name,
-                                        level: latestCharacter.level,
-                                        charClass: latestCharacter.charClass,
-                                        ancestry: latestCharacter.ancestry,
-                                        background: latestCharacter.background,
-                                        alignment: latestCharacter.alignment,
-                                        generationMethod: latestCharacter.generationMethod,
-                                        abilityScores: (latestCharacter.abilityScores as Record<string, number>) ?? {},
-                                        proficiencies: latestCharacter.proficiencies
-                                            ? ({
-                                                ...EMPTY_PROFICIENCIES,
-                                                ...(latestCharacter.proficiencies as Record<string, string[]>),
-                                            })
-                                            : { ...EMPTY_PROFICIENCIES },
-                                        spellsCount: latestCharacter.spells.length,
-                                        updatedAt: latestCharacter.updatedAt,
-                                    }}
-                                    disableLevelUp={actor.isGuest}
-                                />
-                            </div>
-                        ) : (
-                            <p className="mt-6 text-sm text-white/60">No characters yet. Use the forge to create your first adventurer.</p>
-                        )}
-                    </div>
-                    <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-                        <h2 className="text-lg font-semibold text-white">Spell targeting coverage</h2>
-                        {shapeEntries.length ? (
-                            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                                {shapeEntries.map(([shape, count]) => (
-                                    <div key={shape} className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                                        <p className="text-sm font-semibold text-white">{shapeLabels[shape]}</p>
-                                        <p className="mt-1 text-2xl font-bold text-white">{count}</p>
-                                        <p className="text-xs uppercase tracking-[0.3em] text-white/60">templates</p>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="mt-6 text-sm text-white/60">Start logging spells with targeting metadata to see coverage insights.</p>
-                        )}
-                    </div>
+                <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+                    <h2 className="text-lg font-semibold text-white">Latest character activity</h2>
+                    {latestCharacter ? (
+                        <div className="mt-4">
+                            <CharacterCard
+                                character={{
+                                    id: latestCharacter.id,
+                                    name: latestCharacter.name,
+                                    level: latestCharacter.level,
+                                    charClass: latestCharacter.charClass,
+                                    ancestry: latestCharacter.ancestry,
+                                    background: latestCharacter.background,
+                                    alignment: latestCharacter.alignment,
+                                    generationMethod: latestCharacter.generationMethod,
+                                    abilityScores: (latestCharacter.abilityScores as Record<string, number>) ?? {},
+                                    proficiencies: latestCharacter.proficiencies
+                                        ? ({
+                                            ...EMPTY_PROFICIENCIES,
+                                            ...(latestCharacter.proficiencies as Record<string, string[]>),
+                                        })
+                                        : { ...EMPTY_PROFICIENCIES },
+                                    spellsCount: latestCharacter.spells.length,
+                                    updatedAt: latestCharacter.updatedAt,
+                                }}
+                                disableLevelUp={actor.isGuest}
+                            />
+                        </div>
+                    ) : (
+                        <p className="mt-6 text-sm text-white/60">No characters yet. Use the forge to create your first adventurer.</p>
+                    )}
                 </section>
 
                 <section className="rounded-3xl border border-white/10 bg-white/5 p-6">

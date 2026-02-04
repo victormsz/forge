@@ -113,7 +113,7 @@ const ancestryOptions: AncestryOption[] = [
         label: "Human",
         value: "Human",
         description: "Adaptable excellence across every class.",
-        detail: "Humans thrive in any environment, picking up regional tricks and diplomatic savvy in equal measure.",
+        detail: "Humans thrive in any environment, picking up regional tricks and diplomatic savvy in equal measure.\n\n**Ability Bonuses:** +1 to all ability scores\n**Speed:** 30 ft.\n**Size:** Medium (5-6 ft. tall)\n**Age:** Reach adulthood in late teens, live less than a century\n\n**Traits:**\n• Versatile talent that adapts to any role\n• Quick learners who master diverse skills\n• Natural diplomats bridging cultural divides",
         proficiencies: {
             ...EMPTY_PROFICIENCIES,
             languages: ["Common", "One additional language of your choice"],
@@ -123,7 +123,7 @@ const ancestryOptions: AncestryOption[] = [
         label: "Elf",
         value: "Elf",
         description: "Graceful experts with sharp minds and senses.",
-        detail: "Elven lineages gift keen senses, a trance-like meditative rest, and timeless lore passed down in song.",
+        detail: "Elven lineages gift keen senses, a trance-like meditative rest, and timeless lore passed down in song.\n\n**Ability Bonuses:** +2 Dexterity\n**Speed:** 30 ft.\n**Size:** Medium (5-6 ft. tall, slender builds)\n**Age:** Claim adulthood around 100, live to 750 years\n\n**Traits:**\n• **Darkvision:** See in dim light within 60 ft. as if bright light\n• **Keen Senses:** Proficiency in Perception\n• **Fey Ancestry:** Advantage on saves vs. charm, magic can't put you to sleep\n• **Trance:** Meditate 4 hours instead of sleeping 8 hours",
         proficiencies: {
             ...EMPTY_PROFICIENCIES,
             skills: ["Perception"],
@@ -134,7 +134,7 @@ const ancestryOptions: AncestryOption[] = [
         label: "Dwarf",
         value: "Dwarf",
         description: "Stalwart defenders with deep artisan roots.",
-        detail: "Dwarves train from childhood with tools and axes, bolstered by hearty constitutions and clan oaths.",
+        detail: "Dwarves train from childhood with tools and axes, bolstered by hearty constitutions and clan oaths.\n\n**Ability Bonuses:** +2 Constitution\n**Speed:** 25 ft. (not reduced by armor)\n**Size:** Medium (4-5 ft. tall, ~150 lbs)\n**Age:** Considered young until 50, live about 350 years\n\n**Traits:**\n• **Darkvision:** See in dim light within 60 ft. as if bright light\n• **Dwarven Resilience:** Advantage on saves vs. poison, resistance to poison damage\n• **Dwarven Combat Training:** Proficiency with battleaxe, handaxe, light hammer, warhammer\n• **Stonecunning:** Double proficiency on History checks related to stonework",
         proficiencies: {
             ...EMPTY_PROFICIENCIES,
             weapons: ["Battleaxes", "Handaxes", "Light hammers", "Warhammers"],
@@ -146,7 +146,7 @@ const ancestryOptions: AncestryOption[] = [
         label: "Halfling",
         value: "Halfling",
         description: "Lucky nimble souls who dodge danger.",
-        detail: "Halflings blend optimism with supernatural luck, slipping past giants and calamity with a grin.",
+        detail: "Halflings blend optimism with supernatural luck, slipping past giants and calamity with a grin.\n\n**Ability Bonuses:** +2 Dexterity\n**Speed:** 25 ft.\n**Size:** Small (~3 ft. tall, ~40 lbs)\n**Age:** Reach adulthood at 20, live into their second century\n\n**Traits:**\n• **Lucky:** Reroll any attack roll, ability check, or save that rolls a 1\n• **Brave:** Advantage on saves against being frightened\n• **Halfling Nimbleness:** Move through space of creatures larger than you\n• Natural optimism and good-hearted kindness",
         proficiencies: {
             ...EMPTY_PROFICIENCIES,
             languages: ["Common", "Halfling"],
@@ -156,7 +156,7 @@ const ancestryOptions: AncestryOption[] = [
         label: "Dragonborn",
         value: "Dragonborn",
         description: "Heritage of dragons, breath weapons included.",
-        detail: "Draconic ancestry fuels elemental breath, proud honor codes, and intimidating presence on any battlefield.",
+        detail: "Draconic ancestry fuels elemental breath, proud honor codes, and intimidating presence on any battlefield.\n\n**Ability Bonuses:** +2 Strength, +1 Charisma\n**Speed:** 30 ft.\n**Size:** Medium (6+ ft. tall, ~250 lbs)\n**Age:** Reach adulthood by 15, live to around 80\n\n**Traits:**\n• **Draconic Ancestry:** Choose dragon type for breath weapon and damage resistance\n• **Breath Weapon:** Exhale destructive energy (2d6 damage, recharge on short/long rest)\n• **Damage Resistance:** Resist damage type associated with your ancestry\n• Proud clan honor and unwavering loyalty",
         proficiencies: {
             ...EMPTY_PROFICIENCIES,
             languages: ["Common", "Draconic"],
@@ -166,7 +166,7 @@ const ancestryOptions: AncestryOption[] = [
         label: "Gnome",
         value: "Gnome",
         description: "Inventive tinkerers with sharp minds.",
-        detail: "Gnomes combine curiosity with cunning, excelling at magic and mechanics with centuries of accumulated wisdom.",
+        detail: "Gnomes combine curiosity with cunning, excelling at magic and mechanics with centuries of accumulated wisdom.\n\n**Ability Bonuses:** +2 Intelligence\n**Speed:** 25 ft.\n**Size:** Small (3-4 ft. tall, ~40 lbs)\n**Age:** Settle into adult life around 40, live 350-500 years\n\n**Traits:**\n• **Darkvision:** See in dim light within 60 ft. as if bright light\n• **Gnome Cunning:** Advantage on Int, Wis, and Cha saves against magic\n• Boundless enthusiasm for learning and invention\n• Good-hearted nature, even the tricksters among them",
         proficiencies: {
             ...EMPTY_PROFICIENCIES,
             languages: ["Common", "Gnomish"],
@@ -176,7 +176,7 @@ const ancestryOptions: AncestryOption[] = [
         label: "Half-Elf",
         value: "Half-Elf",
         description: "Charismatic blend of two worlds.",
-        detail: "Half-elves inherit elven grace and human ambition, thriving in social situations and adapting to any role.",
+        detail: "Half-elves inherit elven grace and human ambition, thriving in social situations and adapting to any role.\n\n**Ability Bonuses:** +2 Charisma, +1 to two other abilities\n**Speed:** 30 ft.\n**Size:** Medium (5-6 ft. tall)\n**Age:** Reach adulthood around 20, often exceed 180 years\n\n**Traits:**\n• **Darkvision:** See in dim light within 60 ft. as if bright light\n• **Fey Ancestry:** Advantage on saves vs. charm, magic can't put you to sleep\n• **Skill Versatility:** Proficiency in two skills of your choice\n• Bridge between two worlds with adaptable nature",
         proficiencies: {
             ...EMPTY_PROFICIENCIES,
             skills: ["Choose any two skills"],
@@ -187,7 +187,7 @@ const ancestryOptions: AncestryOption[] = [
         label: "Half-Orc",
         value: "Half-Orc",
         description: "Relentless strength and savage endurance.",
-        detail: "Half-orcs combine orcish might with human versatility, refusing to fall and striking devastating blows.",
+        detail: "Half-orcs combine orcish might with human versatility, refusing to fall and striking devastating blows.\n\n**Ability Bonuses:** +2 Strength, +1 Constitution\n**Speed:** 30 ft.\n**Size:** Medium (5-6+ ft. tall, larger & bulkier than humans)\n**Age:** Mature by 14, rarely live longer than 75 years\n\n**Traits:**\n• **Darkvision:** See in dim light within 60 ft. as if bright light\n• **Relentless Endurance:** Drop to 1 HP instead of 0 once per long rest\n• **Savage Attacks:** Roll one extra weapon damage die on critical hits\n• **Menacing:** Proficiency in Intimidation",
         proficiencies: {
             ...EMPTY_PROFICIENCIES,
             skills: ["Intimidation"],
@@ -198,7 +198,7 @@ const ancestryOptions: AncestryOption[] = [
         label: "Tiefling",
         value: "Tiefling",
         description: "Infernal heritage with innate magic.",
-        detail: "Tieflings carry devilish blood that grants fire resistance and dark spellcasting, often facing prejudice with defiance.",
+        detail: "Tieflings carry devilish blood that grants fire resistance and dark spellcasting, often facing prejudice with defiance.\n\n**Ability Bonuses:** +2 Charisma, +1 Intelligence\n**Speed:** 30 ft.\n**Size:** Medium (same size as humans)\n**Age:** Mature at same rate as humans, live a few years longer\n\n**Traits:**\n• **Darkvision:** See in dim light within 60 ft. as if bright light\n• **Hellish Resistance:** Resistance to fire damage\n• **Infernal Legacy:** Know thaumaturgy cantrip; at 3rd level cast hellish rebuke; at 5th level cast darkness\n• Independent spirit inclined toward chaotic alignments",
         proficiencies: {
             ...EMPTY_PROFICIENCIES,
             languages: ["Common", "Infernal"],
@@ -787,7 +787,7 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                     return true;
                 }
                 // Check if all equipment choices have been made
-                return equipmentOptions.every((_, index) => 
+                return equipmentOptions.every((_, index) =>
                     formState.equipmentChoices[index] !== undefined
                 );
             }
@@ -804,7 +804,7 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
         const skillChoices = selectedClass?.proficiencies.skills.choices;
         const needsSkillSelection = skillChoices && formState.selectedSkills.length !== skillChoices.count;
         const equipmentOptions = selectedClass?.startingEquipmentOptions || [];
-        const needsEquipmentSelection = equipmentOptions.length > 0 && 
+        const needsEquipmentSelection = equipmentOptions.length > 0 &&
             !equipmentOptions.every((_, index) => formState.equipmentChoices[index] !== undefined);
 
         return (
@@ -1247,12 +1247,106 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                             <div className="lg:w-1/3">
                                 {(() => {
                                     const insight = ancestryOptions.find((option) => option.value === (hoveredAncestry ?? formState.ancestry)) ?? ancestryOptions[0];
+                                    const detailParts = insight.detail.split('\n\n');
+
                                     return (
-                                        <div className="rounded-2xl border border-white/15 bg-black/30 p-5">
-                                            <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Lore Focus</p>
+                                        <div className="rounded-2xl border border-white/15 bg-black/30 p-5 overflow-y-auto max-h-[600px]">
+                                            <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Ancestry Details</p>
                                             <p className="mt-2 text-lg font-semibold text-white">{insight.label}</p>
-                                            <p className="mt-2 text-sm text-white/70">{insight.detail}</p>
-                                            <p className="mt-3 text-xs text-white/50">Hover or focus a race to update.</p>
+
+                                            <div className="mt-3 space-y-3">
+                                                {detailParts.map((part, idx) => {
+                                                    if (part.startsWith('**')) {
+                                                        // Format stat blocks (Ability Bonuses, Speed, Size, Age)
+                                                        const lines = part.split('\n');
+                                                        return (
+                                                            <div key={idx} className="text-xs space-y-1">
+                                                                {lines.map((line, lineIdx) => {
+                                                                    const match = line.match(/\*\*(.*?):\*\*(.*)/);
+                                                                    if (match) {
+                                                                        return (
+                                                                            <div key={lineIdx} className="flex gap-2">
+                                                                                <span className="font-semibold text-rose-300 min-w-[100px]">{match[1]}:</span>
+                                                                                <span className="text-white/80">{match[2].trim()}</span>
+                                                                            </div>
+                                                                        );
+                                                                    }
+                                                                    return null;
+                                                                })}
+                                                            </div>
+                                                        );
+                                                    } else if (part.includes('•')) {
+                                                        // Format trait lists
+                                                        const lines = part.split('\n').filter(l => l.trim());
+                                                        return (
+                                                            <div key={idx} className="text-xs space-y-1.5">
+                                                                {lines.map((line, lineIdx) => {
+                                                                    if (line.includes('•')) {
+                                                                        const match = line.match(/• \*\*(.*?):\*\*(.*)/);
+                                                                        if (match) {
+                                                                            return (
+                                                                                <div key={lineIdx} className="flex gap-2">
+                                                                                    <span className="text-white/50">•</span>
+                                                                                    <div>
+                                                                                        <span className="font-semibold text-white">{match[1]}: </span>
+                                                                                        <span className="text-white/70">{match[2].trim()}</span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            );
+                                                                        }
+                                                                        return (
+                                                                            <div key={lineIdx} className="flex gap-2">
+                                                                                <span className="text-white/50">•</span>
+                                                                                <span className="text-white/70">{line.replace('•', '').trim()}</span>
+                                                                            </div>
+                                                                        );
+                                                                    }
+                                                                    return null;
+                                                                })}
+                                                            </div>
+                                                        );
+                                                    } else {
+                                                        // Regular paragraph
+                                                        return (
+                                                            <p key={idx} className="text-sm text-white/70 leading-relaxed">
+                                                                {part}
+                                                            </p>
+                                                        );
+                                                    }
+                                                })}
+                                            </div>
+
+                                            {insight.proficiencies && (
+                                                <div className="mt-4 pt-4 border-t border-white/10 space-y-2">
+                                                    <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Proficiencies</p>
+                                                    {insight.proficiencies.skills.length > 0 && (
+                                                        <div className="text-xs">
+                                                            <span className="font-semibold text-rose-300">Skills: </span>
+                                                            <span className="text-white/70">{insight.proficiencies.skills.join(', ')}</span>
+                                                        </div>
+                                                    )}
+                                                    {insight.proficiencies.weapons.length > 0 && (
+                                                        <div className="text-xs">
+                                                            <span className="font-semibold text-rose-300">Weapons: </span>
+                                                            <span className="text-white/70">{insight.proficiencies.weapons.join(', ')}</span>
+                                                        </div>
+                                                    )}
+                                                    {insight.proficiencies.tools.length > 0 && (
+                                                        <div className="text-xs">
+                                                            <span className="font-semibold text-rose-300">Tools: </span>
+                                                            <span className="text-white/70">{insight.proficiencies.tools.join(', ')}</span>
+                                                        </div>
+                                                    )}
+                                                    {insight.proficiencies.languages.length > 0 && (
+                                                        <div className="text-xs">
+                                                            <span className="font-semibold text-rose-300">Languages: </span>
+                                                            <span className="text-white/70">{insight.proficiencies.languages.join(', ')}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            <p className="mt-4 text-xs text-white/40 italic">Hover or focus a race to update.</p>
                                         </div>
                                     );
                                 })()}
@@ -1437,10 +1531,10 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                                             }}
                                             disabled={!canSelect && !isSelected}
                                             className={`rounded-xl border px-3 py-2 text-left text-sm transition ${isSelected
-                                                    ? "border-rose-300 bg-rose-300/10 text-white"
-                                                    : canSelect
-                                                        ? "border-white/15 bg-black/30 text-white/70 hover:border-white/30"
-                                                        : "border-white/5 bg-black/20 text-white/30 cursor-not-allowed"
+                                                ? "border-rose-300 bg-rose-300/10 text-white"
+                                                : canSelect
+                                                    ? "border-white/15 bg-black/30 text-white/70 hover:border-white/30"
+                                                    : "border-white/5 bg-black/20 text-white/30 cursor-not-allowed"
                                                 }`}
                                         >
                                             <div className="flex items-center gap-2">
@@ -1617,16 +1711,14 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                                                                             },
                                                                         }));
                                                                     }}
-                                                                    className={`rounded-xl border px-4 py-3 text-left text-sm transition ${
-                                                                        isSelected
+                                                                    className={`rounded-xl border px-4 py-3 text-left text-sm transition ${isSelected
                                                                             ? "border-rose-300 bg-rose-300/10 text-white"
                                                                             : "border-white/15 bg-black/30 text-white/70 hover:border-white/30"
-                                                                    }`}
+                                                                        }`}
                                                                 >
                                                                     <div className="flex items-start gap-2">
-                                                                        <div className={`mt-0.5 h-4 w-4 rounded-full border flex-shrink-0 flex items-center justify-center ${
-                                                                            isSelected ? "border-rose-300 bg-rose-300" : "border-white/30"
-                                                                        }`}>
+                                                                        <div className={`mt-0.5 h-4 w-4 rounded-full border flex-shrink-0 flex items-center justify-center ${isSelected ? "border-rose-300 bg-rose-300" : "border-white/30"
+                                                                            }`}>
                                                                             {isSelected && (
                                                                                 <div className="h-2 w-2 rounded-full bg-black" />
                                                                             )}

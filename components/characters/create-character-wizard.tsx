@@ -1107,13 +1107,13 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                                     const selectedClass =
                                         classOptions.find((option) => option.value === (hoveredBackground ?? formState.charClass)) ??
                                         classOptions[0];
-                                    
+
                                     const hasSkillChoices = selectedClass.proficiencies.skills.choices;
                                     const hasFixedSkills = selectedClass.proficiencies.skills.fixed.length > 0;
                                     const hasArmor = selectedClass.proficiencies.armor.length > 0;
                                     const hasWeapons = selectedClass.proficiencies.weapons.length > 0;
                                     const hasTools = selectedClass.proficiencies.tools.length > 0;
-                                    
+
                                     return (
                                         <div className="rounded-2xl border border-white/15 bg-black/30 p-5 space-y-4">
                                             <div>
@@ -1121,39 +1121,39 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                                                 <p className="mt-2 text-lg font-semibold text-white">{selectedClass.label}</p>
                                                 <p className="mt-2 text-sm text-white/70">{selectedClass.detail}</p>
                                             </div>
-                                            
+
                                             <div className="space-y-3 pt-3 border-t border-white/10">
                                                 <div>
                                                     <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Hit Die</p>
                                                     <p className="mt-1 text-xs text-white/70">1d{selectedClass.hitDie} per level</p>
                                                 </div>
-                                                
+
                                                 <div>
                                                     <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Saving Throws</p>
                                                     <p className="mt-1 text-xs text-white/70">{selectedClass.savingThrows.join(", ")}</p>
                                                 </div>
-                                                
+
                                                 {hasArmor && (
                                                     <div>
                                                         <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Armor</p>
                                                         <p className="mt-1 text-xs text-white/70">{selectedClass.proficiencies.armor.join(", ")}</p>
                                                     </div>
                                                 )}
-                                                
+
                                                 {hasWeapons && (
                                                     <div>
                                                         <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Weapons</p>
                                                         <p className="mt-1 text-xs text-white/70">{selectedClass.proficiencies.weapons.join(", ")}</p>
                                                     </div>
                                                 )}
-                                                
+
                                                 {hasTools && (
                                                     <div>
                                                         <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Tools</p>
                                                         <p className="mt-1 text-xs text-white/70">{selectedClass.proficiencies.tools.join(", ")}</p>
                                                     </div>
                                                 )}
-                                                
+
                                                 {(hasSkillChoices || hasFixedSkills) && (
                                                     <div>
                                                         <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Skills</p>
@@ -1168,7 +1168,7 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                                                     </div>
                                                 )}
                                             </div>
-                                            
+
                                             <p className="mt-3 text-xs text-white/50">Hover or select a class to update.</p>
                                         </div>
                                     );

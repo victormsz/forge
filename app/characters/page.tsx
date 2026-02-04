@@ -123,9 +123,12 @@ export default async function CharactersPage() {
                         {serialized.length === 0 ? (
                             <div className="col-span-full rounded-2xl border-2 border-dashed border-white/20 bg-black/20 p-12 text-center">
                                 <div className="mx-auto max-w-sm space-y-4">
+<<<<<<< Updated upstream
                                     <div className="mx-auto h-20 w-20 rounded-full border-2 border-white/20 bg-white/5 flex items-center justify-center">
                                         <span className="text-4xl">⚔️</span>
                                     </div>
+=======
+>>>>>>> Stashed changes
                                     <p className="text-lg font-semibold text-white/80">No characters yet</p>
                                     <p className="text-sm text-white/60">Create your first character to begin your adventure!</p>
                                 </div>

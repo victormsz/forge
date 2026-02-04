@@ -113,6 +113,18 @@ function parseAbilityIncreaseChoice(input: FormDataEntryValue | null): AbilityIn
     return { ability: key as AbilityKey, amount: 1 };
 }
 
+function parsePositiveInteger(input: FormDataEntryValue | null) {
+    if (typeof input !== "string") {
+        return null;
+    }
+    const value = Number(input);
+    if (!Number.isFinite(value)) {
+        return null;
+    }
+    const integer = Math.trunc(value);
+    return integer > 0 ? integer : null;
+}
+
 export function parseCreateCharacterFormData(formData: FormData): CreateCharacterInput {
     const methodInput = formData.get("method");
     const generationMethod = allowedMethods.has(methodInput as AbilityGenerationMethod)
@@ -157,12 +169,19 @@ export function parseLevelUpFormData(formData: FormData): LevelUpInput {
         .map((value) => parseAbilityIncreaseChoice(value))
         .filter((choice): choice is AbilityIncreaseChoice => Boolean(choice));
 
+    const hitDiceRoll = parsePositiveInteger(formData.get("hitDiceRoll"));
+
+    if (hitDiceRoll === null) {
+        throw new Error("Roll your hit die before applying this level up.");
+    }
+
     return {
         characterId,
         subclass: readString(formData.get("subclass")),
         feat: readString(formData.get("feat")),
         abilityIncreases,
         notes: readString(formData.get("notes"), null, 800),
+        hitDiceRoll,
     };
 }
 

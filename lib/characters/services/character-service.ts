@@ -1,6 +1,7 @@
 import { AbilityGenerationMethod } from "@prisma/client";
 
 import { MAX_CHARACTER_LEVEL } from "@/lib/characters/constants";
+import { getHitDieValue } from "@/lib/characters/hit-dice";
 import type { LevelUpInput, CreateCharacterInput, LevelUpChoicesMeta } from "@/lib/characters/types";
 import { assertPointBuyWithinBudget } from "@/lib/characters/form-parsers";
 import { getLevelRequirement } from "@/lib/characters/leveling/level-requirements";
@@ -100,6 +101,12 @@ export class CharacterService {
 
         if (requirements.abilityScoreIncrements > 0 && input.abilityIncreases.length !== requirements.abilityScoreIncrements) {
             throw new Error(`Select ${requirements.abilityScoreIncrements} ability score increases for this level.`);
+        }
+
+        const hitDieValue = getHitDieValue(existing.charClass);
+
+        if (typeof input.hitDiceRoll !== "number" || input.hitDiceRoll < 1 || input.hitDiceRoll > hitDieValue) {
+            throw new Error(`Roll your d${hitDieValue} hit die before applying this level up.`);
         }
 
         const abilityIncreases = requirements.abilityScoreIncrements > 0

@@ -32,6 +32,7 @@ export interface LevelUpInput {
     feat: string | null;
     abilityIncreases: AbilityIncreaseChoice[];
     notes: string | null;
+    hitDiceRoll: number;
 }
 
 export interface LevelUpChoicesMeta extends LevelUpInput {

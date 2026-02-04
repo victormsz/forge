@@ -1,15 +1,7 @@
 "use server";
 
 import { registerEmailAccount } from "@/lib/auth/email-auth-service";
-
-export interface RegisterFormState {
-    status: "idle" | "success" | "error";
-    message?: string;
-    verificationUrl?: string;
-}
-
-const initialState: RegisterFormState = { status: "idle" };
-export const REGISTER_FORM_INITIAL_STATE = initialState;
+import type { RegisterFormState } from "@/lib/auth/register-form-state";
 
 function getBaseUrl() {
     return process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";

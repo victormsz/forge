@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { HitDiceRoller } from "@/components/characters/hit-dice-roller";
 import { levelUpCharacter } from "@/app/characters/actions";
 import { ABILITY_SCORE_PICKLIST, GLOBAL_FEAT_OPTIONS, getSubclassOptions } from "@/lib/characters/level-up-options";
 import { MAX_CHARACTER_LEVEL } from "@/lib/characters/constants";
 import { getLevelRequirement } from "@/lib/characters/leveling/level-requirements";
+import { getHitDieValue } from "@/lib/characters/hit-dice";
 import { getCurrentActor } from "@/lib/current-actor";
 import { prisma } from "@/lib/prisma";
 
@@ -50,6 +52,9 @@ export default async function LevelUpPage({ params }: LevelUpPageProps) {
         ...entry,
         score: abilityScores[entry.value] ?? 0,
     }));
+    const conScore = abilityScores.con ?? 10;
+    const conModifier = Math.floor((conScore - 10) / 2);
+    const hitDieValue = getHitDieValue(character.charClass);
 
     const subclassOptions = getSubclassOptions(character.charClass);
     const abilitySlots = requirement.abilityScoreIncrements;
@@ -170,6 +175,19 @@ export default async function LevelUpPage({ params }: LevelUpPageProps) {
                                 No ability score improvements unlock at level {nextLevel}. You can still document spell swaps or other features in the notes.
                             </div>
                         )}
+
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-semibold">Hit dice & HP gain</span>
+                                <span className="text-xs text-white/60">Manual roll required</span>
+                            </div>
+                            <HitDiceRoller
+                                hitDieValue={hitDieValue}
+                                conModifier={conModifier}
+                                nextLevel={nextLevel}
+                                characterName={character.name}
+                            />
+                        </div>
 
                         <div className="space-y-2">
                             <label htmlFor="notes" className="text-sm font-semibold">Notes</label>

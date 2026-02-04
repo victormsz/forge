@@ -1,8 +1,10 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
 
-import { REGISTER_FORM_INITIAL_STATE, registerWithEmail } from "@/app/auth/email/actions";
+import { registerWithEmail } from "@/app/auth/email/actions";
+import { REGISTER_FORM_INITIAL_STATE } from "@/lib/auth/register-form-state";
 
 function SubmitButton() {
     const { pending } = useFormStatus();
@@ -19,7 +21,7 @@ function SubmitButton() {
 }
 
 export function RegisterForm() {
-    const [state, formAction] = useFormState(registerWithEmail, REGISTER_FORM_INITIAL_STATE);
+    const [state, formAction] = useActionState(registerWithEmail, REGISTER_FORM_INITIAL_STATE);
 
     return (
         <form action={formAction} className="space-y-4">

@@ -37,6 +37,19 @@ export default async function Home() {
     : isGuest
       ? "Prototype a hero without linking an account. Guest mode saves one character and previews the forge, but leveling, inventory, and spell tracking stay locked until you sign in."
       : "Authenticate once, sync across devices, and keep every feature unlocked while we build the 5.5 ruleset.";
+  const emailAuthLinks = (
+    <p className="text-xs text-white/70">
+      Prefer email credentials?{" "}
+      <Link href="/auth/email/register" className="text-rose-200 underline-offset-4 hover:underline">
+        Sign up with email
+      </Link>{" "}
+      <span className="text-white/50">or</span>{" "}
+      <Link href="/auth/email/login" className="text-rose-200 underline-offset-4 hover:underline">
+        log in
+      </Link>
+      .
+    </p>
+  );
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(250,232,214,0.8),_transparent_55%),_#0b0b0d] text-white">
@@ -84,11 +97,16 @@ export default async function Home() {
                 <div className="space-y-2">
                   <SignInButtons />
                   <p className="text-xs text-white/60">Sign in with Google or Discord to unlock unlimited heroes and full spell/item tooling.</p>
+                  {emailAuthLinks}
                 </div>
               </div>
             ) : (
               <div className="flex flex-col gap-4">
-                <SignInButtons />
+                <div className="space-y-2">
+                  <SignInButtons />
+                  <p className="text-xs text-white/60">Sign in with Google or Discord to unlock unlimited heroes and full spell/item tooling.</p>
+                  {emailAuthLinks}
+                </div>
                 <form action={continueAsGuest} className="space-y-2">
                   <button
                     type="submit"

@@ -29,7 +29,7 @@ function isAbilityScoreImprovement(feature: ClassFeature): boolean {
 export function getLevelRequirement(className: string | null | undefined, level: number): LevelRequirement {
     const levelData = getLevelData(className, level);
     const subclassLevel = getSubclassLevelFromData(className);
-    
+
     if (!levelData) {
         // Fallback for missing data
         return {
@@ -44,7 +44,7 @@ export function getLevelRequirement(className: string | null | undefined, level:
 
     // Check if this level has an Ability Score Improvement feature
     const hasASI = levelData.features.some(isAbilityScoreImprovement);
-    
+
     // ability_score_bonuses in the JSON represents how many ASI opportunities have been gained by this level
     // Each ASI grants 2 points to distribute (or can be swapped for a feat)
     const abilityScoreIncrements = hasASI ? 2 : 0;

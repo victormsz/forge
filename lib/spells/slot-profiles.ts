@@ -86,7 +86,7 @@ function spellcastingToSlots(spellcasting: SpellcastingInfo | undefined): SpellS
     if (!spellcasting) {
         return ZERO_SLOTS;
     }
-    
+
     return [
         spellcasting.spell_slots_level_1 ?? 0,
         spellcasting.spell_slots_level_2 ?? 0,
@@ -123,14 +123,14 @@ function getPactMagicFromJson(className: string | null | undefined, level: numbe
     if (!isWarlockPactMagic(className)) {
         return null;
     }
-    
+
     const levelData = getLevelData(className, level);
     const spellcasting = levelData?.spellcasting;
-    
+
     if (!spellcasting) {
         return null;
     }
-    
+
     // Find the highest spell slot level available
     for (let i = 9; i >= 1; i--) {
         const key = `spell_slots_level_${i}` as keyof SpellcastingInfo;
@@ -139,7 +139,7 @@ function getPactMagicFromJson(className: string | null | undefined, level: numbe
             return { slots, slotLevel: i };
         }
     }
-    
+
     return null;
 }
 
@@ -227,7 +227,7 @@ export function getSpellSlotSummary(className: string | null | undefined, level:
     // Determine the description based on progression type
     let title = "Spell slots";
     let description = `${classLabel} spell slot progression.`;
-    
+
     switch (progression) {
         case "full":
             title = "Full caster progression";

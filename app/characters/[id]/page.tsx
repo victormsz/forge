@@ -169,35 +169,24 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                             className="rounded-xl border border-white/30 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 hover:border-white/50"
                         >
                             ← Roster
-<<<<<<< Updated upstream
                         </Link>
                         <Link
                             href={`/characters/${character.id}/items`}
                             className="rounded-xl border border-sky-400/40 bg-sky-400/10 px-5 py-2.5 text-sm font-semibold text-sky-200 transition hover:bg-sky-400/20"
                         >
                             🎒 Inventory
-=======
->>>>>>> Stashed changes
                         </Link>
                         <Link
                             href={`/characters/${character.id}/spells`}
                             className="rounded-xl border border-blue-400/40 bg-blue-400/10 px-5 py-2.5 text-sm font-semibold text-blue-300 transition hover:bg-blue-400/20"
                         >
-<<<<<<< Updated upstream
                             📚 Spells
-=======
-                            Spells
->>>>>>> Stashed changes
                         </Link>
                         <Link
                             href={`/characters/${character.id}/level-up`}
                             className="rounded-xl border border-emerald-400/40 bg-emerald-400/10 px-5 py-2.5 text-sm font-bold text-emerald-300 transition hover:bg-emerald-400/20"
                         >
-<<<<<<< Updated upstream
                             ⬆️ Level Up
-=======
-                            Level Up
->>>>>>> Stashed changes
                         </Link>
                         <Link
                             href={`/api/characters/${character.id}/sheet`}

@@ -1,5 +1,6 @@
 import { ABILITY_KEYS, type AbilityKey } from "@/lib/point-buy";
 import type { CharacterProficiencies } from "@/lib/characters/types";
+import { getProficiencyBonus as getJsonProficiencyBonus } from "@/lib/characters/leveling/level-data";
 
 export const SKILL_CONFIG = [
     { key: "acrobatics", label: "Acrobatics", ability: "dex" },
@@ -64,7 +65,8 @@ export function computeProficiencyBonus(level: number) {
     if (level <= 0) {
         return 2;
     }
-    return Math.floor((level - 1) / 4) + 2;
+    // Use the JSON-based proficiency bonus calculation
+    return getJsonProficiencyBonus(level);
 }
 
 export function normalizeProficiencies(raw: unknown): CharacterProficiencies {

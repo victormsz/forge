@@ -1,4 +1,5 @@
 import equipmentPayload from "@/db/2024/5e-SRD-Equipment.json";
+import magicItemPayload from "@/db/2014/5e-SRD-Magic-Items.json";
 
 export interface ItemReference {
     id: string;
@@ -9,6 +10,7 @@ export interface ItemReference {
     costLabel: string | null;
     weight: number | null;
     description: string | null;
+    rarity: string | null;
     properties: string[];
     detailTags: string[];
     damageLabel: string | null;
@@ -29,10 +31,12 @@ interface RawEquipmentRecord {
     name?: string | null;
     equipment_categories?: Array<{ index?: string | null; name?: string | null }> | null;
     gear_category?: { index?: string | null; name?: string | null } | null;
+    equipment_category?: { index?: string | null; name?: string | null } | null;
     cost?: { quantity?: number | string | null; unit?: string | null } | null;
     weight?: number | string | null;
     quantity?: number | string | null;
     description?: string | null;
+    desc?: Array<string | null> | null;
     properties?: Array<{ name?: string | null }> | null;
     damage?: {
         damage_dice?: string | null;
@@ -55,13 +59,21 @@ interface RawEquipmentRecord {
     str_minimum?: number | string | null;
     mastery?: { name?: string | null } | null;
     ability?: { name?: string | null } | null;
+    rarity?: { name?: string | null } | null;
+    variant?: boolean | null;
+    variants?: Array<{ index?: string | null; name?: string | null }> | null;
     url?: string | null;
     image?: string | null;
 }
 
-const rawEquipment: RawEquipmentRecord[] = Array.isArray(equipmentPayload)
+const baseEquipmentRecords: RawEquipmentRecord[] = Array.isArray(equipmentPayload)
     ? (equipmentPayload as RawEquipmentRecord[])
     : [];
+const magicEquipmentRecords: RawEquipmentRecord[] = Array.isArray(magicItemPayload)
+    ? (magicItemPayload as RawEquipmentRecord[])
+    : [];
+
+const rawEquipment: RawEquipmentRecord[] = [...baseEquipmentRecords, ...magicEquipmentRecords];
 
 const normalizedItems: ItemReference[] = rawEquipment
     .map((record) => normalizeItem(record))
@@ -93,12 +105,13 @@ function normalizeItem(entry: RawEquipmentRecord): ItemReference | null {
     const categoryIds = extractCategoryIds(entry);
     const costLabel = formatCost(entry.cost);
     const weight = parseWeight(entry.weight);
-    const description = sanitizeLongText(entry.description);
+    const description = sanitizeLongText(buildDescription(entry));
+    const rarityLabel = sanitizeText(entry.rarity?.name);
     const properties = extractProperties(entry.properties);
     const damageLabel = formatDamage(entry.damage, entry.two_handed_damage);
     const rangeLabel = formatRange(entry.range);
     const bundleQuantity = parseInteger(entry.quantity);
-    const detailTags = buildDetailTags(entry, damageLabel, rangeLabel, bundleQuantity, properties);
+    const detailTags = buildDetailTags(entry, description, rarityLabel, damageLabel, rangeLabel, bundleQuantity, properties);
 
     return {
         id: slug,
@@ -109,6 +122,7 @@ function normalizeItem(entry: RawEquipmentRecord): ItemReference | null {
         costLabel,
         weight,
         description,
+        rarity: rarityLabel,
         properties,
         detailTags,
         damageLabel,
@@ -120,25 +134,29 @@ function normalizeItem(entry: RawEquipmentRecord): ItemReference | null {
 }
 
 function extractCategoryNames(entry: RawEquipmentRecord) {
-    const categories = Array.isArray(entry.equipment_categories)
-        ? entry.equipment_categories
-        : entry.gear_category
-            ? [entry.gear_category]
-            : [];
-    return categories
+    return collectCategoryEntries(entry)
         .map((category) => sanitizeText(category?.name))
         .filter((category): category is string => Boolean(category));
 }
 
 function extractCategoryIds(entry: RawEquipmentRecord) {
-    const categories = Array.isArray(entry.equipment_categories)
-        ? entry.equipment_categories
-        : entry.gear_category
-            ? [entry.gear_category]
-            : [];
-    return categories
+    return collectCategoryEntries(entry)
         .map((category) => sanitizeText(category?.index))
         .filter((category): category is string => Boolean(category));
+}
+
+function collectCategoryEntries(entry: RawEquipmentRecord) {
+    const categories: Array<{ index?: string | null; name?: string | null }> = [];
+    if (Array.isArray(entry.equipment_categories)) {
+        categories.push(...entry.equipment_categories);
+    }
+    if (entry.gear_category) {
+        categories.push(entry.gear_category);
+    }
+    if (entry.equipment_category) {
+        categories.push(entry.equipment_category);
+    }
+    return categories;
 }
 
 function extractProperties(properties: RawEquipmentRecord["properties"]) {
@@ -152,6 +170,8 @@ function extractProperties(properties: RawEquipmentRecord["properties"]) {
 
 function buildDetailTags(
     entry: RawEquipmentRecord,
+    description: string | null,
+    rarityLabel: string | null,
     damageLabel: string | null,
     rangeLabel: string | null,
     bundleQuantity: number | null,
@@ -159,11 +179,17 @@ function buildDetailTags(
 ) {
     const tags = new Set<string>();
 
+    if (rarityLabel) {
+        tags.add(`${rarityLabel} rarity`);
+    }
     if (damageLabel) {
         tags.add(damageLabel);
     }
     if (rangeLabel) {
         tags.add(rangeLabel);
+    }
+    if (description && /requires attunement/i.test(description)) {
+        tags.add("Requires attunement");
     }
     if (bundleQuantity && bundleQuantity > 1) {
         tags.add(`Bundle of ${bundleQuantity}`);
@@ -186,6 +212,12 @@ function buildDetailTags(
     const strengthRequirement = parseInteger(entry.str_minimum);
     if (strengthRequirement) {
         tags.add(`STR ${strengthRequirement}+ required`);
+    }
+    if (entry.variant) {
+        tags.add("Variant item");
+    }
+    if (Array.isArray(entry.variants) && entry.variants.length > 0) {
+        tags.add("Includes variants");
     }
     properties.forEach((property) => tags.add(property));
 
@@ -288,6 +320,21 @@ function sanitizeLongText(value: unknown) {
         return null;
     }
     return text.length > 1800 ? `${text.slice(0, 1797)}...` : text;
+}
+
+function buildDescription(entry: RawEquipmentRecord) {
+    if (entry.description) {
+        return entry.description;
+    }
+    if (Array.isArray(entry.desc)) {
+        const paragraphs = entry.desc
+            .map((segment) => (typeof segment === "string" ? segment.trim() : ""))
+            .filter((segment) => segment.length > 0);
+        if (paragraphs.length > 0) {
+            return paragraphs.join("\n\n");
+        }
+    }
+    return null;
 }
 
 function slugify(value: string) {

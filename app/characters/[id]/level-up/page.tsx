@@ -81,6 +81,18 @@ export default async function LevelUpPage({ params, searchParams }: LevelUpPageP
                         <p className="text-sm text-white/70">
                             You are moving from level {character.level} to level {nextLevel}. The form below highlights only the options that unlock for this class and level so every advancement stays rules-accurate.
                         </p>
+                        {requirement.features.length > 0 && (
+                            <div className="mt-4 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-4">
+                                <h2 className="mb-2 text-sm font-semibold text-emerald-200">New Features at Level {nextLevel}</h2>
+                                <ul className="space-y-1">
+                                    {requirement.features.map((feature) => (
+                                        <li key={feature.index} className="text-sm text-emerald-100/90">
+                                            • {feature.name}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
                     </header>
 
                     <dl className="mt-6 grid gap-3 sm:grid-cols-3">

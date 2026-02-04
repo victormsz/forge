@@ -105,16 +105,16 @@ export default async function DashboardPage() {
     }));
 
     return (
-        <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(250,232,214,0.25),_transparent_50%),_#050506] text-white">
+        <div className="min-h-screen bg-forge text-white">
             <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-16 sm:px-6 lg:px-8">
                 <header className="space-y-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-rose-200">Command Dashboard</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-rose-200">Dashboard</p>
                     <h1 className="text-3xl font-semibold text-white sm:text-4xl">Welcome back, {user.name ?? "Adventurer"}</h1>
                     <p className="max-w-3xl text-sm text-white/70">
-                        Track roster momentum, spell coverage, and ability workflows from a single panel. Jump into the forge to add new heroes or refine your latest build.
+                        Review your roster, recent updates, and quick actions without leaving this panel.
                     </p>
                     {actor.isGuest && (
-                        <p className="text-xs text-white/60">Guest mode: one hero slot, no leveling, items, or spells. Sign in with Google/Discord when you are ready for the full toolkit.</p>
+                        <p className="text-xs text-white/60">Guest mode is limited to one hero and basic features. Sign in to unlock leveling, items, and spells.</p>
                     )}
                     <div className="flex flex-wrap gap-3">
                         <Link

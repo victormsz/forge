@@ -72,11 +72,11 @@ export default async function LevelUpPage({ params, searchParams }: LevelUpPageP
     const featureDetails = withFeatureDescriptions(requirement.features);
 
     return (
-        <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(250,232,214,0.15),_transparent_45%),_#050506] py-16 text-white">
+        <div className="min-h-screen bg-forge py-16 text-white">
             <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between text-sm text-white/70">
                     <Link href="/characters" className="text-white/70 transition hover:text-white">
-                        ← Back to roster
+                        Back to roster
                     </Link>
                     <p className="uppercase tracking-[0.3em] text-rose-200">Level Up</p>
                 </div>
@@ -86,7 +86,7 @@ export default async function LevelUpPage({ params, searchParams }: LevelUpPageP
                         <p className="text-xs uppercase tracking-[0.4em] text-white/60">{character.charClass ?? "Hero"}</p>
                         <h1 className="text-3xl font-semibold">Advance {character.name}</h1>
                         <p className="text-sm text-white/70">
-                            You are moving from level {character.level} to level {nextLevel}. The form below highlights only the options that unlock for this class and level so every advancement stays rules-accurate.
+                            Move from level {character.level} to level {nextLevel}. Only options that unlock at this level are shown.
                         </p>
                         {featureDetails.length > 0 && (
                             <div className="mt-4 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-4">

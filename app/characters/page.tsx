@@ -58,7 +58,7 @@ export default async function CharactersPage() {
     const guestLimitReached = actor.isGuest && serialized.length >= 1;
 
     return (
-        <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(250,232,214,0.15),_transparent_45%),_#050506] text-white">
+        <div className="min-h-screen bg-forge text-white">
             <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-12 sm:px-6 lg:px-8">
                 <header className="space-y-3">
                     <div className="flex items-center gap-3">
@@ -67,7 +67,7 @@ export default async function CharactersPage() {
                     </div>
                     <h1 className="text-4xl font-bold leading-tight text-white sm:text-5xl">Your Characters</h1>
                     <p className="max-w-2xl text-base text-white/80">
-                        Manage your party, track abilities and spells, level up characters, and export professional character sheets.
+                        Track your party, tune builds, and export clean character sheets.
                     </p>
                 </header>
 
@@ -76,7 +76,7 @@ export default async function CharactersPage() {
                         <div className="flex-1">
                             <h2 className="text-2xl font-bold text-white">Create New Character</h2>
                             <p className="mt-2 text-base text-white/80">
-                                Build your hero with guided steps through abilities, ancestry, class, and spells.
+                                Guided steps for abilities, ancestry, class, and spells.
                             </p>
                             {actor.isGuest && (
                                 <div className="mt-4 rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3">
@@ -99,14 +99,14 @@ export default async function CharactersPage() {
                                     href="/characters/create"
                                     className="rounded-xl bg-gradient-to-r from-rose-500 to-rose-400 px-8 py-4 text-sm font-bold text-white shadow-lg transition hover:shadow-rose-400/40 hover:scale-[1.02] active:scale-[0.98]"
                                 >
-                                    Create Character
+                                    Create character
                                 </Link>
                             )}
                             <Link
                                 href="/dashboard"
                                 className="rounded-xl border border-white/30 bg-white/5 px-6 py-3 text-sm font-semibold text-white/90 transition hover:bg-white/10 hover:border-white/50"
                             >
-                                ← Dashboard
+                                Back to dashboard
                             </Link>
                         </div>
                     </div>
@@ -123,11 +123,8 @@ export default async function CharactersPage() {
                         {serialized.length === 0 ? (
                             <div className="col-span-full rounded-2xl border-2 border-dashed border-white/20 bg-black/20 p-12 text-center">
                                 <div className="mx-auto max-w-sm space-y-4">
-                                    <div className="mx-auto h-20 w-20 rounded-full border-2 border-white/20 bg-white/5 flex items-center justify-center">
-                                        <span className="text-4xl">⚔️</span>
-                                    </div>
                                     <p className="text-lg font-semibold text-white/80">No characters yet</p>
-                                    <p className="text-sm text-white/60">Create your first character to begin your adventure!</p>
+                                    <p className="text-sm text-white/60">Create your first character to start tracking your roster.</p>
                                 </div>
                             </div>
                         ) : (

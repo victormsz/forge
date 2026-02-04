@@ -189,7 +189,7 @@ export function CharacterCard({ character, disableLevelUp = false }: CharacterCa
                                 <p className="mb-1.5 text-[0.6rem] font-bold uppercase tracking-wider text-white/50">Armor</p>
                                 <div className="flex flex-wrap gap-1.5">
                                     {topArmor.map((armor) => (
-                                        <span key={armor} className="rounded-lg border border-purple-400/30 bg-purple-400/10 px-2 py-1 text-purple-300">
+                                        <span key={armor} className="rounded-lg border border-amber-300/30 bg-amber-300/10 px-2 py-1 text-amber-200">
                                             {armor}
                                         </span>
                                     ))}
@@ -207,13 +207,13 @@ export function CharacterCard({ character, disableLevelUp = false }: CharacterCa
                             prefetch={false}
                             className="font-semibold text-white/70 transition hover:text-white"
                         >
-                            📄 Export PDF
+                            Export PDF
                         </Link>
                         <Link
                             href={`/characters/${id}`}
                             className="font-semibold text-rose-300 transition hover:text-rose-200"
                         >
-                            View Sheet →
+                            View sheet
                         </Link>
                     </div>
                 </div>

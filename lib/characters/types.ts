@@ -68,6 +68,8 @@ export interface ToggleSpellPreparationInput {
     isPrepared: boolean;
 }
 
+export type EquipmentSlot = "MAIN_HAND" | "OFF_HAND" | "ARMOR" | "SHIELD";
+
 export interface AddItemInput {
     characterId: string;
     name: string;
@@ -79,6 +81,12 @@ export interface AddItemInput {
     notes: string | null;
     referenceId: string | null;
     isCustom: boolean;
+}
+
+export interface EquipItemInput {
+    characterId: string;
+    itemId: string;
+    slot: EquipmentSlot | null;
 }
 
 export const EMPTY_PROFICIENCIES: CharacterProficiencies = {

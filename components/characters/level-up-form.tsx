@@ -127,7 +127,7 @@ export function LevelUpForm({
                                             )}
                                             {hasAbilityBonus && (
                                                 <p className="mt-1 text-xs text-amber-300">
-                                                    ✨ +1 to an ability score
+                                                    Grants +1 to an ability score
                                                 </p>
                                             )}
                                         </div>
@@ -148,8 +148,8 @@ export function LevelUpForm({
 
                     <p className="text-xs text-white/60">
                         {isFeatSelected
-                            ? "⚠️ You've chosen a feat. Ability score improvements are hidden (you can only choose one or the other)."
-                            : "💡 Choose a feat OR use ability score improvements below."}
+                            ? "Feat selected. Ability score improvements are hidden because you can only choose one option."
+                            : "Choose a feat or use ability score improvements below."}
                     </p>
                 </div>
             )}

@@ -11,6 +11,7 @@ import {
     parseToggleSpellPreparationFormData,
     parseAddItemFormData,
     parseDeleteItemFormData,
+    parseEquipItemFormData,
 } from "@/lib/characters/form-parsers";
 import { CharacterService } from "@/lib/characters/services/character-service";
 import { getCurrentActor } from "@/lib/current-actor";
@@ -116,6 +117,18 @@ export async function deleteItem(formData: FormData) {
     const { itemId } = parseDeleteItemFormData(formData);
 
     const characterId = await service.deleteItem(itemId);
+    revalidatePath(`/characters/${characterId}`);
+    revalidatePath(`/characters/${characterId}/items`);
+    revalidatePath("/characters");
+    revalidatePath("/dashboard");
+}
+
+export async function equipItem(formData: FormData) {
+    const actor = ensureActor(await getCurrentActor(), "Authentication required to modify equipment.");
+    const service = new CharacterService(actor);
+    const input = parseEquipItemFormData(formData);
+
+    const characterId = await service.equipItem(input);
     revalidatePath(`/characters/${characterId}`);
     revalidatePath(`/characters/${characterId}/items`);
     revalidatePath("/characters");

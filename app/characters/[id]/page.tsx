@@ -11,37 +11,99 @@ import { SPELL_AFFINITY_LABELS } from "@/lib/spells/labels";
 import { formatSubclassName } from "@/lib/characters/level-up-options";
 import { getFeaturesUpToLevel, getSubclassFeaturesUpToLevel } from "@/lib/characters/leveling/level-data";
 import { withFeatureDescriptions } from "@/lib/characters/leveling/feature-data";
+import { findReferenceItemById, type ItemReference } from "@/lib/items/reference";
 import {
     abilityModifier,
     buildSkillSummaries,
-    computeProficiencyBonus,
-    formatModifier,
-    normalizeAbilityScores,
-    normalizeProficiencies,
-} from "@/lib/characters/statistics";
+                                <div>
+                                    <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/60">Combat Stats</h2>
+                                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                                        {[
+                                            {
+                                                label: "Armor Class",
+                                                value: armorClass,
+                                                detail: armorSegments,
+                                            },
+                                            {
+                                                label: "Initiative",
+                                                value: formatModifier(abilityModifiers.dex),
+                                                detail: "Dexterity modifier",
+                                            },
+                                            {
+                                                label: "Speed",
+                                                value: `${walkingSpeed} ft`,
+                                                detail: "Walking speed",
+                                            },
+                                            {
+                                                label: "Proficiency",
+                                                value: `+${proficiencyBonus}`,
+                                                detail: `Level ${character.level}`,
+                                            },
+                                            {
+                                                label: "Hit Dice",
+                                                value: hitDiceDisplay,
+                                                detail: character.charClass || "Default d8",
+                                            },
+                                            {
+                                                label: "Max HP",
+                                                value: maxHpEstimate,
+                                                detail: "Full die plus average rolls and CON",
+                                            },
+                                        ].map((stat) => (
+                                            <div key={stat.label} className="rounded-2xl border border-white/15 bg-gradient-to-br from-black/40 to-black/20 p-4">
+                                                <div className="mb-2 text-xs uppercase tracking-wider text-white/60">{stat.label}</div>
+                                                <div className="text-3xl font-bold text-white">{stat.value}</div>
+                                                <p className="mt-2 text-xs text-white/50">{stat.detail}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
 
-export const metadata: Metadata = {
-    title: "ForgeSheet | Character Sheet",
-    description: "Immersive single-character sheet inspired by the printable D&D layout.",
-};
-
-const abilityDetails: Record<AbilityKey, { label: string; blurb: string }> = {
-    str: { label: "Strength", blurb: "Force · Athletics" },
-    dex: { label: "Dexterity", blurb: "Agility · Reflex" },
-    con: { label: "Constitution", blurb: "Endurance" },
-    int: { label: "Intelligence", blurb: "Logic" },
-    wis: { label: "Wisdom", blurb: "Insight" },
-    cha: { label: "Charisma", blurb: "Presence" },
-};
-
-const generationLabels = {
-    POINT_BUY: "Point Buy",
-    RANDOM: "Random Rolls",
-};
+                                <div>
+                                    <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/60">Skills</h2>
+                                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                                        {skillSummaries.map((skill) => (
+                                            <div
+                                                key={skill.label}
+                                                className={`rounded-2xl border p-4 ${
+                                                    skill.proficient
+                                                        ? "border-rose-400/40 bg-rose-400/10"
+                                                        : "border-white/15 bg-gradient-to-br from-black/40 to-black/20"
+                                                }`}
+                                            >
+                                                <div className="mb-2 flex items-center justify-between text-[0.65rem] font-bold uppercase tracking-wider">
+                                                    <span className={skill.proficient ? "text-rose-300" : "text-white/60"}>{skill.label}</span>
+                                                    <span className="text-white/50">{skill.ability.toUpperCase()}</span>
+                                                </div>
+                                                <div className="flex items-baseline justify-between gap-3">
+                                                    <span className="text-2xl font-bold text-white">{formatModifier(skill.total)}</span>
+                                                    <span className="text-xs text-white/70">
+                                                        {skill.proficient ? `+${proficiencyBonus} prof` : `${formatModifier(skill.base)} base`}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+    },
+    {
+        title: "Movement",
+        hint: "Movement is separate from your action.",
+        items: [
+            { name: "Move", detail: "Up to your speed; split before and after actions." },
+            { name: "Jump", detail: "Long or high jump based on Strength and movement." },
+            { name: "Climb, Swim, Crawl", detail: "Movement modes that can cost extra speed." },
+            { name: "Stand Up", detail: "Spend movement to rise from prone." },
+            { name: "Interact with Object", detail: "Draw a weapon, open a door, etc." },
+        ],
+    },
+];
 
 type CharacterSheetPageProps = {
     params: Promise<{ id: string }>;
 };
+
+type EquippedSlot = "MAIN_HAND" | "OFF_HAND" | "ARMOR" | "SHIELD";
 
 function formatAbilityIncreases(choices: LevelUpChoicesMeta["abilityIncreases"]) {
     if (!Array.isArray(choices) || choices.length === 0) {
@@ -51,6 +113,58 @@ function formatAbilityIncreases(choices: LevelUpChoicesMeta["abilityIncreases"])
     return choices
         .map((choice) => `${choice.ability.toUpperCase()} +${choice.amount}`)
         .join(", ");
+}
+
+function parseDamageLabel(damageLabel: string | null) {
+    if (!damageLabel) {
+        return null;
+    }
+    const base = damageLabel.split(" (")[0] ?? damageLabel;
+    const match = base.match(/^(\d+d\d+)\s*(.*)?$/i);
+    if (!match) {
+        return null;
+    }
+    return {
+        dice: match[1],
+        damageType: match[2]?.trim() || null,
+        label: base,
+    };
+}
+
+function chooseWeaponAbilityModifier(reference: ItemReference | null, abilityModifiers: Record<AbilityKey, number>) {
+    const properties = reference?.properties?.map((property) => property.toLowerCase()) ?? [];
+    const isFinesse = properties.includes("finesse");
+    const isRanged = properties.includes("range") || properties.includes("ammunition");
+    if (isRanged) {
+        return abilityModifiers.dex;
+    }
+    if (isFinesse) {
+        return Math.max(abilityModifiers.dex, abilityModifiers.str);
+    }
+    return abilityModifiers.str;
+}
+
+function formatWeaponDamage(reference: ItemReference | null, abilityModifiers: Record<AbilityKey, number>) {
+    const parsed = parseDamageLabel(reference?.damageLabel ?? null);
+    if (!parsed) {
+        return null;
+    }
+    const modifier = chooseWeaponAbilityModifier(reference, abilityModifiers);
+    const modifierLabel = modifier === 0 ? "" : modifier > 0 ? ` + ${modifier}` : ` - ${Math.abs(modifier)}`;
+    const typeLabel = parsed.damageType ? ` ${parsed.damageType}` : "";
+    return `${parsed.dice}${modifierLabel}${typeLabel}`;
+}
+
+function computeArmorBase(reference: ItemReference | null, dexModifier: number) {
+    if (!reference?.armorClass) {
+        return 10 + dexModifier;
+    }
+    const { base, dexBonus, maxBonus } = reference.armorClass;
+    if (!dexBonus) {
+        return base;
+    }
+    const dexApplied = typeof maxBonus === "number" ? Math.min(dexModifier, maxBonus) : dexModifier;
+    return base + dexApplied;
 }
 
 export default async function CharacterSheetPage({ params }: CharacterSheetPageProps) {
@@ -83,7 +197,10 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                     cost: true,
                     weight: true,
                     quantity: true,
+                    description: true,
                     notes: true,
+                    referenceId: true,
+                    equippedSlot: true,
                     isCustom: true,
                     updatedAt: true,
                 },
@@ -108,12 +225,6 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
     const armorBonus = character.armorBonus ?? 0;
     const shieldBonus = character.shieldBonus ?? 0;
     const miscBonus = character.miscBonus ?? 0;
-    const armorClass = 10 + abilityModifiers.dex + armorBonus + shieldBonus + miscBonus;
-    const armorSegments = ["10 base", `${formatModifier(abilityModifiers.dex)} DEX`]
-        .concat(armorBonus ? [`+${armorBonus} armor`] : [])
-        .concat(shieldBonus ? [`+${shieldBonus} shield`] : [])
-        .concat(miscBonus ? [`+${miscBonus} misc`] : [])
-        .join(" · ");
 
     const hitDieValue = getHitDieValue(character.charClass);
     const hitDiceDisplay = `${character.level}d${hitDieValue}`;
@@ -123,6 +234,55 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
     const skillSummaries = buildSkillSummaries(proficiencies, abilityModifiers, proficiencyBonus);
     const spells = character.spells;
     const inventoryItems = character.items ?? [];
+    const inventoryPreview = inventoryItems.map((item) => {
+        const reference = item.referenceId ? findReferenceItemById(item.referenceId) : null;
+        const masteryTag = reference?.detailTags.find((tag) => tag.startsWith("Mastery:")) ?? null;
+        const isWeapon = reference?.categories?.some((category) => /weapon/i.test(category)) ?? false;
+        return {
+            ...item,
+            damageLabel: reference?.damageLabel ?? null,
+            rangeLabel: reference?.rangeLabel ?? null,
+            weaponProperties: isWeapon ? reference?.properties ?? [] : [],
+            masteryTag: isWeapon ? masteryTag : null,
+            equippedSlot: (item.equippedSlot as EquippedSlot | null) ?? null,
+        };
+    });
+    const equippedMainHand = inventoryPreview.find((item) => item.equippedSlot === "MAIN_HAND") ?? null;
+    const equippedOffHand = inventoryPreview.find((item) => item.equippedSlot === "OFF_HAND") ?? null;
+    const equippedArmor = inventoryPreview.find((item) => item.equippedSlot === "ARMOR") ?? null;
+    const equippedShield = inventoryPreview.find((item) => item.equippedSlot === "SHIELD") ?? null;
+
+    const mainHandReference = equippedMainHand?.referenceId ? findReferenceItemById(equippedMainHand.referenceId) : null;
+    const offHandReference = equippedOffHand?.referenceId ? findReferenceItemById(equippedOffHand.referenceId) : null;
+    const armorReference = equippedArmor?.referenceId ? findReferenceItemById(equippedArmor.referenceId) : null;
+    const shieldReference = equippedShield?.referenceId ? findReferenceItemById(equippedShield.referenceId) : null;
+
+    const mainHandDamage = formatWeaponDamage(mainHandReference, abilityModifiers);
+    const offHandDamage = formatWeaponDamage(offHandReference, abilityModifiers);
+
+    const armorBase = computeArmorBase(armorReference, abilityModifiers.dex);
+    const shieldGearBonus = shieldReference?.armorClass?.base ?? 0;
+    const armorClass = armorBase + shieldGearBonus + armorBonus + shieldBonus + miscBonus;
+    const armorSegments = [
+        armorReference?.armorClass
+            ? `${armorReference.name} base ${armorReference.armorClass.base}`
+            : "10 base",
+        armorReference?.armorClass
+            ? armorReference.armorClass.dexBonus
+                ? (() => {
+                    const maxBonus = armorReference.armorClass?.maxBonus;
+                    const dexApplied = typeof maxBonus === "number" ? Math.min(abilityModifiers.dex, maxBonus) : abilityModifiers.dex;
+                    return `${formatModifier(dexApplied)} DEX${typeof maxBonus === "number" ? ` (max +${maxBonus})` : ""}`;
+                })()
+                : "DEX not applied"
+            : `${formatModifier(abilityModifiers.dex)} DEX`,
+        shieldGearBonus ? `+${shieldGearBonus} shield` : null,
+        armorBonus ? `+${armorBonus} armor` : null,
+        shieldBonus ? `+${shieldBonus} shield` : null,
+        miscBonus ? `+${miscBonus} misc` : null,
+    ]
+        .filter(Boolean)
+        .join(" · ");
     const inventoryTotalCount = character._count?.items ?? inventoryItems.length;
     const totalInventoryWeight = inventoryItems.reduce((sum, item) => sum + (item.weight ?? 0) * item.quantity, 0);
     const totalInventoryQuantity = inventoryItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -175,7 +335,7 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
     ];
 
     return (
-        <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(250,232,214,0.18),_transparent_55%),_#030308] text-white">
+        <div className="min-h-screen bg-forge text-white">
             <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-12 sm:px-6 lg:px-8">
                 <div className="flex flex-wrap items-start justify-between gap-6">
                     <div className="flex-1 min-w-0">
@@ -196,32 +356,32 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                             href="/characters"
                             className="rounded-xl border border-white/30 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 hover:border-white/50"
                         >
-                            ← Roster
+                            Back to roster
                         </Link>
                         <Link
                             href={`/characters/${character.id}/items`}
                             className="rounded-xl border border-sky-400/40 bg-sky-400/10 px-5 py-2.5 text-sm font-semibold text-sky-200 transition hover:bg-sky-400/20"
                         >
-                            🎒 Inventory
+                            Inventory
                         </Link>
                         <Link
                             href={`/characters/${character.id}/spells`}
                             className="rounded-xl border border-blue-400/40 bg-blue-400/10 px-5 py-2.5 text-sm font-semibold text-blue-300 transition hover:bg-blue-400/20"
                         >
-                            📚 Spells
+                            Spells
                         </Link>
                         <Link
                             href={`/characters/${character.id}/level-up`}
                             className="rounded-xl border border-emerald-400/40 bg-emerald-400/10 px-5 py-2.5 text-sm font-bold text-emerald-300 transition hover:bg-emerald-400/20"
                         >
-                            ⬆️ Level Up
+                            Level up
                         </Link>
                         <Link
                             href={`/api/characters/${character.id}/sheet`}
                             prefetch={false}
                             className="rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-6 py-2.5 text-sm font-bold text-white shadow-lg transition hover:shadow-rose-400/40 hover:scale-[1.02]"
                         >
-                            📄 Export PDF
+                            Export PDF
                         </Link>
                     </div>
                 </div>
@@ -264,72 +424,97 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                                                 label: "Armor Class",
                                                 value: armorClass,
                                                 detail: armorSegments,
-                                                icon: "🛡️",
                                             },
                                             {
                                                 label: "Initiative",
                                                 value: formatModifier(abilityModifiers.dex),
                                                 detail: "Dexterity modifier",
-                                                icon: "⚡",
                                             },
                                             {
                                                 label: "Speed",
                                                 value: `${walkingSpeed} ft`,
                                                 detail: "Walking speed",
-                                                icon: "🏃",
                                             },
                                             {
                                                 label: "Proficiency",
                                                 value: `+${proficiencyBonus}`,
                                                 detail: `Level ${character.level}`,
-                                                icon: "⭐",
                                             },
                                             {
                                                 label: "Hit Dice",
                                                 value: hitDiceDisplay,
                                                 detail: character.charClass || "Default d8",
-                                                icon: "🎲",
                                             },
                                             {
                                                 label: "Max HP",
                                                 value: maxHpEstimate,
-                                                detail: `Full die + avg rolls + CON mod`,
-                                                icon: "❤️",
+                                                detail: "Full die plus average rolls and CON",
                                             },
                                         ].map((stat) => (
                                             <div key={stat.label} className="rounded-2xl border border-white/15 bg-gradient-to-br from-black/40 to-black/20 p-4">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <span className="text-lg">{stat.icon}</span>
-                                                    <p className="text-[0.65rem] font-bold uppercase tracking-wider text-white/60">{stat.label}</p>
-                                                </div>
-                                                <p className="text-3xl font-bold text-white">{stat.value}</p>
-                                                <p className="mt-1.5 text-xs text-white/60">{stat.detail}</p>
+                                                <div className="mb-2 text-xs uppercase tracking-wider text-white/60">{stat.label}</div>
+                                                <div className="text-3xl font-bold text-white">{stat.value}</div>
+                                                <p className="mt-2 text-xs text-white/50">{stat.detail}</p>
                                             </div>
                                         ))}
                                     </div>
+                                </div>
 
-                                    <div>
-                                        <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/60">Skill Checks</h2>
-                                        <div className="grid gap-3 sm:grid-cols-2">
-                                            {skillSummaries.map((skill) => (
-                                                <div
-                                                    key={skill.key}
-                                                    className={`rounded-xl border px-4 py-3 transition ${skill.proficient
-                                                        ? "border-rose-400/60 bg-rose-400/15 shadow-lg shadow-rose-500/10"
+                                <div>
+                                    <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/60">Skills</h2>
+                                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                                        {skillSummaries.map((skill) => (
+                                            <div
+                                                key={skill.label}
+                                                className={`rounded-2xl border p-4 ${
+                                                    skill.proficient
+                                                        ? "border-rose-400/40 bg-rose-400/10"
                                                         : "border-white/15 bg-gradient-to-br from-black/40 to-black/20"
-                                                        }`}
-                                                >
-                                                    <div className="flex items-center justify-between text-[0.65rem] font-bold uppercase tracking-wider mb-2">
-                                                        <span className={skill.proficient ? "text-rose-300" : "text-white/60"}>{skill.label}</span>
-                                                        <span className="text-white/50">{skill.ability.toUpperCase()}</span>
-                                                    </div>
-                                                    <div className="flex items-baseline justify-between gap-3">
-                                                        <span className="text-2xl font-bold text-white">{formatModifier(skill.total)}</span>
-                                                        <span className="text-xs text-white/70">
-                                                            {skill.proficient ? `✓ +${proficiencyBonus}` : `${formatModifier(skill.base)}`}
-                                                        </span>
-                                                    </div>
+                                                }`}
+                                            >
+                                                <div className="mb-2 flex items-center justify-between text-[0.65rem] font-bold uppercase tracking-wider">
+                                                    <span className={skill.proficient ? "text-rose-300" : "text-white/60"}>{skill.label}</span>
+                                                    <span className="text-white/50">{skill.ability.toUpperCase()}</span>
                                                 </div>
+                                                <div className="flex items-baseline justify-between gap-3">
+                                                    <span className="text-2xl font-bold text-white">{formatModifier(skill.total)}</span>
+                                                    <span className="text-xs text-white/70">
+                                                        {skill.proficient ? `+${proficiencyBonus} prof` : `${formatModifier(skill.base)} base`}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/60">Core Actions</h2>
+                                        <p className="mb-4 text-sm text-white/60">
+                                            Corebook action, bonus action, reaction, and movement options for a turn.
+                                        </p>
+                                        <div className="grid gap-4 lg:grid-cols-2">
+                                            {COREBOOK_ACTION_GROUPS.map((group) => (
+                                                <article
+                                                    key={group.title}
+                                                    className="rounded-2xl border border-white/15 bg-gradient-to-br from-black/40 to-black/20 p-4"
+                                                >
+                                                    <div className="flex items-center justify-between gap-3 mb-3">
+                                                        <div>
+                                                            <h3 className="text-sm font-bold uppercase tracking-wider text-white/70">
+                                                                {group.title}
+                                                            </h3>
+                                                            <p className="text-xs text-white/50">{group.hint}</p>
+                                                        </div>
+                                                    </div>
+                                                    <ul className="space-y-2">
+                                                        {group.items.map((item) => (
+                                                            <li key={item.name} className="text-sm text-white/80">
+                                                                <span className="font-semibold text-white">{item.name}</span>
+                                                                <span className="text-white/60">: {item.detail}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </article>
                                             ))}
                                         </div>
                                     </div>
@@ -366,15 +551,41 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                             </dl>
                         </div>
 
+                        <div className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-sm">
+                            <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/70">Equipment Loadout</h2>
+                            <div className="space-y-4 text-sm">
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Main Hand</p>
+                                    <p className="text-white font-semibold">{equippedMainHand?.name ?? "None"}</p>
+                                    {mainHandDamage && <p className="text-xs text-white/60">{mainHandDamage}</p>}
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Off Hand</p>
+                                    <p className="text-white font-semibold">{equippedOffHand?.name ?? "None"}</p>
+                                    {offHandDamage && <p className="text-xs text-white/60">{offHandDamage}</p>}
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Armor</p>
+                                    <p className="text-white font-semibold">{equippedArmor?.name ?? "None"}</p>
+                                    {armorReference?.armorClass && (
+                                        <p className="text-xs text-white/60">AC {armorReference.armorClass.base}</p>
+                                    )}
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Shield</p>
+                                    <p className="text-white font-semibold">{equippedShield?.name ?? "None"}</p>
+                                    {shieldGearBonus ? <p className="text-xs text-white/60">+{shieldGearBonus} AC</p> : null}
+                                </div>
+                            </div>
+                        </div>
+
                     </aside>
                 </section>
 
                 <section className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-sm">
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                         <div>
-                            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                                🎒 Inventory Preview
-                            </h2>
+                            <h2 className="text-xl font-bold text-white">Inventory Preview</h2>
                             <p className="mt-1 text-sm text-white/70">Recent kit additions and carried weight.</p>
                         </div>
                         <div className="flex items-center gap-4">
@@ -385,7 +596,7 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                                 href={`/characters/${character.id}/items`}
                                 className="text-sm font-semibold text-sky-300 hover:text-sky-100 transition"
                             >
-                                Open inventory →
+                                Open inventory
                             </Link>
                         </div>
                     </div>
@@ -397,19 +608,19 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                             {totalInventoryQuantity} pieces tracked
                         </span>
                     </div>
-                    {inventoryItems.length === 0 ? (
+                    {inventoryPreview.length === 0 ? (
                         <div className="mt-6 rounded-xl border border-dashed border-white/20 bg-black/20 p-6 text-center">
                             <p className="text-white/60">No inventory entries yet.</p>
                             <Link
                                 href={`/characters/${character.id}/items`}
                                 className="mt-3 inline-block text-sm font-semibold text-sky-300 hover:text-sky-100 transition"
                             >
-                                Start packing →
+                                Start packing
                             </Link>
                         </div>
                     ) : (
                         <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                            {inventoryItems.map((item) => (
+                            {inventoryPreview.map((item) => (
                                 <article key={item.id} className="rounded-xl border border-white/15 bg-gradient-to-br from-black/40 to-black/20 p-4">
                                     <div className="flex items-start justify-between gap-3">
                                         <div>
@@ -428,9 +639,34 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                                         {typeof item.weight === "number" && (
                                             <span className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1">{(item.weight * item.quantity).toFixed(1)} lb</span>
                                         )}
+                                        {item.damageLabel && (
+                                            <span className="rounded-lg border border-rose-400/30 bg-rose-400/10 px-2.5 py-1 text-rose-200">
+                                                {item.damageLabel}
+                                            </span>
+                                        )}
+                                        {item.rangeLabel && (
+                                            <span className="rounded-lg border border-blue-400/30 bg-blue-400/10 px-2.5 py-1 text-blue-200">
+                                                {item.rangeLabel}
+                                            </span>
+                                        )}
+                                        {item.masteryTag && (
+                                            <span className="rounded-lg border border-amber-400/30 bg-amber-400/10 px-2.5 py-1 text-amber-200">
+                                                {item.masteryTag}
+                                            </span>
+                                        )}
+                                        {item.weaponProperties.slice(0, 3).map((property) => (
+                                            <span
+                                                key={`${item.id}-${property}`}
+                                                className="rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 text-emerald-200"
+                                            >
+                                                {property}
+                                            </span>
+                                        ))}
                                         <span className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1">{item.isCustom ? "Custom" : "SRD"}</span>
                                     </div>
-                                    {item.notes && <p className="mt-3 text-sm text-white/70">{item.notes}</p>}
+                                    {(item.notes || item.description) && (
+                                        <p className="mt-3 text-sm text-white/70">{item.notes ?? item.description}</p>
+                                    )}
                                     <p className="mt-3 text-[0.65rem] uppercase tracking-[0.3em] text-white/50">Updated {item.updatedAt.toLocaleDateString()}</p>
                                 </article>
                             ))}
@@ -441,9 +677,7 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                 <section className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-sm">
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                         <div>
-                            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                                📖 Spellbook
-                            </h2>
+                            <h2 className="text-xl font-bold text-white">Spellbook</h2>
                             <p className="mt-1 text-sm text-white/70">Known spells and abilities</p>
                         </div>
                         <div className="flex items-center gap-4">
@@ -454,7 +688,7 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                                 href={`/characters/${character.id}/spells`}
                                 className="text-sm font-semibold text-rose-300 hover:text-rose-200 transition"
                             >
-                                Manage →
+                                Manage spells
                             </Link>
                         </div>
                     </div>
@@ -465,7 +699,7 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                                 href={`/characters/${character.id}/spells`}
                                 className="mt-3 inline-block text-sm font-semibold text-rose-300 hover:text-rose-200 transition"
                             >
-                                Add your first spell →
+                                Add your first spell
                             </Link>
                         </div>
                     ) : (
@@ -577,9 +811,7 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                 <section className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-sm">
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                         <div>
-                            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                                ⭐ Feats
-                            </h2>
+                            <h2 className="text-xl font-bold text-white">Feats</h2>
                             <p className="mt-1 text-sm text-white/70">Special abilities and character features</p>
                         </div>
                         <span className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-2 text-sm font-bold text-amber-300">
@@ -597,9 +829,6 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                                 <article key={`${feat}-${index}`} className="rounded-xl border border-amber-400/30 bg-gradient-to-br from-amber-400/10 to-amber-400/5 p-5">
                                     <div className="flex items-start justify-between gap-3 mb-2">
                                         <div>
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className="text-2xl">🌟</span>
-                                            </div>
                                             <h3 className="text-lg font-bold text-white">{feat}</h3>
                                         </div>
                                     </div>

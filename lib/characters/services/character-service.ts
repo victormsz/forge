@@ -9,6 +9,7 @@ import type {
     AddSpellInput,
     ToggleSpellPreparationInput,
     AddItemInput,
+    EquipItemInput,
 } from "@/lib/characters/types";
 import { assertPointBuyWithinBudget } from "@/lib/characters/form-parsers";
 import { getLevelRequirement } from "@/lib/characters/leveling/level-requirements";
@@ -479,5 +480,44 @@ export class CharacterService {
         this.ensureOwnership(item.character.userId);
         await prisma.item.delete({ where: { id: itemId } });
         return item.characterId;
+    }
+
+    async equipItem(input: EquipItemInput) {
+        if (this.actor.isGuest) {
+            throw new Error("Guest access cannot modify equipment.");
+        }
+
+        const item = await prisma.item.findUnique({
+            where: { id: input.itemId },
+            select: {
+                id: true,
+                characterId: true,
+                character: { select: { userId: true } },
+            },
+        });
+
+        if (!item || item.characterId !== input.characterId) {
+            throw new Error("Item not found or access denied.");
+        }
+
+        this.ensureOwnership(item.character.userId);
+
+        if (!input.slot) {
+            await prisma.item.update({ where: { id: input.itemId }, data: { equippedSlot: null } });
+            return input.characterId;
+        }
+
+        await prisma.$transaction([
+            prisma.item.updateMany({
+                where: { characterId: input.characterId, equippedSlot: input.slot },
+                data: { equippedSlot: null },
+            }),
+            prisma.item.update({
+                where: { id: input.itemId },
+                data: { equippedSlot: input.slot },
+            }),
+        ]);
+
+        return input.characterId;
     }
 }

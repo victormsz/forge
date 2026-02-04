@@ -28,7 +28,7 @@ export default async function CharacterCreatePage() {
     }
 
     return (
-        <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(250,232,214,0.3),_transparent_55%),_#050506] text-white">
+        <div className="min-h-screen bg-forge text-white">
             <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-16 sm:px-6 lg:px-8">
                 <header className="space-y-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.3em] text-rose-200">Creation Flow</p>
@@ -38,7 +38,7 @@ export default async function CharacterCreatePage() {
                     </p>
                     <div className="flex flex-wrap gap-3">
                         <Link href="/characters" className="text-xs font-semibold uppercase tracking-[0.3em] text-rose-200 underline-offset-4 hover:underline">
-                            ← Back to roster
+                            Back to roster
                         </Link>
                         <Link href="/dashboard" className="text-xs font-semibold uppercase tracking-[0.3em] text-white/70 underline-offset-4 hover:text-white hover:underline">
                             View dashboard

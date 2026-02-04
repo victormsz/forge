@@ -16,8 +16,15 @@ export interface ItemReference {
     damageLabel: string | null;
     rangeLabel: string | null;
     bundleQuantity: number | null;
+    armorClass: ArmorClassInfo | null;
     imageUrl: string | null;
     sourceUrl: string | null;
+}
+
+export interface ArmorClassInfo {
+    base: number;
+    dexBonus: boolean;
+    maxBonus: number | null;
 }
 
 export interface ItemCategoryOption {
@@ -112,6 +119,7 @@ function normalizeItem(entry: RawEquipmentRecord): ItemReference | null {
     const rangeLabel = formatRange(entry.range);
     const bundleQuantity = parseInteger(entry.quantity);
     const detailTags = buildDetailTags(entry, description, rarityLabel, damageLabel, rangeLabel, bundleQuantity, properties);
+    const armorClass = extractArmorClass(entry.armor_class);
 
     return {
         id: slug,
@@ -128,6 +136,7 @@ function normalizeItem(entry: RawEquipmentRecord): ItemReference | null {
         damageLabel,
         rangeLabel,
         bundleQuantity,
+        armorClass,
         imageUrl: sanitizeText(entry.image),
         sourceUrl: sanitizeText(entry.url),
     };
@@ -272,6 +281,22 @@ function formatArmorClass(ac: RawEquipmentRecord["armor_class"]) {
     const maxBonus = parseInteger(ac.max_bonus);
     const maxSegment = dexBonus && maxBonus ? ` (max +${maxBonus})` : "";
     return `AC ${base}${dexBonus}${maxSegment}`;
+}
+
+function extractArmorClass(ac: RawEquipmentRecord["armor_class"]): ArmorClassInfo | null {
+    if (!ac) {
+        return null;
+    }
+    const base = parseInteger(ac.base);
+    if (!base) {
+        return null;
+    }
+    const maxBonus = parseInteger(ac.max_bonus);
+    return {
+        base,
+        dexBonus: Boolean(ac.dex_bonus),
+        maxBonus: maxBonus ?? null,
+    };
 }
 
 function formatCost(cost: RawEquipmentRecord["cost"]) {

@@ -3,9 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 
-import { deleteItem } from "@/app/characters/actions";
+import { deleteItem, equipItem } from "@/app/characters/actions";
 import { ItemLibraryForm } from "@/components/items/item-library-form";
 import type { ItemCategoryOption, ItemReference } from "@/lib/items/reference";
+import type { EquipmentSlot } from "@/lib/characters/types";
 
 type Item = {
     id: string;
@@ -16,6 +17,11 @@ type Item = {
     quantity: number;
     description: string | null;
     notes: string | null;
+    referenceId: string | null;
+    equippedSlot: EquipmentSlot | null;
+    isWeapon: boolean;
+    isArmor: boolean;
+    isShield: boolean;
     isCustom: boolean;
     updatedAt: Date;
 };
@@ -153,6 +159,11 @@ export function CharacterItemsPageClient({
                                                     {item.cost && (
                                                         <span className="rounded-full border border-white/15 px-3 py-1">{item.cost}</span>
                                                     )}
+                                                    {item.equippedSlot && (
+                                                        <span className="rounded-full border border-emerald-400/40 bg-emerald-400/10 px-3 py-1 text-emerald-200">
+                                                            Equipped
+                                                        </span>
+                                                    )}
                                                     <span className="rounded-full border border-white/15 px-3 py-1">
                                                         {item.isCustom ? "Custom" : "SRD"}
                                                     </span>
@@ -165,20 +176,85 @@ export function CharacterItemsPageClient({
                                                 <p className="mt-3 text-sm text-sky-200">{item.notes}</p>
                                             )}
                                             <p className="mt-3 text-xs uppercase tracking-[0.3em] text-white/50">Updated {item.updatedAt.toLocaleDateString()}</p>
-                                            <form
-                                                action={deleteItem}
-                                                className="mt-4 flex items-center justify-end gap-3"
-                                                onClick={(e) => e.stopPropagation()}
-                                            >
-                                                <input type="hidden" name="itemId" value={item.id} />
-                                                <input type="hidden" name="characterId" value={character.id} />
-                                                <button
-                                                    type="submit"
-                                                    className="rounded-full border border-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white/80 transition hover:border-rose-300 hover:text-white"
-                                                >
-                                                    Delete
-                                                </button>
-                                            </form>
+                                            <div className="mt-4 flex flex-wrap items-center justify-between gap-3" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex flex-wrap items-center gap-2 text-[0.65rem] uppercase tracking-[0.3em]">
+                                                    {item.isWeapon && (
+                                                        <>
+                                                            <form action={equipItem}>
+                                                                <input type="hidden" name="characterId" value={character.id} />
+                                                                <input type="hidden" name="itemId" value={item.id} />
+                                                                <input type="hidden" name="slot" value="MAIN_HAND" />
+                                                                <button
+                                                                    type="submit"
+                                                                    className="rounded-full border border-emerald-400/40 px-3 py-1 text-emerald-200 transition hover:border-emerald-200 hover:text-white"
+                                                                >
+                                                                    Main-hand
+                                                                </button>
+                                                            </form>
+                                                            <form action={equipItem}>
+                                                                <input type="hidden" name="characterId" value={character.id} />
+                                                                <input type="hidden" name="itemId" value={item.id} />
+                                                                <input type="hidden" name="slot" value="OFF_HAND" />
+                                                                <button
+                                                                    type="submit"
+                                                                    className="rounded-full border border-emerald-400/40 px-3 py-1 text-emerald-200 transition hover:border-emerald-200 hover:text-white"
+                                                                >
+                                                                    Off-hand
+                                                                </button>
+                                                            </form>
+                                                        </>
+                                                    )}
+                                                    {item.isArmor && (
+                                                        <form action={equipItem}>
+                                                            <input type="hidden" name="characterId" value={character.id} />
+                                                            <input type="hidden" name="itemId" value={item.id} />
+                                                            <input type="hidden" name="slot" value="ARMOR" />
+                                                            <button
+                                                                type="submit"
+                                                                className="rounded-full border border-blue-400/40 px-3 py-1 text-blue-200 transition hover:border-blue-200 hover:text-white"
+                                                            >
+                                                                Armor
+                                                            </button>
+                                                        </form>
+                                                    )}
+                                                    {item.isShield && (
+                                                        <form action={equipItem}>
+                                                            <input type="hidden" name="characterId" value={character.id} />
+                                                            <input type="hidden" name="itemId" value={item.id} />
+                                                            <input type="hidden" name="slot" value="SHIELD" />
+                                                            <button
+                                                                type="submit"
+                                                                className="rounded-full border border-amber-400/40 px-3 py-1 text-amber-200 transition hover:border-amber-200 hover:text-white"
+                                                            >
+                                                                Shield
+                                                            </button>
+                                                        </form>
+                                                    )}
+                                                    {item.equippedSlot && (
+                                                        <form action={equipItem}>
+                                                            <input type="hidden" name="characterId" value={character.id} />
+                                                            <input type="hidden" name="itemId" value={item.id} />
+                                                            <input type="hidden" name="slot" value="" />
+                                                            <button
+                                                                type="submit"
+                                                                className="rounded-full border border-white/20 px-3 py-1 text-white/70 transition hover:border-white/50 hover:text-white"
+                                                            >
+                                                                Unequip
+                                                            </button>
+                                                        </form>
+                                                    )}
+                                                </div>
+                                                <form action={deleteItem} className="flex items-center gap-3">
+                                                    <input type="hidden" name="itemId" value={item.id} />
+                                                    <input type="hidden" name="characterId" value={character.id} />
+                                                    <button
+                                                        type="submit"
+                                                        className="rounded-full border border-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white/80 transition hover:border-rose-300 hover:text-white"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </form>
+                                            </div>
                                         </article>
                                     ))}
                                 </div>

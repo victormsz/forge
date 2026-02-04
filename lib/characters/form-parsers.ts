@@ -22,11 +22,14 @@ import {
     type AddSpellInput,
     type ToggleSpellPreparationInput,
     type AddItemInput,
+    type EquipItemInput,
+    type EquipmentSlot,
 } from "@/lib/characters/types";
 
 const allowedMethods = new Set<AbilityGenerationMethod>([AbilityGenerationMethod.POINT_BUY, AbilityGenerationMethod.RANDOM]);
 const allowedShapes = new Set<SpellTargetShape>(Object.values(SpellTargetShape));
 const allowedAffinities = new Set<SpellTargetAffinity>(Object.values(SpellTargetAffinity));
+const allowedEquipmentSlots = new Set<EquipmentSlot>(["MAIN_HAND", "OFF_HAND", "ARMOR", "SHIELD"]);
 
 export const HIT_DICE_ROLL_REQUIRED_MESSAGE = "Roll your hit die before applying this level up.";
 
@@ -285,6 +288,21 @@ export function parseCreateCharacterFormData(formData: FormData): CreateCharacte
         ancestryAbilityChoices,
         backgroundAbilityChoice,
     };
+}
+
+export function parseEquipItemFormData(formData: FormData): EquipItemInput {
+    const characterId = readString(formData.get("characterId"));
+    const itemId = readString(formData.get("itemId"));
+    if (!characterId || !itemId) {
+        throw new Error("Missing character or item id.");
+    }
+
+    const slotValue = readString(formData.get("slot"));
+    const slot = slotValue && allowedEquipmentSlots.has(slotValue as EquipmentSlot)
+        ? (slotValue as EquipmentSlot)
+        : null;
+
+    return { characterId, itemId, slot };
 }
 
 export function parseLevelUpFormData(formData: FormData): LevelUpInput {

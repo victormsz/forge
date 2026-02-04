@@ -24,6 +24,22 @@ export interface Proficiency {
     url: string;
 }
 
+export interface EquipmentReference {
+    equipment: {
+        index: string;
+        name: string;
+        url: string;
+    };
+    quantity: number;
+}
+
+export interface EquipmentOption {
+    desc: string;
+    choose: number;
+    type: string;
+    from: any; // Complex nested structure
+}
+
 export interface ClassData {
     index: string;
     name: string;
@@ -35,6 +51,8 @@ export interface ClassData {
         name: string;
         url: string;
     }>;
+    starting_equipment: EquipmentReference[];
+    starting_equipment_options: EquipmentOption[];
 }
 
 export interface Subclass {
@@ -71,6 +89,8 @@ export interface ClassOption {
     };
     savingThrows: string[];
     subclasses?: SubclassOption[];
+    startingEquipment: EquipmentReference[];
+    startingEquipmentOptions: EquipmentOption[];
 }
 
 const classDescriptions: Record<string, string> = {
@@ -203,6 +223,8 @@ export function getClassOptions(): ClassOption[] {
             },
             savingThrows,
             subclasses,
+            startingEquipment: classData.starting_equipment || [],
+            startingEquipmentOptions: classData.starting_equipment_options || [],
         };
     });
 }

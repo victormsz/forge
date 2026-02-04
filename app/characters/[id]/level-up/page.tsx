@@ -11,6 +11,7 @@ import { getHitDieValue } from "@/lib/characters/hit-dice";
 import { getCurrentActor } from "@/lib/current-actor";
 import { prisma } from "@/lib/prisma";
 import { HIT_DICE_ROLL_REQUIRED_MESSAGE } from "@/lib/characters/form-parsers";
+import { LevelUpForm } from "@/components/characters/level-up-form";
 
 interface LevelUpPageProps {
     params: { id: string };
@@ -184,113 +185,18 @@ export default async function LevelUpPage({ params, searchParams }: LevelUpPageP
                 </section>
 
                 <section className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-                    <form action={levelUpCharacter} className="space-y-6">
-                        {showHitDiceError && (
-                            <div
-                                role="alert"
-                                className="rounded-2xl border border-rose-400/50 bg-rose-500/10 px-4 py-3 text-sm text-rose-100"
-                            >
-                                {HIT_DICE_ROLL_REQUIRED_MESSAGE}
-                            </div>
-                        )}
-                        <input type="hidden" name="characterId" value={character.id} />
-
-                        {showSubclassChoice && (
-                            <SubclassSelector
-                                subclassOptions={subclassOptions}
-                                subclassDescriptions={SUBCLASS_DESCRIPTIONS}
-                            />
-                        )}
-
-                        {showFeatChoice && (
-                            <div className="space-y-2">
-                                <label htmlFor="feat" className="text-sm font-semibold">Feat (optional)</label>
-                                <select
-                                    id="feat"
-                                    name="feat"
-                                    defaultValue=""
-                                    className="w-full rounded-2xl border border-white/15 bg-black/30 px-4 py-3 text-sm text-white focus:border-rose-300 focus:outline-none"
-                                >
-                                    <option value="">Choose a feat</option>
-                                    {GLOBAL_FEAT_OPTIONS.map((feat) => (
-                                        <option key={feat.value} value={feat.value}>
-                                            {feat.label}
-                                        </option>
-                                    ))}
-                                </select>
-                                <p className="text-xs text-white/60">Spend this slot on a feat or split +2 ability points above.</p>
-                            </div>
-                        )}
-
-                        {abilitySlots > 0 ? (
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm font-semibold">Ability score improvements</span>
-                                    <span className="text-xs text-white/60">Select {abilitySlots} × +1 bonuses</span>
-                                </div>
-                                <div className={`grid gap-3 ${abilitySlots > 1 ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
-                                    {Array.from({ length: abilitySlots }).map((_, index) => (
-                                        <select
-                                            key={index}
-                                            name="abilityIncreases"
-                                            defaultValue=""
-                                            className="w-full rounded-2xl border border-white/15 bg-black/30 px-4 py-3 text-sm text-white focus:border-rose-300 focus:outline-none"
-                                        >
-                                            <option value="">No change</option>
-                                            {ABILITY_SCORE_PICKLIST.map((ability) => (
-                                                <option key={ability.value} value={ability.value}>
-                                                    {ability.label}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    ))}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="rounded-2xl border border-dashed border-white/20 bg-black/20 px-4 py-3 text-sm text-white/60">
-                                No ability score improvements unlock at level {nextLevel}. You can still document spell swaps or other features in the notes.
-                            </div>
-                        )}
-
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm font-semibold">Hit dice & HP gain</span>
-                                <span className="text-xs text-white/60">Manual roll required</span>
-                            </div>
-                            <HitDiceRoller
-                                hitDieValue={hitDieValue}
-                                conModifier={conModifier}
-                                nextLevel={nextLevel}
-                                characterName={character.name}
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <label htmlFor="notes" className="text-sm font-semibold">Notes</label>
-                            <textarea
-                                id="notes"
-                                name="notes"
-                                rows={4}
-                                placeholder="Document spell swaps, extra attacks, or custom table rulings."
-                                className="w-full rounded-2xl border border-white/15 bg-black/30 px-4 py-3 text-sm text-white focus:border-rose-300 focus:outline-none"
-                            />
-                        </div>
-
-                        <div className="flex flex-wrap gap-4">
-                            <Link
-                                href="/characters"
-                                className="rounded-full border border-white/20 px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-white/70 transition hover:border-white/40"
-                            >
-                                Cancel
-                            </Link>
-                            <button
-                                type="submit"
-                                className="rounded-full bg-rose-400 px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-black transition hover:bg-rose-300"
-                            >
-                                Apply level up
-                            </button>
-                        </div>
-                    </form>
+                    <LevelUpForm
+                        characterId={character.id}
+                        showHitDiceError={showHitDiceError}
+                        showSubclassChoice={showSubclassChoice}
+                        showFeatChoice={showFeatChoice}
+                        abilitySlots={abilitySlots}
+                        nextLevel={nextLevel}
+                        hitDieValue={hitDieValue}
+                        conModifier={conModifier}
+                        characterName={character.name}
+                        subclassOptions={subclassOptions}
+                    />
                 </section>
             </main>
         </div>

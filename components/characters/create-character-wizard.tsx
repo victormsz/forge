@@ -274,6 +274,7 @@ const baseSteps = [
     { id: "background", title: "Select Background", description: "Ground them in a life before adventuring." },
     { id: "class", title: "Select Class", description: "Lock their primary toolkit for adventures." },
     { id: "subclass", title: "Choose Subclass", description: "Select your specialization or divine domain." },
+    { id: "equipment", title: "Starting Equipment", description: "Choose your initial gear and weapons." },
     { id: "alignment", title: "Set Alignment", description: "Capture their guiding ethos." },
 ];
 
@@ -337,6 +338,7 @@ interface WizardFormState {
     alignment: string;
     abilityScores: AbilityScores;
     selectedSkills: string[];
+    equipmentChoices: Record<number, number>; // Maps equipment option index to selected choice index
 }
 
 function SubmitButton({ disabled }: { disabled: boolean }) {
@@ -364,6 +366,7 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
         alignment: "",
         abilityScores: { ...DEFAULT_ABILITY_SCORES },
         selectedSkills: [],
+        equipmentChoices: {},
     }));
     const [rolledSets, setRolledSets] = useState<RolledSet[]>([]);
     const [rollAssignments, setRollAssignments] = useState<RollAssignments>({});
@@ -686,6 +689,16 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                 }
             }
 
+            // Skip equipment step if there are no equipment choices
+            if (activeSteps[nextIndex]?.id === "equipment") {
+                const selectedClass = classOptions.find((c) => c.value === formState.charClass);
+                const equipmentOptions = selectedClass?.startingEquipmentOptions || [];
+                if (equipmentOptions.length === 0) {
+                    // Skip to next step
+                    nextIndex = Math.min(nextIndex + 1, activeSteps.length - 1);
+                }
+            }
+
             return nextIndex;
         });
     };
@@ -710,6 +723,16 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
             if (activeSteps[prevIndex]?.id === "subclass") {
                 const selectedClass = classOptions.find((c) => c.value === formState.charClass);
                 if (!selectedClass?.subclasses || selectedClass.subclasses.length === 0) {
+                    // Skip to previous step
+                    prevIndex = Math.max(prevIndex - 1, 0);
+                }
+            }
+
+            // Skip equipment step backward if there are no equipment choices
+            if (activeSteps[prevIndex]?.id === "equipment") {
+                const selectedClass = classOptions.find((c) => c.value === formState.charClass);
+                const equipmentOptions = selectedClass?.startingEquipmentOptions || [];
+                if (equipmentOptions.length === 0) {
                     // Skip to previous step
                     prevIndex = Math.max(prevIndex - 1, 0);
                 }
@@ -753,6 +776,21 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                 }
                 return Boolean(formState.subclass);
             }
+            case "equipment": {
+                const selectedClass = classOptions.find((c) => c.value === formState.charClass);
+                if (!selectedClass) {
+                    return false;
+                }
+                // If there are no equipment choices, auto-advance
+                const equipmentOptions = selectedClass.startingEquipmentOptions || [];
+                if (equipmentOptions.length === 0) {
+                    return true;
+                }
+                // Check if all equipment choices have been made
+                return equipmentOptions.every((_, index) => 
+                    formState.equipmentChoices[index] !== undefined
+                );
+            }
             case "alignment":
                 return Boolean(formState.alignment);
             default:
@@ -765,6 +803,9 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
         const needsSubclass = selectedClass?.subclasses && selectedClass.subclasses.length > 0;
         const skillChoices = selectedClass?.proficiencies.skills.choices;
         const needsSkillSelection = skillChoices && formState.selectedSkills.length !== skillChoices.count;
+        const equipmentOptions = selectedClass?.startingEquipmentOptions || [];
+        const needsEquipmentSelection = equipmentOptions.length > 0 && 
+            !equipmentOptions.every((_, index) => formState.equipmentChoices[index] !== undefined);
 
         return (
             formState.name.trim().length >= MIN_NAME_LENGTH &&
@@ -774,7 +815,8 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
             (!needsSubclass || Boolean(formState.subclass)) &&
             Boolean(formState.alignment) &&
             generationReady &&
-            !needsSkillSelection
+            !needsSkillSelection &&
+            !needsEquipmentSelection
         );
     })();
 
@@ -1482,6 +1524,132 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                                         );
                                     })()}
                                 </div>
+                            </div>
+                        );
+                    })()}
+
+                    {currentStep.id === "equipment" && (() => {
+                        const selectedClass = classOptions.find((c) => c.value === formState.charClass);
+                        if (!selectedClass) {
+                            return null;
+                        }
+
+                        const startingEquipment = selectedClass.startingEquipment || [];
+                        const equipmentOptions = selectedClass.startingEquipmentOptions || [];
+
+                        // Helper to render equipment option
+                        const renderEquipmentOption = (option: any, optionIndex: number, choiceIndex: number) => {
+                            if (option.option_type === "counted_reference") {
+                                const count = option.count || 1;
+                                const name = option.of?.name || "Unknown";
+                                return (
+                                    <span key={`${optionIndex}-${choiceIndex}`}>
+                                        {count > 1 ? `${count}× ` : ""}{name}
+                                    </span>
+                                );
+                            }
+                            if (option.option_type === "choice") {
+                                const desc = option.choice?.desc || "Choose from category";
+                                return <span key={`${optionIndex}-${choiceIndex}`}>{desc}</span>;
+                            }
+                            return <span key={`${optionIndex}-${choiceIndex}`}>Unknown option</span>;
+                        };
+
+                        return (
+                            <div className="mt-6 space-y-6">
+                                {/* Starting Equipment (automatic) */}
+                                {startingEquipment.length > 0 && (
+                                    <div className="rounded-2xl border border-white/15 bg-black/30 p-6">
+                                        <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60 mb-4">
+                                            Automatic Starting Equipment
+                                        </p>
+                                        <div className="grid gap-2 sm:grid-cols-2">
+                                            {startingEquipment.map((item, index) => (
+                                                <div key={index} className="flex items-center gap-2 text-sm text-white/70">
+                                                    <div className="h-2 w-2 rounded-full bg-rose-300/50" />
+                                                    <span>
+                                                        {item.quantity > 1 ? `${item.quantity}× ` : ""}
+                                                        {item.equipment.name}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Equipment Choices */}
+                                {equipmentOptions.length > 0 && (
+                                    <div className="space-y-4">
+                                        <div className="rounded-2xl border border-white/15 bg-black/30 p-6">
+                                            <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60 mb-2">
+                                                Equipment Choices
+                                            </p>
+                                            <p className="text-sm text-white/70 mb-4">
+                                                Select one option from each choice below
+                                            </p>
+                                            <p className="text-xs text-white/50">
+                                                {Object.keys(formState.equipmentChoices).length} / {equipmentOptions.length} selected
+                                            </p>
+                                        </div>
+
+                                        {equipmentOptions.map((equipOption, optionIndex) => {
+                                            const options = equipOption.from?.options || [];
+                                            const selectedChoice = formState.equipmentChoices[optionIndex];
+
+                                            return (
+                                                <div key={optionIndex} className="rounded-2xl border border-white/15 bg-black/30 p-6">
+                                                    <p className="text-sm font-semibold text-white mb-3">
+                                                        Choice {optionIndex + 1}: {equipOption.desc}
+                                                    </p>
+                                                    <div className="grid gap-3 sm:grid-cols-2">
+                                                        {options.map((choice: any, choiceIndex: number) => {
+                                                            const isSelected = selectedChoice === choiceIndex;
+                                                            return (
+                                                                <button
+                                                                    type="button"
+                                                                    key={choiceIndex}
+                                                                    onClick={() => {
+                                                                        setFormState((prev) => ({
+                                                                            ...prev,
+                                                                            equipmentChoices: {
+                                                                                ...prev.equipmentChoices,
+                                                                                [optionIndex]: choiceIndex,
+                                                                            },
+                                                                        }));
+                                                                    }}
+                                                                    className={`rounded-xl border px-4 py-3 text-left text-sm transition ${
+                                                                        isSelected
+                                                                            ? "border-rose-300 bg-rose-300/10 text-white"
+                                                                            : "border-white/15 bg-black/30 text-white/70 hover:border-white/30"
+                                                                    }`}
+                                                                >
+                                                                    <div className="flex items-start gap-2">
+                                                                        <div className={`mt-0.5 h-4 w-4 rounded-full border flex-shrink-0 flex items-center justify-center ${
+                                                                            isSelected ? "border-rose-300 bg-rose-300" : "border-white/30"
+                                                                        }`}>
+                                                                            {isSelected && (
+                                                                                <div className="h-2 w-2 rounded-full bg-black" />
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="flex-1">
+                                                                            {renderEquipmentOption(choice, optionIndex, choiceIndex)}
+                                                                        </div>
+                                                                    </div>
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {startingEquipment.length === 0 && equipmentOptions.length === 0 && (
+                                    <div className="rounded-2xl border border-white/15 bg-black/30 p-6 text-center">
+                                        <p className="text-sm text-white/70">No starting equipment defined for this class.</p>
+                                    </div>
+                                )}
                             </div>
                         );
                     })()}

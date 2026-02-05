@@ -28,6 +28,8 @@ export default async function DashboardPage() {
         redirect("/");
     }
 
+    const isGuest = actor.role === "guest";
+
     const [user, characters] = await Promise.all([
         prisma.user.findUnique({
             where: { id: actor.userId },
@@ -69,7 +71,7 @@ export default async function DashboardPage() {
             value: totalSpells.toString(),
             detail: totalSpells > 0 ? "Custom targeting ready" : "Log your first spell",
         },
-        actor.isGuest
+        isGuest
             ? {
                 title: "Guest access",
                 value: "Limited (1 hero)",
@@ -113,7 +115,7 @@ export default async function DashboardPage() {
                     <p className="max-w-3xl text-sm text-white/70">
                         Review your roster, recent updates, and quick actions without leaving this panel.
                     </p>
-                    {actor.isGuest && (
+                    {isGuest && (
                         <p className="text-xs text-white/60">Guest mode is limited to one hero and basic features. Sign in to unlock leveling, items, and spells.</p>
                     )}
                     <div className="flex flex-wrap gap-3">
@@ -166,7 +168,7 @@ export default async function DashboardPage() {
                                     spellsCount: latestCharacter.spells.length,
                                     updatedAt: latestCharacter.updatedAt,
                                 }}
-                                disableLevelUp={actor.isGuest}
+                                disableLevelUp={isGuest}
                             />
                         </div>
                     ) : (
@@ -187,7 +189,7 @@ export default async function DashboardPage() {
                     {rosterPreview.length ? (
                         <div className="mt-6 grid gap-4 lg:grid-cols-3">
                             {rosterPreview.map((character) => (
-                                <CharacterCard key={character.id} character={character} disableLevelUp={actor.isGuest} />
+                                <CharacterCard key={character.id} character={character} disableLevelUp={isGuest} />
                             ))}
                         </div>
                     ) : (

@@ -75,6 +75,8 @@ export const authOptions: NextAuthOptions = {
                 session.user.id = user.id;
                 session.user.name = user.name ?? session.user.name;
                 session.user.email = user.email ?? session.user.email;
+                session.user.role = user.role;
+                session.user.plan = user.plan;
             }
             return session;
         },

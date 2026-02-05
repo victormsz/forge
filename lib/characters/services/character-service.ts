@@ -67,7 +67,7 @@ export class CharacterService {
             throw new Error("Select ancestry, class, background, and alignment to forge a hero.");
         }
 
-        if (this.actor.isGuest) {
+        if (this.actor.role === "guest") {
             const existingCharacters = await prisma.character.count({ where: { userId: this.actor.userId } });
             if (existingCharacters >= 1) {
                 throw new Error("Guest access supports only one character. Delete your current hero or sign in to add more.");
@@ -185,7 +185,7 @@ export class CharacterService {
     }
 
     async levelUp(input: LevelUpInput) {
-        if (this.actor.isGuest) {
+        if (this.actor.role === "guest") {
             throw new Error("Guest access cannot level up characters.");
         }
 
@@ -284,7 +284,7 @@ export class CharacterService {
     }
 
     async addSpell(input: AddSpellInput) {
-        if (this.actor.isGuest) {
+        if (this.actor.role === "guest") {
             throw new Error("Sign in to track spells.");
         }
 
@@ -351,7 +351,7 @@ export class CharacterService {
     }
 
     async deleteSpell(spellId: string) {
-        if (this.actor.isGuest) {
+        if (this.actor.role === "guest") {
             throw new Error("Guest access cannot modify spells.");
         }
 
@@ -374,7 +374,7 @@ export class CharacterService {
     }
 
     async toggleSpellPreparation(input: ToggleSpellPreparationInput) {
-        if (this.actor.isGuest) {
+        if (this.actor.role === "guest") {
             throw new Error("Guest access cannot modify spells.");
         }
 
@@ -409,7 +409,7 @@ export class CharacterService {
     }
 
     async addItem(input: AddItemInput) {
-        if (this.actor.isGuest) {
+        if (this.actor.role === "guest") {
             throw new Error("Sign in to manage inventory.");
         }
 
@@ -460,7 +460,7 @@ export class CharacterService {
     }
 
     async deleteItem(itemId: string) {
-        if (this.actor.isGuest) {
+        if (this.actor.role === "guest") {
             throw new Error("Guest access cannot modify inventory.");
         }
 
@@ -483,7 +483,7 @@ export class CharacterService {
     }
 
     async equipItem(input: EquipItemInput) {
-        if (this.actor.isGuest) {
+        if (this.actor.role === "guest") {
             throw new Error("Guest access cannot modify equipment.");
         }
 

@@ -28,7 +28,7 @@ export default async function LevelUpPage({ params, searchParams }: LevelUpPageP
         redirect("/");
     }
 
-    if (actor.isGuest) {
+    if (actor.role === "guest") {
         redirect("/characters");
     }
 

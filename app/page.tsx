@@ -8,23 +8,54 @@ import { getCurrentActor } from "@/lib/current-actor";
 
 const featureCards = [
   {
+    title: "Party Command",
+    body: "Dungeon Masters can spin up parties, invite players by email, and view every character sheet in their roster.",
+  },
+  {
+    title: "Shared Table Chat",
+    body: "Keep one chat per party with text, item shares, and uploads for images or short video clips.",
+  },
+  {
     title: "Precision Spellcraft",
     body: "Model every spell with single-target darts, 30 ft cones, squares, or sprawling AOEs. Flag who it hits: allies, foes, everyone, or just the scenery.",
   },
+];
+
+const accountOptions = [
   {
-    title: "Point Buy or Chaos",
-    body: "Lock in disciplined point-buy spreads or let the dice gods choose with fast random rolls. Track budgets, rerolls, and variant rules in one spot.",
+    title: "Guest",
+    tag: "Try the forge",
+    detail: "1 character, no leveling, no parties. Seven-day guest save.",
+    cta: "Continue as guest",
+    href: null as string | null,
   },
   {
-    title: "Mobile-First Sheets",
-    body: "Craft on your phone, finalize on desktop. Responsive cards stack into a printable grid that exports to PDF without tedious formatting passes.",
+    title: "Paid Player",
+    tag: "Full character tools",
+    detail: "Unlimited characters, full features, can join parties.",
+    cta: "Create player account",
+    href: "/auth/email/register?plan=paid_player",
+  },
+  {
+    title: "Basic DM",
+    tag: "One party",
+    detail: "Create 1 party with up to 5 players, plus full DM views.",
+    cta: "Create basic DM account",
+    href: "/auth/email/register?plan=basic_dm",
+  },
+  {
+    title: "Premium DM",
+    tag: "Unlimited parties",
+    detail: "Unlimited parties and players, full DM control.",
+    cta: "Create premium DM account",
+    href: "/auth/email/register?plan=premium_dm",
   },
 ];
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
   const actor = await getCurrentActor(session);
-  const isGuest = actor?.isGuest ?? false;
+  const isGuest = actor?.role === "guest";
   const userName = session?.user?.name ?? actor?.name ?? "Adventurer";
   const guestLimitCopy = "Guest access covers one character slot without leveling, items, or spells.";
   const heroHeadline = session
@@ -33,10 +64,10 @@ export default async function Home() {
       ? "Guest mode unlocked — limited forge access."
       : "Sign in to start forging.";
   const heroBody = session
-    ? "Create a character, assign ownership, and start logging ability rolls, spell slots, and party buffs."
+    ? "Create characters, manage parties, and keep chat-ready summaries for the table."
     : isGuest
-      ? "Prototype a hero without linking an account. Guest mode saves one character and previews the forge, but leveling, inventory, and spell tracking stay locked until you sign in."
-      : "Authenticate once, sync across devices, and keep every feature unlocked while we build the 5.5 ruleset.";
+      ? "Prototype a hero without linking an account. Guest mode saves one character and previews the forge, but leveling, inventory, parties, and spell tracking stay locked until you sign in."
+      : "Pick a player or DM account, invite your table by email, and keep party chat and sheets in sync.";
   const emailAuthLinks = (
     <p className="text-xs text-white/70">
       Prefer email credentials?{" "}
@@ -104,7 +135,7 @@ export default async function Home() {
               <div className="flex flex-col gap-4">
                 <div className="space-y-2">
                   <SignInButtons />
-                  <p className="text-xs text-white/60">Sign in with Google or Discord to unlock unlimited heroes and full spell/item tooling.</p>
+                  <p className="text-xs text-white/60">Sign in with Google or Discord to unlock parties, chat, and full spell/item tooling.</p>
                   {emailAuthLinks}
                 </div>
                 <form action={continueAsGuest} className="space-y-2">
@@ -151,6 +182,44 @@ export default async function Home() {
             )}
           </div>
         </section>
+
+        {!session && (
+          <section className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-lg">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-rose-200">Account Paths</p>
+                <h2 className="mt-2 text-2xl font-semibold text-white">Choose your account type</h2>
+                <p className="mt-2 text-sm text-white/70">Plan selection is saved on signup, with upgrades coming soon.</p>
+              </div>
+            </div>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {accountOptions.map((option) => (
+                <div key={option.title} className="rounded-2xl border border-white/10 bg-black/30 p-5">
+                  <p className="text-xs uppercase tracking-[0.25em] text-white/50">{option.tag}</p>
+                  <h3 className="mt-2 text-lg font-semibold text-white">{option.title}</h3>
+                  <p className="mt-2 text-sm text-white/70">{option.detail}</p>
+                  {option.href ? (
+                    <Link
+                      href={option.href}
+                      className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-rose-400 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-black transition hover:bg-rose-300"
+                    >
+                      {option.cta}
+                    </Link>
+                  ) : (
+                    <form action={continueAsGuest} className="mt-4">
+                      <button
+                        type="submit"
+                        className="w-full rounded-full border border-white/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:border-rose-200"
+                      >
+                        {option.cta}
+                      </button>
+                    </form>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {featureCards.map((card) => (

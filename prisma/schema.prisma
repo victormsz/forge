@@ -41,12 +41,51 @@ enum EquipmentSlot {
   SHIELD
 }
 
+enum UserRole {
+  guest
+  player
+  dm
+}
+
+enum UserPlan {
+  guest
+  paid_player
+  basic_dm
+  premium_dm
+}
+
+enum PartyMemberRole {
+  dm
+  player
+}
+
+enum PartyInviteStatus {
+  pending
+  accepted
+  declined
+  revoked
+  expired
+}
+
+enum PartyMessageType {
+  text
+  item
+  image
+  video
+}
+
+enum PartyAttachmentType {
+  image
+  video
+}
+
 // ---- Core Domain ----
 
 model User {
   id         String      @id @default(cuid())
   email      String      @unique
-  isGuest    Boolean     @default(false)
+  role       UserRole    @default(player)
+  plan       UserPlan    @default(paid_player)
   name       String?
   image      String?
   emailVerified DateTime?
@@ -55,6 +94,11 @@ model User {
   emailVerificationExpires DateTime?
   createdAt  DateTime    @default(now())
   characters Character[]
+
+  partiesOwned Party[] @relation("PartyOwner")
+  partyMemberships PartyMember[]
+  partyInvitesSent PartyInvite[] @relation("PartyInviter")
+  partyMessages PartyMessage[]
 
   accounts Account[]
   sessions Session[]
@@ -128,6 +172,96 @@ model Item {
   character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
 
   @@index([characterId])
+}
+
+model Party {
+  id        String   @id @default(cuid())
+  name      String
+  ownerId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner   User          @relation("PartyOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members PartyMember[]
+  invites PartyInvite[]
+  chat    PartyChat?
+
+  @@index([ownerId])
+}
+
+model PartyMember {
+  id       String          @id @default(cuid())
+  partyId  String
+  userId   String
+  role     PartyMemberRole @default(player)
+  joinedAt DateTime        @default(now())
+
+  party Party @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([partyId, userId])
+  @@index([userId])
+}
+
+model PartyInvite {
+  id          String            @id @default(cuid())
+  partyId     String
+  email       String
+  token       String            @unique
+  status      PartyInviteStatus @default(pending)
+  invitedById String
+  createdAt   DateTime          @default(now())
+  expiresAt   DateTime
+  respondedAt DateTime?
+
+  party     Party @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  invitedBy User  @relation("PartyInviter", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([partyId])
+}
+
+model PartyChat {
+  id        String   @id @default(cuid())
+  partyId   String   @unique
+  createdAt DateTime @default(now())
+
+  party    Party          @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  messages PartyMessage[]
+}
+
+model PartyMessage {
+  id           String           @id @default(cuid())
+  chatId       String
+  senderId     String
+  type         PartyMessageType
+  text         String?
+  itemSnapshot Json?
+  createdAt    DateTime         @default(now())
+
+  chat        PartyChat               @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender      User                    @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  attachments PartyMessageAttachment[]
+
+  @@index([chatId])
+  @@index([senderId])
+}
+
+model PartyMessageAttachment {
+  id        String              @id @default(cuid())
+  messageId String
+  type      PartyAttachmentType
+  url       String
+  name      String?
+  size      Int?
+  mimeType  String?
+  width     Int?
+  height    Int?
+  createdAt DateTime            @default(now())
+
+  message PartyMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
 }
 
 // ---- NextAuth Models ----

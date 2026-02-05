@@ -25,7 +25,8 @@ export async function continueAsGuest() {
         data: {
             email: `guest-${randomUUID()}@guest.local`,
             name: "Guest Adventurer",
-            isGuest: true,
+            role: "guest",
+            plan: "guest",
         },
         select: { id: true },
     });

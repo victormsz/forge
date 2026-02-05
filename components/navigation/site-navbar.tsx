@@ -8,6 +8,7 @@ const navLinks = [
     { label: "Home", href: "/" },
     { label: "Dashboard", href: "/dashboard" },
     { label: "Characters", href: "/characters" },
+    { label: "Parties", href: "/parties" },
 ];
 
 export async function SiteNavbar() {

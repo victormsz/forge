@@ -2,13 +2,16 @@ import type { Session } from "next-auth";
 import { getServerSession } from "next-auth";
 import { cookies } from "next/headers";
 
+import type { UserPlan, UserRole } from "@prisma/client";
+
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { GUEST_COOKIE_NAME } from "@/lib/guest-session";
 
 export interface CurrentActor {
     userId: string;
-    isGuest: boolean;
+    role: UserRole;
+    plan: UserPlan;
     name?: string | null;
     email?: string | null;
 }
@@ -18,9 +21,12 @@ export async function getCurrentActor(existingSession?: Session | null): Promise
     const cookieStore = await cookies();
 
     if (session?.user?.id) {
+        const role = session.user.role ?? "player";
+        const plan = session.user.plan ?? "paid_player";
         return {
             userId: session.user.id,
-            isGuest: false,
+            role,
+            plan,
             name: session.user.name,
             email: session.user.email,
         };
@@ -34,16 +40,17 @@ export async function getCurrentActor(existingSession?: Session | null): Promise
 
     const guestUser = await prisma.user.findUnique({
         where: { id: guestCookie },
-        select: { id: true, name: true, email: true, isGuest: true },
+        select: { id: true, name: true, email: true, role: true, plan: true },
     });
 
-    if (!guestUser || !guestUser.isGuest) {
+    if (!guestUser || guestUser.role !== "guest") {
         return null;
     }
 
     return {
         userId: guestUser.id,
-        isGuest: true,
+        role: guestUser.role,
+        plan: guestUser.plan,
         name: guestUser.name ?? "Guest Adventurer",
         email: guestUser.email,
     };

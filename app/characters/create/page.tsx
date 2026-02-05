@@ -19,7 +19,7 @@ export default async function CharacterCreatePage() {
         redirect("/");
     }
 
-    if (actor.isGuest) {
+    if (actor.role === "guest") {
         const existingCharacters = await prisma.character.count({ where: { userId: actor.userId } });
 
         if (existingCharacters >= 1) {

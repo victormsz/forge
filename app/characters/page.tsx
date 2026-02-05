@@ -27,6 +27,8 @@ export default async function CharactersPage() {
         redirect("/");
     }
 
+    const isGuest = actor.role === "guest";
+
     const characters = await prisma.character.findMany({
         where: { userId: actor.userId },
         // Keep roster positions stable so characters don't jump around after updates.
@@ -55,7 +57,7 @@ export default async function CharactersPage() {
         updatedAt: character.updatedAt,
     }));
 
-    const guestLimitReached = actor.isGuest && serialized.length >= 1;
+    const guestLimitReached = isGuest && serialized.length >= 1;
 
     return (
         <div className="min-h-screen bg-forge text-white">
@@ -78,7 +80,7 @@ export default async function CharactersPage() {
                             <p className="mt-2 text-base text-white/80">
                                 Guided steps for abilities, ancestry, class, and spells.
                             </p>
-                            {actor.isGuest && (
+                            {isGuest && (
                                 <div className="mt-4 rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3">
                                     <p className="text-sm text-amber-200/90">
                                         <strong>Guest limitation:</strong> Create one character. Sign in to unlock unlimited characters, leveling, and advanced features.
@@ -129,7 +131,7 @@ export default async function CharactersPage() {
                             </div>
                         ) : (
                             serialized.map((character) => (
-                                <CharacterCard key={character.id} character={character} disableLevelUp={actor.isGuest} />
+                                <CharacterCard key={character.id} character={character} disableLevelUp={isGuest} />
                             ))
                         )}
                     </div>

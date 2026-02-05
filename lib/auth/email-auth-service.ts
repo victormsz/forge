@@ -41,7 +41,8 @@ export async function registerEmailAccount({ name, email, password }: RegisterEm
                 emailVerificationToken: verificationToken,
                 emailVerificationExpires: verificationExpires,
                 emailVerified: null,
-                isGuest: false,
+                role: "player",
+                plan: "paid_player",
             },
         });
     } else {
@@ -52,7 +53,8 @@ export async function registerEmailAccount({ name, email, password }: RegisterEm
                 hashedPassword,
                 emailVerificationToken: verificationToken,
                 emailVerificationExpires: verificationExpires,
-                isGuest: false,
+                role: "player",
+                plan: "paid_player",
             },
         });
     }

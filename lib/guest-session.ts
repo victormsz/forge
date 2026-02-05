@@ -34,10 +34,10 @@ export async function getGuestUserFromCookie() {
 
     const guestUser = await prisma.user.findUnique({
         where: { id: guestId },
-        select: { id: true, name: true, email: true, isGuest: true },
+        select: { id: true, name: true, email: true, role: true, plan: true },
     });
 
-    if (!guestUser || !guestUser.isGuest) {
+    if (!guestUser || guestUser.role !== "guest") {
         await clearGuestCookie();
         return null;
     }

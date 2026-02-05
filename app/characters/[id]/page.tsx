@@ -12,6 +12,7 @@ import { formatSubclassName } from "@/lib/characters/level-up-options";
 import { getFeaturesUpToLevel, getSubclassFeaturesUpToLevel } from "@/lib/characters/leveling/level-data";
 import { withFeatureDescriptions } from "@/lib/characters/leveling/feature-data";
 import { findReferenceItemById, type ItemReference } from "@/lib/items/reference";
+import { canViewCharacterSheet } from "@/lib/parties/access";
 import {
     abilityModifier,
     buildSkillSummaries,
@@ -174,8 +175,11 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
     }
 
     const character = await prisma.character.findFirst({
-        where: { id, userId: actor.userId },
+        where: { id },
         include: {
+            user: {
+                select: { id: true, name: true, email: true, role: true },
+            },
             spells: {
                 orderBy: [
                     { level: "asc" },
@@ -213,6 +217,15 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
         notFound();
     }
 
+    const canView = await canViewCharacterSheet(actor, character.userId);
+
+    if (!canView) {
+        notFound();
+    }
+
+    const isOwner = actor.userId === character.userId;
+    const ownerLabel = character.user.name ?? character.user.email ?? "Adventurer";
+
     const abilityScores = normalizeAbilityScores(character.abilityScores);
     const abilityModifiers = ABILITY_KEYS.reduce((acc, key) => {
         acc[key] = abilityModifier(abilityScores[key]);
@@ -238,6 +251,7 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
         const isWeapon = reference?.categories?.some((category) => /weapon/i.test(category)) ?? false;
         return {
             ...item,
+            description: item.description ?? reference?.description ?? null,
             damageLabel: reference?.damageLabel ?? null,
             rangeLabel: reference?.rangeLabel ?? null,
             weaponProperties: isWeapon ? reference?.properties ?? [] : [],
@@ -328,7 +342,7 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
 
     const infoTags = [
         generationLabels[character.generationMethod],
-        actor.isGuest ? "Guest owner" : "Synced account",
+        character.user.role === "guest" ? "Guest owner" : "Synced account",
         `Sheet ID ${character.id.slice(0, 6)}`,
     ];
 
@@ -348,6 +362,11 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                                 : `Level ${character.level}`}
                         </p>
                         <p className="mt-1 text-sm text-white/60">{ancestryLine}</p>
+                        {!isOwner && (
+                            <p className="mt-3 text-xs text-rose-200/80">
+                                Viewing as DM for a party member. Editing tools are disabled.
+                            </p>
+                        )}
                     </div>
                     <div className="flex flex-wrap gap-3">
                         <Link
@@ -356,24 +375,28 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                         >
                             Back to roster
                         </Link>
-                        <Link
-                            href={`/characters/${character.id}/items`}
-                            className="rounded-xl border border-sky-400/40 bg-sky-400/10 px-5 py-2.5 text-sm font-semibold text-sky-200 transition hover:bg-sky-400/20"
-                        >
-                            Inventory
-                        </Link>
-                        <Link
-                            href={`/characters/${character.id}/spells`}
-                            className="rounded-xl border border-blue-400/40 bg-blue-400/10 px-5 py-2.5 text-sm font-semibold text-blue-300 transition hover:bg-blue-400/20"
-                        >
-                            Spells
-                        </Link>
-                        <Link
-                            href={`/characters/${character.id}/level-up`}
-                            className="rounded-xl border border-emerald-400/40 bg-emerald-400/10 px-5 py-2.5 text-sm font-bold text-emerald-300 transition hover:bg-emerald-400/20"
-                        >
-                            Level up
-                        </Link>
+                        {isOwner && (
+                            <>
+                                <Link
+                                    href={`/characters/${character.id}/items`}
+                                    className="rounded-xl border border-sky-400/40 bg-sky-400/10 px-5 py-2.5 text-sm font-semibold text-sky-200 transition hover:bg-sky-400/20"
+                                >
+                                    Inventory
+                                </Link>
+                                <Link
+                                    href={`/characters/${character.id}/spells`}
+                                    className="rounded-xl border border-blue-400/40 bg-blue-400/10 px-5 py-2.5 text-sm font-semibold text-blue-300 transition hover:bg-blue-400/20"
+                                >
+                                    Spells
+                                </Link>
+                                <Link
+                                    href={`/characters/${character.id}/level-up`}
+                                    className="rounded-xl border border-emerald-400/40 bg-emerald-400/10 px-5 py-2.5 text-sm font-bold text-emerald-300 transition hover:bg-emerald-400/20"
+                                >
+                                    Level up
+                                </Link>
+                            </>
+                        )}
                         <Link
                             href={`/api/characters/${character.id}/sheet`}
                             prefetch={false}
@@ -464,11 +487,10 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                                         {skillSummaries.map((skill) => (
                                             <div
                                                 key={skill.label}
-                                                className={`rounded-2xl border p-4 ${
-                                                    skill.proficient
-                                                        ? "border-rose-400/40 bg-rose-400/10"
-                                                        : "border-white/15 bg-gradient-to-br from-black/40 to-black/20"
-                                                }`}
+                                                className={`rounded-2xl border p-4 ${skill.proficient
+                                                    ? "border-rose-400/40 bg-rose-400/10"
+                                                    : "border-white/15 bg-gradient-to-br from-black/40 to-black/20"
+                                                    }`}
                                             >
                                                 <div className="mb-2 flex items-center justify-between text-[0.65rem] font-bold uppercase tracking-wider">
                                                     <span className={skill.proficient ? "text-rose-300" : "text-white/60"}>{skill.label}</span>
@@ -487,34 +509,33 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
 
                                 <div>
                                     <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/60">Core Actions</h2>
-                                        <p className="mb-4 text-sm text-white/60">
-                                            Corebook action, bonus action, reaction, and movement options for a turn.
-                                        </p>
-                                        <div className="grid gap-4 lg:grid-cols-2">
-                                            {COREBOOK_ACTION_GROUPS.map((group) => (
-                                                <article
-                                                    key={group.title}
-                                                    className="rounded-2xl border border-white/15 bg-gradient-to-br from-black/40 to-black/20 p-4"
-                                                >
-                                                    <div className="flex items-center justify-between gap-3 mb-3">
-                                                        <div>
-                                                            <h3 className="text-sm font-bold uppercase tracking-wider text-white/70">
-                                                                {group.title}
-                                                            </h3>
-                                                            <p className="text-xs text-white/50">{group.hint}</p>
-                                                        </div>
+                                    <p className="mb-4 text-sm text-white/60">
+                                        Corebook action, bonus action, reaction, and movement options for a turn.
+                                    </p>
+                                    <div className="grid gap-4 lg:grid-cols-2">
+                                        {COREBOOK_ACTION_GROUPS.map((group) => (
+                                            <article
+                                                key={group.title}
+                                                className="rounded-2xl border border-white/15 bg-gradient-to-br from-black/40 to-black/20 p-4"
+                                            >
+                                                <div className="flex items-center justify-between gap-3 mb-3">
+                                                    <div>
+                                                        <h3 className="text-sm font-bold uppercase tracking-wider text-white/70">
+                                                            {group.title}
+                                                        </h3>
+                                                        <p className="text-xs text-white/50">{group.hint}</p>
                                                     </div>
-                                                    <ul className="space-y-2">
-                                                        {group.items.map((item) => (
-                                                            <li key={item.name} className="text-sm text-white/80">
-                                                                <span className="font-semibold text-white">{item.name}</span>
-                                                                <span className="text-white/60">: {item.detail}</span>
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                </article>
-                                            ))}
-                                        </div>
+                                                </div>
+                                                <ul className="space-y-2">
+                                                    {group.items.map((item) => (
+                                                        <li key={item.name} className="text-sm text-white/80">
+                                                            <span className="font-semibold text-white">{item.name}</span>
+                                                            <span className="text-white/60">: {item.detail}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </article>
+                                        ))}
                                     </div>
                                 </div>
                             </div>
@@ -527,7 +548,7 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                             <dl className="mt-4 space-y-3.5 text-sm">
                                 <div>
                                     <dt className="text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Owner</dt>
-                                    <dd className="text-white">{actor.name ?? actor.email ?? "Adventurer"}</dd>
+                                    <dd className="text-white">{ownerLabel}</dd>
                                 </div>
                                 <div>
                                     <dt className="text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Generation</dt>
@@ -619,7 +640,7 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                     ) : (
                         <div className="mt-6 grid gap-4 sm:grid-cols-2">
                             {inventoryPreview.map((item) => (
-                                <article key={item.id} className="rounded-xl border border-white/15 bg-gradient-to-br from-black/40 to-black/20 p-4">
+                                <article key={item.id} className="group relative rounded-xl border border-white/15 bg-gradient-to-br from-black/40 to-black/20 p-4">
                                     <div className="flex items-start justify-between gap-3">
                                         <div>
                                             <p className="text-xs uppercase tracking-[0.35em] text-white/50">{item.category ?? "Misc gear"}</p>
@@ -663,7 +684,14 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                                         <span className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1">{item.isCustom ? "Custom" : "SRD"}</span>
                                     </div>
                                     {(item.notes || item.description) && (
-                                        <p className="mt-3 text-sm text-white/70">{item.notes ?? item.description}</p>
+                                        <div className="pointer-events-none absolute left-4 right-4 top-16 z-10 translate-y-2 rounded-xl border border-white/20 bg-black/80 p-3 text-xs text-white/90 opacity-0 shadow-2xl shadow-black/60 backdrop-blur-sm transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100">
+                                            {item.description && (
+                                                <p className="leading-relaxed text-white/90 line-clamp-4">{item.description}</p>
+                                            )}
+                                            {item.notes && (
+                                                <p className={`leading-relaxed text-sky-200 ${item.description ? "mt-2" : ""}`}>{item.notes}</p>
+                                            )}
+                                        </div>
                                     )}
                                     <p className="mt-3 text-[0.65rem] uppercase tracking-[0.3em] text-white/50">Updated {item.updatedAt.toLocaleDateString()}</p>
                                 </article>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getCurrentActor } from "@/lib/current-actor";
 import { generateCharacterSheetPdf } from "@/lib/export";
+import { canViewCharacterSheet } from "@/lib/parties/access";
 import { prisma } from "@/lib/prisma";
 import { ABILITY_KEYS, type AbilityKey } from "@/lib/point-buy";
 import {
@@ -33,7 +34,6 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     const character = await prisma.character.findFirst({
         where: {
             id: params.id,
-            userId: actor.userId,
         },
         include: {
             spells: {
@@ -54,6 +54,12 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     });
 
     if (!character) {
+        return NextResponse.json({ error: "Character not found" }, { status: 404 });
+    }
+
+    const canView = await canViewCharacterSheet(actor, character.userId);
+
+    if (!canView) {
         return NextResponse.json({ error: "Character not found" }, { status: 404 });
     }
 

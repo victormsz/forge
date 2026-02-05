@@ -15,76 +15,74 @@ import { findReferenceItemById, type ItemReference } from "@/lib/items/reference
 import {
     abilityModifier,
     buildSkillSummaries,
-                                <div>
-                                    <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/60">Combat Stats</h2>
-                                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                                        {[
-                                            {
-                                                label: "Armor Class",
-                                                value: armorClass,
-                                                detail: armorSegments,
-                                            },
-                                            {
-                                                label: "Initiative",
-                                                value: formatModifier(abilityModifiers.dex),
-                                                detail: "Dexterity modifier",
-                                            },
-                                            {
-                                                label: "Speed",
-                                                value: `${walkingSpeed} ft`,
-                                                detail: "Walking speed",
-                                            },
-                                            {
-                                                label: "Proficiency",
-                                                value: `+${proficiencyBonus}`,
-                                                detail: `Level ${character.level}`,
-                                            },
-                                            {
-                                                label: "Hit Dice",
-                                                value: hitDiceDisplay,
-                                                detail: character.charClass || "Default d8",
-                                            },
-                                            {
-                                                label: "Max HP",
-                                                value: maxHpEstimate,
-                                                detail: "Full die plus average rolls and CON",
-                                            },
-                                        ].map((stat) => (
-                                            <div key={stat.label} className="rounded-2xl border border-white/15 bg-gradient-to-br from-black/40 to-black/20 p-4">
-                                                <div className="mb-2 text-xs uppercase tracking-wider text-white/60">{stat.label}</div>
-                                                <div className="text-3xl font-bold text-white">{stat.value}</div>
-                                                <p className="mt-2 text-xs text-white/50">{stat.detail}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
+    computeProficiencyBonus,
+    formatModifier,
+    normalizeAbilityScores,
+    normalizeProficiencies,
+} from "@/lib/characters/statistics";
 
-                                <div>
-                                    <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/60">Skills</h2>
-                                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                                        {skillSummaries.map((skill) => (
-                                            <div
-                                                key={skill.label}
-                                                className={`rounded-2xl border p-4 ${
-                                                    skill.proficient
-                                                        ? "border-rose-400/40 bg-rose-400/10"
-                                                        : "border-white/15 bg-gradient-to-br from-black/40 to-black/20"
-                                                }`}
-                                            >
-                                                <div className="mb-2 flex items-center justify-between text-[0.65rem] font-bold uppercase tracking-wider">
-                                                    <span className={skill.proficient ? "text-rose-300" : "text-white/60"}>{skill.label}</span>
-                                                    <span className="text-white/50">{skill.ability.toUpperCase()}</span>
-                                                </div>
-                                                <div className="flex items-baseline justify-between gap-3">
-                                                    <span className="text-2xl font-bold text-white">{formatModifier(skill.total)}</span>
-                                                    <span className="text-xs text-white/70">
-                                                        {skill.proficient ? `+${proficiencyBonus} prof` : `${formatModifier(skill.base)} base`}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
+export const metadata: Metadata = {
+    title: "ForgeSheet | Character Sheet",
+    description: "Immersive single-character sheet inspired by the printable D&D layout.",
+};
+
+const abilityDetails: Record<AbilityKey, { label: string; blurb: string }> = {
+    str: { label: "Strength", blurb: "Force · Athletics" },
+    dex: { label: "Dexterity", blurb: "Agility · Reflex" },
+    con: { label: "Constitution", blurb: "Endurance" },
+    int: { label: "Intelligence", blurb: "Logic" },
+    wis: { label: "Wisdom", blurb: "Insight" },
+    cha: { label: "Charisma", blurb: "Presence" },
+};
+
+const generationLabels = {
+    POINT_BUY: "Point Buy",
+    RANDOM: "Random Rolls",
+};
+
+const COREBOOK_ACTION_GROUPS = [
+    {
+        title: "Actions",
+        hint: "Choose one action on your turn.",
+        items: [
+            {
+                name: "Attack",
+                detail: "Make a weapon or unarmed strike. You can also grapple or shove.",
+            },
+            { name: "Cast a Spell", detail: "Cast a spell with a casting time of 1 action." },
+            { name: "Dash", detail: "Gain extra movement equal to your speed." },
+            { name: "Disengage", detail: "Your movement does not provoke opportunity attacks this turn." },
+            { name: "Dodge", detail: "Attackers have disadvantage; you gain advantage on Dex saves." },
+            { name: "Help", detail: "Give an ally advantage on a task or attack." },
+            { name: "Hide", detail: "Attempt to hide if you have cover or are obscured." },
+            { name: "Ready", detail: "Prepare a trigger and response using your reaction." },
+            { name: "Search", detail: "Look for something; uses an ability check." },
+            { name: "Use an Object", detail: "Interact with an object that needs your action." },
+            { name: "Improvised Action", detail: "Do something else the DM allows." },
+        ],
+    },
+    {
+        title: "Special Attacks",
+        hint: "Options within the Attack action.",
+        items: [
+            { name: "Grapple", detail: "Replace an attack to grab a creature." },
+            { name: "Shove", detail: "Push a creature or knock it prone." },
+        ],
+    },
+    {
+        title: "Bonus Actions",
+        hint: "Only when a feature or spell grants one.",
+        items: [
+            { name: "Bonus Action", detail: "Take a bonus action from a class feature, spell, or item." },
+        ],
+    },
+    {
+        title: "Reactions",
+        hint: "One reaction per round.",
+        items: [
+            { name: "Opportunity Attack", detail: "Strike when a creature leaves your reach." },
+            { name: "Readied Action", detail: "Use your reaction to execute a readied response." },
+        ],
     },
     {
         title: "Movement",

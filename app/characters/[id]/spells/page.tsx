@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import type { SpellTargetAffinity, SpellTargetShape } from "@prisma/client";
 
 import { addSpell, deleteSpell, toggleSpellPreparation } from "@/app/characters/actions";
+import { Card } from "@/components/ui/card";
 import { SpellLibraryForm } from "@/components/spells/spell-library-form";
 import { getCurrentActor } from "@/lib/current-actor";
 import { prisma } from "@/lib/prisma";
@@ -117,7 +118,7 @@ export default async function CharacterSpellsPage({ params }: CharacterSpellsPag
 
                 <section className="grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
                     <div className="space-y-8">
-                        <article className="rounded-3xl border border-white/10 bg-white/5 p-6">
+                        <Card className="rounded-3xl border border-white/10 bg-white/5 p-6">
                             <div className="flex flex-wrap items-center justify-between gap-3">
                                 <div>
                                     <div className="flex items-center gap-2 text-[0.65rem] uppercase tracking-[0.35em] text-white/60">
@@ -156,9 +157,9 @@ export default async function CharacterSpellsPage({ params }: CharacterSpellsPag
                             ) : (
                                 <p className="mt-6 rounded-2xl border border-dashed border-white/12 bg-black/30 p-6 text-sm text-white/60">{slotSummary.emptyState}</p>
                             )}
-                        </article>
+                        </Card>
 
-                        <article className="rounded-3xl border border-white/10 bg-white/5 p-6">
+                        <Card className="rounded-3xl border border-white/10 bg-white/5 p-6">
                             <div className="flex flex-wrap items-center justify-between gap-3">
                                 <div>
                                     <h2 className="text-lg font-semibold text-white">Prepared spells</h2>
@@ -180,7 +181,7 @@ export default async function CharacterSpellsPage({ params }: CharacterSpellsPag
                             ) : (
                                 <div className="mt-6 space-y-4">
                                     {preparedSpells.map((spell) => (
-                                        <article key={`prepared-${spell.id}`} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                                        <Card key={`prepared-${spell.id}`} className="rounded-2xl border border-white/10 bg-black/30 p-4">
                                             <div className="flex flex-wrap items-center justify-between gap-3">
                                                 <div>
                                                     <p className="text-xs uppercase tracking-[0.35em] text-white/50">Level {spell.level}</p>
@@ -211,13 +212,13 @@ export default async function CharacterSpellsPage({ params }: CharacterSpellsPag
                                             <p className="mt-3 text-xs uppercase tracking-[0.3em] text-white/50">
                                                 {spell.isCustom ? "Custom entry" : "SRD reference"} · Updated {spell.updatedAt.toLocaleDateString()}
                                             </p>
-                                        </article>
+                                        </Card>
                                     ))}
                                 </div>
                             )}
-                        </article>
+                        </Card>
 
-                        <article className="rounded-3xl border border-white/10 bg-white/5 p-6">
+                        <Card className="rounded-3xl border border-white/10 bg-white/5 p-6">
                             <div className="flex flex-wrap items-center justify-between gap-3">
                                 <div>
                                     <h2 className="text-lg font-semibold text-white">Known spells</h2>
@@ -234,7 +235,7 @@ export default async function CharacterSpellsPage({ params }: CharacterSpellsPag
                             ) : (
                                 <div className="mt-6 space-y-4">
                                     {knownSpells.map((spell) => (
-                                        <article key={spell.id} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                                        <Card key={spell.id} className="rounded-2xl border border-white/10 bg-black/30 p-4">
                                             <div className="flex flex-wrap items-center justify-between gap-3">
                                                 <div>
                                                     <p className="text-xs uppercase tracking-[0.35em] text-white/50">Level {spell.level}</p>
@@ -282,11 +283,11 @@ export default async function CharacterSpellsPage({ params }: CharacterSpellsPag
                                             <p className="mt-3 text-xs uppercase tracking-[0.3em] text-white/50">
                                                 {spell.isCustom ? "Custom entry" : "SRD reference"} · Updated {spell.updatedAt.toLocaleDateString()}
                                             </p>
-                                        </article>
+                                        </Card>
                                     ))}
                                 </div>
                             )}
-                        </article>
+                        </Card>
                     </div>
 
                     <SpellLibraryForm

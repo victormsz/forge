@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 
+import { Card } from "@/components/ui/card";
 import type { CharacterProficiencies, LevelUpChoicesMeta } from "@/lib/characters/types";
 import { getCurrentActor } from "@/lib/current-actor";
 import { prisma } from "@/lib/prisma";
@@ -58,31 +59,28 @@ const COREBOOK_ACTION_GROUPS = [
             { name: "Hide", detail: "Attempt to hide if you have cover or are obscured." },
             { name: "Ready", detail: "Prepare a trigger and response using your reaction." },
             { name: "Search", detail: "Look for something; uses an ability check." },
-            { name: "Use an Object", detail: "Interact with an object that needs your action." },
-            { name: "Improvised Action", detail: "Do something else the DM allows." },
-        ],
-    },
-    {
-        title: "Special Attacks",
-        hint: "Options within the Attack action.",
-        items: [
-            { name: "Grapple", detail: "Replace an attack to grab a creature." },
-            { name: "Shove", detail: "Push a creature or knock it prone." },
         ],
     },
     {
         title: "Bonus Actions",
-        hint: "Only when a feature or spell grants one.",
+        hint: "Extra abilities that can happen on a turn.",
         items: [
-            { name: "Bonus Action", detail: "Take a bonus action from a class feature, spell, or item." },
+            { name: "Off-hand Attack", detail: "Light weapon attack after an Attack action." },
+            { name: "Second Wind", detail: "Fighters heal themselves as a bonus action." },
+            { name: "Bardic Inspiration", detail: "Inspire an ally within 60 feet." },
+            { name: "Rage", detail: "Barbarians enter a furious state." },
+            { name: "Healing Word", detail: "Quick healing spell as a bonus action." },
         ],
     },
     {
         title: "Reactions",
-        hint: "One reaction per round.",
+        hint: "One reaction between turns.",
         items: [
-            { name: "Opportunity Attack", detail: "Strike when a creature leaves your reach." },
-            { name: "Readied Action", detail: "Use your reaction to execute a readied response." },
+            { name: "Opportunity Attack", detail: "Strike a foe that leaves your reach." },
+            { name: "Shield", detail: "Boost AC for a round with a spell." },
+            { name: "Counterspell", detail: "Interrupt a spell cast within 60 feet." },
+            { name: "Uncanny Dodge", detail: "Halve damage from an attacker you can see." },
+            { name: "Absorb Elements", detail: "Soak and convert elemental damage." },
         ],
     },
     {
@@ -119,13 +117,17 @@ function parseDamageLabel(damageLabel: string | null) {
         return null;
     }
     const base = damageLabel.split(" (")[0] ?? damageLabel;
-    const match = base.match(/^(\d+d\d+)\s*(.*)?$/i);
+    const match = base.match(/^(\d+d\d+)\s*([+-]\s*\d+)?\s*(.*)?$/i);
     if (!match) {
         return null;
     }
+    const bonus = match[2] ? Number(match[2].replace(/\s+/g, "")) : 0;
+    const tail = match[3]?.trim() ?? "";
+    const damageType = tail.replace(/\s*damage$/i, "").trim() || null;
     return {
         dice: match[1],
-        damageType: match[2]?.trim() || null,
+        bonus: Number.isFinite(bonus) ? bonus : 0,
+        damageType,
         label: base,
     };
 }
@@ -149,7 +151,8 @@ function formatWeaponDamage(reference: ItemReference | null, abilityModifiers: R
         return null;
     }
     const modifier = chooseWeaponAbilityModifier(reference, abilityModifiers);
-    const modifierLabel = modifier === 0 ? "" : modifier > 0 ? ` + ${modifier}` : ` - ${Math.abs(modifier)}`;
+    const totalBonus = modifier + (parsed.bonus ?? 0);
+    const modifierLabel = totalBonus === 0 ? "" : totalBonus > 0 ? ` + ${totalBonus}` : ` - ${Math.abs(totalBonus)}`;
     const typeLabel = parsed.damageType ? ` ${parsed.damageType}` : "";
     return `${parsed.dice}${modifierLabel}${typeLabel}`;
 }
@@ -225,7 +228,6 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
 
     const isOwner = actor.userId === character.userId;
     const ownerLabel = character.user.name ?? character.user.email ?? "Adventurer";
-
     const abilityScores = normalizeAbilityScores(character.abilityScores);
     const abilityModifiers = ABILITY_KEYS.reduce((acc, key) => {
         acc[key] = abilityModifier(abilityScores[key]);
@@ -240,7 +242,6 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
     const hitDieValue = getHitDieValue(character.charClass);
     const hitDiceDisplay = `${character.level}d${hitDieValue}`;
     const maxHpEstimate = calculateMaxHp(character.level, hitDieValue, abilityModifiers.con);
-
     const proficiencies: CharacterProficiencies = normalizeProficiencies(character.proficiencies);
     const skillSummaries = buildSkillSummaries(proficiencies, abilityModifiers, proficiencyBonus);
     const spells = character.spells;
@@ -358,7 +359,7 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                         <h1 className="text-4xl font-bold text-white sm:text-5xl truncate">{character.name}</h1>
                         <p className="mt-2 text-lg text-white/80">
                             {character.charClass
-                                ? `Level ${character.level} ${character.charClass}${character.subclass ? ` (${formatSubclassName(character.subclass)})` : ''}`
+                                ? `Level ${character.level} ${character.charClass}${character.subclass ? ` (${formatSubclassName(character.subclass)})` : ""}`
                                 : `Level ${character.level}`}
                         </p>
                         <p className="mt-1 text-sm text-white/60">{ancestryLine}</p>
@@ -408,8 +409,16 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                 </div>
 
                 <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
-                    <article className="rounded-3xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-8 shadow-2xl backdrop-blur-sm">
-                        <div className="space-y-8">
+                    <div className="space-y-6">
+                        <Card
+                            collapsible
+                            title="Overview"
+                            titleAs="h2"
+                            titleClassName="text-sm font-bold uppercase tracking-wider text-white/70"
+                            headerClassName="flex items-start justify-between gap-3 p-6"
+                            bodyClassName="px-6 pb-6"
+                            className="rounded-3xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 shadow-2xl backdrop-blur-sm"
+                        >
                             <div className="flex flex-wrap items-center gap-2.5 text-[0.65rem]">
                                 {infoTags.map((tag) => (
                                     <span key={tag} className="rounded-lg border border-white/20 bg-white/5 px-3 py-1.5 text-white/70">
@@ -417,134 +426,169 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                                     </span>
                                 ))}
                             </div>
+                        </Card>
 
-                            <div>
-                                <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/60">Ability Scores</h2>
-                                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-                                    {ABILITY_KEYS.map((key) => (
-                                        <div key={key} className="rounded-2xl border border-white/15 bg-gradient-to-br from-black/40 to-black/20 p-4">
-                                            <div className="flex items-baseline justify-between gap-2 mb-3">
-                                                <p className="text-[0.6rem] font-bold uppercase tracking-wider text-white/60">{abilityDetails[key].label}</p>
-                                            </div>
-                                            <div className="flex items-end justify-between gap-2">
-                                                <span className="text-4xl font-bold text-white">{abilityScores[key]}</span>
-                                                <span className="rounded-xl border border-white/30 bg-white/10 px-3 py-1.5 text-sm font-bold text-white">
-                                                    {formatModifier(abilityModifiers[key])}
-                                                </span>
-                                            </div>
-                                            <p className="mt-2 text-[0.6rem] text-white/50">{abilityDetails[key].blurb}</p>
+                        <Card
+                            collapsible
+                            title="Ability Scores"
+                            titleAs="h2"
+                            titleClassName="text-sm font-bold uppercase tracking-wider text-white/60"
+                            headerClassName="flex items-start justify-between gap-3 p-6"
+                            bodyClassName="px-6 pb-6"
+                            className="rounded-3xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm"
+                        >
+                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                                {ABILITY_KEYS.map((key) => (
+                                    <div key={key} className="rounded-2xl border border-white/15 bg-gradient-to-br from-black/40 to-black/20 p-4">
+                                        <div className="flex items-baseline justify-between gap-2 mb-3">
+                                            <p className="text-[0.6rem] font-bold uppercase tracking-wider text-white/60">{abilityDetails[key].label}</p>
                                         </div>
-                                    ))}
-                                </div>
-
-                                <div>
-                                    <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/60">Combat Stats</h2>
-                                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                                        {[
-                                            {
-                                                label: "Armor Class",
-                                                value: armorClass,
-                                                detail: armorSegments,
-                                            },
-                                            {
-                                                label: "Initiative",
-                                                value: formatModifier(abilityModifiers.dex),
-                                                detail: "Dexterity modifier",
-                                            },
-                                            {
-                                                label: "Speed",
-                                                value: `${walkingSpeed} ft`,
-                                                detail: "Walking speed",
-                                            },
-                                            {
-                                                label: "Proficiency",
-                                                value: `+${proficiencyBonus}`,
-                                                detail: `Level ${character.level}`,
-                                            },
-                                            {
-                                                label: "Hit Dice",
-                                                value: hitDiceDisplay,
-                                                detail: character.charClass || "Default d8",
-                                            },
-                                            {
-                                                label: "Max HP",
-                                                value: maxHpEstimate,
-                                                detail: "Full die plus average rolls and CON",
-                                            },
-                                        ].map((stat) => (
-                                            <div key={stat.label} className="rounded-2xl border border-white/15 bg-gradient-to-br from-black/40 to-black/20 p-4">
-                                                <div className="mb-2 text-xs uppercase tracking-wider text-white/60">{stat.label}</div>
-                                                <div className="text-3xl font-bold text-white">{stat.value}</div>
-                                                <p className="mt-2 text-xs text-white/50">{stat.detail}</p>
-                                            </div>
-                                        ))}
+                                        <div className="flex items-end justify-between gap-2">
+                                            <span className="text-4xl font-bold text-white">{abilityScores[key]}</span>
+                                            <span className="rounded-xl border border-white/30 bg-white/10 px-3 py-1.5 text-sm font-bold text-white">
+                                                {formatModifier(abilityModifiers[key])}
+                                            </span>
+                                        </div>
+                                        <p className="mt-2 text-[0.6rem] text-white/50">{abilityDetails[key].blurb}</p>
                                     </div>
-                                </div>
-
-                                <div>
-                                    <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/60">Skills</h2>
-                                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                                        {skillSummaries.map((skill) => (
-                                            <div
-                                                key={skill.label}
-                                                className={`rounded-2xl border p-4 ${skill.proficient
-                                                    ? "border-rose-400/40 bg-rose-400/10"
-                                                    : "border-white/15 bg-gradient-to-br from-black/40 to-black/20"
-                                                    }`}
-                                            >
-                                                <div className="mb-2 flex items-center justify-between text-[0.65rem] font-bold uppercase tracking-wider">
-                                                    <span className={skill.proficient ? "text-rose-300" : "text-white/60"}>{skill.label}</span>
-                                                    <span className="text-white/50">{skill.ability.toUpperCase()}</span>
-                                                </div>
-                                                <div className="flex items-baseline justify-between gap-3">
-                                                    <span className="text-2xl font-bold text-white">{formatModifier(skill.total)}</span>
-                                                    <span className="text-xs text-white/70">
-                                                        {skill.proficient ? `+${proficiencyBonus} prof` : `${formatModifier(skill.base)} base`}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/60">Core Actions</h2>
-                                    <p className="mb-4 text-sm text-white/60">
-                                        Corebook action, bonus action, reaction, and movement options for a turn.
-                                    </p>
-                                    <div className="grid gap-4 lg:grid-cols-2">
-                                        {COREBOOK_ACTION_GROUPS.map((group) => (
-                                            <article
-                                                key={group.title}
-                                                className="rounded-2xl border border-white/15 bg-gradient-to-br from-black/40 to-black/20 p-4"
-                                            >
-                                                <div className="flex items-center justify-between gap-3 mb-3">
-                                                    <div>
-                                                        <h3 className="text-sm font-bold uppercase tracking-wider text-white/70">
-                                                            {group.title}
-                                                        </h3>
-                                                        <p className="text-xs text-white/50">{group.hint}</p>
-                                                    </div>
-                                                </div>
-                                                <ul className="space-y-2">
-                                                    {group.items.map((item) => (
-                                                        <li key={item.name} className="text-sm text-white/80">
-                                                            <span className="font-semibold text-white">{item.name}</span>
-                                                            <span className="text-white/60">: {item.detail}</span>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </article>
-                                        ))}
-                                    </div>
-                                </div>
+                                ))}
                             </div>
-                        </div>
-                    </article>
+                        </Card>
+
+                        <Card
+                            collapsible
+                            title="Combat Stats"
+                            titleAs="h2"
+                            titleClassName="text-sm font-bold uppercase tracking-wider text-white/60"
+                            headerClassName="flex items-start justify-between gap-3 p-6"
+                            bodyClassName="px-6 pb-6"
+                            className="rounded-3xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm"
+                        >
+                            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                                {[
+                                    {
+                                        label: "Armor Class",
+                                        value: armorClass,
+                                        detail: armorSegments,
+                                    },
+                                    {
+                                        label: "Initiative",
+                                        value: formatModifier(abilityModifiers.dex),
+                                        detail: "Dexterity modifier",
+                                    },
+                                    {
+                                        label: "Speed",
+                                        value: `${walkingSpeed} ft`,
+                                        detail: "Walking speed",
+                                    },
+                                    {
+                                        label: "Proficiency",
+                                        value: `+${proficiencyBonus}`,
+                                        detail: `Level ${character.level}`,
+                                    },
+                                    {
+                                        label: "Hit Dice",
+                                        value: hitDiceDisplay,
+                                        detail: character.charClass || "Default d8",
+                                    },
+                                    {
+                                        label: "Max HP",
+                                        value: maxHpEstimate,
+                                        detail: "Full die plus average rolls and CON",
+                                    },
+                                ].map((stat) => (
+                                    <div key={stat.label} className="rounded-2xl border border-white/15 bg-gradient-to-br from-black/40 to-black/20 p-4">
+                                        <div className="mb-2 text-xs uppercase tracking-wider text-white/60">{stat.label}</div>
+                                        <div className="text-3xl font-bold text-white">{stat.value}</div>
+                                        <p className="mt-2 text-xs text-white/50">{stat.detail}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </Card>
+
+                        <Card
+                            collapsible
+                            title="Skills"
+                            titleAs="h2"
+                            titleClassName="text-sm font-bold uppercase tracking-wider text-white/60"
+                            headerClassName="flex items-start justify-between gap-3 p-6"
+                            bodyClassName="px-6 pb-6"
+                            className="rounded-3xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm"
+                        >
+                            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                                {skillSummaries.map((skill) => (
+                                    <div
+                                        key={skill.label}
+                                        className={`rounded-2xl border p-4 ${skill.proficient
+                                            ? "border-rose-400/40 bg-rose-400/10"
+                                            : "border-white/15 bg-gradient-to-br from-black/40 to-black/20"
+                                            }`}
+                                    >
+                                        <div className="mb-2 flex items-center justify-between text-[0.65rem] font-bold uppercase tracking-wider">
+                                            <span className={skill.proficient ? "text-rose-300" : "text-white/60"}>{skill.label}</span>
+                                            <span className="text-white/50">{skill.ability.toUpperCase()}</span>
+                                        </div>
+                                        <div className="flex items-baseline justify-between gap-3">
+                                            <span className="text-2xl font-bold text-white">{formatModifier(skill.total)}</span>
+                                            <span className="text-xs text-white/70">
+                                                {skill.proficient ? `+${proficiencyBonus} prof` : `${formatModifier(skill.base)} base`}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </Card>
+
+                        <Card
+                            collapsible
+                            title="Core Actions"
+                            titleAs="h2"
+                            titleClassName="text-sm font-bold uppercase tracking-wider text-white/60"
+                            headerClassName="flex items-start justify-between gap-3 p-6"
+                            bodyClassName="px-6 pb-6"
+                            className="rounded-3xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm"
+                        >
+                            <p className="mb-4 text-sm text-white/60">
+                                Corebook action, bonus action, reaction, and movement options for a turn.
+                            </p>
+                            <div className="grid gap-4 lg:grid-cols-2">
+                                {COREBOOK_ACTION_GROUPS.map((group) => (
+                                    <Card
+                                        key={group.title}
+                                        className="rounded-2xl border border-white/15 bg-gradient-to-br from-black/40 to-black/20 p-4"
+                                    >
+                                        <div className="flex items-center justify-between gap-3 mb-3">
+                                            <div>
+                                                <h3 className="text-sm font-bold uppercase tracking-wider text-white/70">
+                                                    {group.title}
+                                                </h3>
+                                                <p className="text-xs text-white/50">{group.hint}</p>
+                                            </div>
+                                        </div>
+                                        <ul className="space-y-2">
+                                            {group.items.map((item) => (
+                                                <li key={item.name} className="text-sm text-white/80">
+                                                    <span className="font-semibold text-white">{item.name}</span>
+                                                    <span className="text-white/60">: {item.detail}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </Card>
+                                ))}
+                            </div>
+                        </Card>
+                    </div>
 
                     <aside className="space-y-6">
-                        <div className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-sm">
-                            <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/70">Character Info</h2>
+                        <Card
+                            collapsible
+                            title="Character Info"
+                            titleAs="h2"
+                            titleClassName="text-sm font-bold uppercase tracking-wider text-white/70"
+                            headerClassName="flex items-start justify-between gap-3 p-6"
+                            bodyClassName="px-6 pb-6"
+                            className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm"
+                        >
                             <dl className="mt-4 space-y-3.5 text-sm">
                                 <div>
                                     <dt className="text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Owner</dt>
@@ -568,10 +612,17 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                                     <dd className="mt-1 text-xs text-white/60">{levelDetail}</dd>
                                 </div>
                             </dl>
-                        </div>
+                        </Card>
 
-                        <div className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-sm">
-                            <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/70">Equipment Loadout</h2>
+                        <Card
+                            collapsible
+                            title="Equipment Loadout"
+                            titleAs="h2"
+                            titleClassName="text-sm font-bold uppercase tracking-wider text-white/70"
+                            headerClassName="flex items-start justify-between gap-3 p-6"
+                            bodyClassName="px-6 pb-6"
+                            className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm"
+                        >
                             <div className="space-y-4 text-sm">
                                 <div>
                                     <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Main Hand</p>
@@ -596,16 +647,23 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                                     {shieldGearBonus ? <p className="text-xs text-white/60">+{shieldGearBonus} AC</p> : null}
                                 </div>
                             </div>
-                        </div>
-
+                        </Card>
                     </aside>
                 </section>
 
-                <section className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-sm">
+                <Card
+                    as="section"
+                    collapsible
+                    title="Inventory Preview"
+                    titleAs="h2"
+                    titleClassName="text-xl font-bold text-white"
+                    headerClassName="flex items-start justify-between gap-3 p-6"
+                    bodyClassName="px-6 pb-6"
+                    className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm"
+                >
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                         <div>
-                            <h2 className="text-xl font-bold text-white">Inventory Preview</h2>
-                            <p className="mt-1 text-sm text-white/70">Recent kit additions and carried weight.</p>
+                            <p className="text-sm text-white/70">Recent kit additions and carried weight.</p>
                         </div>
                         <div className="flex items-center gap-4">
                             <span className="rounded-xl border border-sky-400/40 bg-sky-400/10 px-4 py-2 text-sm font-bold text-sky-200">
@@ -698,13 +756,21 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                             ))}
                         </div>
                     )}
-                </section>
+                </Card>
 
-                <section className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-sm">
+                <Card
+                    as="section"
+                    collapsible
+                    title="Spellbook"
+                    titleAs="h2"
+                    titleClassName="text-xl font-bold text-white"
+                    headerClassName="flex items-start justify-between gap-3 p-6"
+                    bodyClassName="px-6 pb-6"
+                    className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm"
+                >
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                         <div>
-                            <h2 className="text-xl font-bold text-white">Spellbook</h2>
-                            <p className="mt-1 text-sm text-white/70">Known spells and abilities</p>
+                            <p className="text-sm text-white/70">Known spells and abilities</p>
                         </div>
                         <div className="flex items-center gap-4">
                             <span className="rounded-xl border border-blue-400/40 bg-blue-400/10 px-4 py-2 text-sm font-bold text-blue-300">
@@ -765,13 +831,21 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                             ))}
                         </div>
                     )}
-                </section>
+                </Card>
 
-                <section className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-sm">
+                <Card
+                    as="section"
+                    collapsible
+                    title="Proficiencies & Languages"
+                    titleAs="h2"
+                    titleClassName="text-xl font-bold text-white"
+                    headerClassName="flex items-start justify-between gap-3 p-6"
+                    bodyClassName="px-6 pb-6"
+                    className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm"
+                >
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                         <div>
-                            <h2 className="text-xl font-bold text-white">Proficiencies & Languages</h2>
-                            <p className="mt-1 text-sm text-white/70">Skills, weapons, armor, and languages</p>
+                            <p className="text-sm text-white/70">Skills, weapons, armor, and languages</p>
                         </div>
                         <span className="rounded-xl border border-purple-400/40 bg-purple-400/10 px-4 py-2 text-sm font-bold text-purple-300">
                             {Object.values(proficiencies).reduce((total, list) => total + list.length, 0)} Total
@@ -780,7 +854,9 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                     <div className="grid gap-4 md:grid-cols-2">
                         {(Object.entries(proficiencies) as [keyof CharacterProficiencies, string[]][]).map(([key, list]) => (
                             <article key={key} className="rounded-xl border border-white/15 bg-gradient-to-br from-black/40 to-black/20 p-4">
-                                <p className="mb-3 text-sm font-bold uppercase tracking-wider text-white/60">{key.charAt(0).toUpperCase() + key.slice(1)}</p>
+                                <p className="mb-3 text-sm font-bold uppercase tracking-wider text-white/60">
+                                    {key.charAt(0).toUpperCase() + key.slice(1)}
+                                </p>
                                 {list.length ? (
                                     <div className="flex flex-wrap gap-2">
                                         {list.map((item) => (
@@ -795,13 +871,21 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                             </article>
                         ))}
                     </div>
-                </section>
+                </Card>
 
-                <section className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-sm">
+                <Card
+                    as="section"
+                    collapsible
+                    title="Class Features"
+                    titleAs="h2"
+                    titleClassName="text-xl font-bold text-white"
+                    headerClassName="flex items-start justify-between gap-3 p-6"
+                    bodyClassName="px-6 pb-6"
+                    className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm"
+                >
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                         <div>
-                            <h2 className="text-xl font-bold text-white">Class Features</h2>
-                            <p className="mt-1 text-sm text-white/70">Abilities gained from your class and subclass</p>
+                            <p className="text-sm text-white/70">Abilities gained from your class and subclass</p>
                         </div>
                         <span className="rounded-xl border border-emerald-400/40 bg-emerald-400/10 px-4 py-2 text-sm font-bold text-emerald-300">
                             {featureDetails.length} {featureDetails.length === 1 ? "Feature" : "Features"}
@@ -832,16 +916,24 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                             ))}
                         </div>
                     )}
-                </section>
+                </Card>
 
-                <section className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-sm">
+                <Card
+                    as="section"
+                    collapsible
+                    title="Feats"
+                    titleAs="h2"
+                    titleClassName="text-xl font-bold text-white"
+                    headerClassName="flex items-start justify-between gap-3 p-6"
+                    bodyClassName="px-6 pb-6"
+                    className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm"
+                >
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                         <div>
-                            <h2 className="text-xl font-bold text-white">Feats</h2>
-                            <p className="mt-1 text-sm text-white/70">Special abilities and character features</p>
+                            <p className="text-sm text-white/70">Special abilities and character features</p>
                         </div>
                         <span className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-2 text-sm font-bold text-amber-300">
-                            {feats.length} {feats.length === 1 ? 'Feat' : 'Feats'}
+                            {feats.length} {feats.length === 1 ? "Feat" : "Feats"}
                         </span>
                     </div>
                     {feats.length === 0 ? (
@@ -872,9 +964,8 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                             ))}
                         </div>
                     )}
-                </section>
+                </Card>
             </main>
         </div>
     );
 }
-

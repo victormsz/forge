@@ -115,7 +115,7 @@ function normalizeItem(entry: RawEquipmentRecord): ItemReference | null {
     const description = sanitizeLongText(buildDescription(entry));
     const rarityLabel = sanitizeText(entry.rarity?.name);
     const properties = extractProperties(entry.properties);
-    const damageLabel = formatDamage(entry.damage, entry.two_handed_damage);
+    const damageLabel = resolveDamageLabel(entry, description);
     const rangeLabel = formatRange(entry.range);
     const bundleQuantity = parseInteger(entry.quantity);
     const detailTags = buildDetailTags(entry, description, rarityLabel, damageLabel, rangeLabel, bundleQuantity, properties);
@@ -247,11 +247,43 @@ function formatDamage(
 }
 
 function formatDamageEntry(entry: RawEquipmentRecord["damage"]) {
-    if (!entry || !entry.damage_dice) {
+    if (!entry || entry.damage_dice == null) {
+        return null;
+    }
+    const dice = typeof entry.damage_dice === "number" ? entry.damage_dice.toString() : sanitizeText(entry.damage_dice);
+    if (!dice) {
         return null;
     }
     const type = sanitizeText(entry.damage_type?.name);
-    return type ? `${entry.damage_dice} ${type}` : entry.damage_dice;
+    return type ? `${dice} ${type}` : dice;
+}
+
+function resolveDamageLabel(entry: RawEquipmentRecord, description: string | null) {
+    const structured = formatDamage(entry.damage, entry.two_handed_damage);
+    if (structured) {
+        return structured;
+    }
+    return extractDamageFromDescription(description);
+}
+
+function extractDamageFromDescription(description: string | null) {
+    if (!description) {
+        return null;
+    }
+    const damageTypes = "acid|cold|fire|force|lightning|necrotic|poison|psychic|radiant|thunder|bludgeoning|piercing|slashing";
+    const dicePattern = new RegExp(`(\\d+d\\d+(?:\\s*[+-]\\s*\\d+)?)\\s*(${damageTypes})\\s*damage`, "i");
+    const diceMatch = description.match(dicePattern);
+    if (diceMatch) {
+        const dice = diceMatch[1]?.replace(/\s+/g, " ").trim();
+        const type = diceMatch[2]?.trim();
+        if (dice && type) {
+            return `${dice} ${type}`;
+        }
+    }
+    const fallbackPattern = /damage(?:\s*die)?(?:\s*of)?\s*(\d+d\d+(?:\s*[+-]\s*\d+)?)/i;
+    const fallbackMatch = description.match(fallbackPattern);
+    const fallbackDice = fallbackMatch?.[1]?.replace(/\s+/g, " ").trim();
+    return fallbackDice || null;
 }
 
 function formatRange(range: RawEquipmentRecord["range"]) {

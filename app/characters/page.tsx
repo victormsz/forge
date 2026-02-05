@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 
 import { CharacterCard } from "@/components/characters/character-card";
+import { Card } from "@/components/ui/card";
 import { getCurrentActor } from "@/lib/current-actor";
 import { prisma } from "@/lib/prisma";
 
@@ -73,7 +74,10 @@ export default async function CharactersPage() {
                     </p>
                 </header>
 
-                <section id="forge" className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/10 to-white/5 p-8 backdrop-blur-sm shadow-2xl">
+                <Card
+                    as="section"
+                    className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/10 to-white/5 p-8 backdrop-blur-sm shadow-2xl"
+                >
                     <div className="flex items-start justify-between gap-6">
                         <div className="flex-1">
                             <h2 className="text-2xl font-bold text-white">Create New Character</h2>
@@ -112,7 +116,7 @@ export default async function CharactersPage() {
                             </Link>
                         </div>
                     </div>
-                </section>
+                </Card>
 
                 <section>
                     <div className="mb-6 flex items-center justify-between">
@@ -123,12 +127,12 @@ export default async function CharactersPage() {
                     </div>
                     <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                         {serialized.length === 0 ? (
-                            <div className="col-span-full rounded-2xl border-2 border-dashed border-white/20 bg-black/20 p-12 text-center">
+                            <Card className="col-span-full rounded-2xl border-2 border-dashed border-white/20 bg-black/20 p-12 text-center">
                                 <div className="mx-auto max-w-sm space-y-4">
                                     <p className="text-lg font-semibold text-white/80">No characters yet</p>
                                     <p className="text-sm text-white/60">Create your first character to start tracking your roster.</p>
                                 </div>
-                            </div>
+                            </Card>
                         ) : (
                             serialized.map((character) => (
                                 <CharacterCard key={character.id} character={character} disableLevelUp={isGuest} />

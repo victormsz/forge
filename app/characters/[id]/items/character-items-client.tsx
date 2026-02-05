@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { deleteItem, equipItem } from "@/app/characters/actions";
 import { ItemLibraryForm } from "@/components/items/item-library-form";
+import { Card } from "@/components/ui/card";
 import type { ItemCategoryOption, ItemReference } from "@/lib/items/reference";
 import type { EquipmentSlot } from "@/lib/characters/types";
 
@@ -78,7 +79,7 @@ export function CharacterItemsPageClient({
 
                 <section className="grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
                     <div className="space-y-8">
-                        <article className="rounded-3xl border border-white/10 bg-white/5 p-6">
+                        <Card className="rounded-3xl border border-white/10 bg-white/5 p-6">
                             <div className="flex flex-wrap items-center justify-between gap-3">
                                 <div>
                                     <h2 className="text-lg font-semibold text-white">Pack overview</h2>
@@ -108,9 +109,9 @@ export function CharacterItemsPageClient({
                                     )}
                                 </div>
                             </div>
-                        </article>
+                        </Card>
 
-                        <article className="rounded-3xl border border-white/10 bg-white/5 p-6">
+                        <Card className="rounded-3xl border border-white/10 bg-white/5 p-6">
                             <div className="flex flex-wrap items-center justify-between gap-3">
                                 <div>
                                     <h2 className="text-lg font-semibold text-white">Inventory</h2>
@@ -125,13 +126,22 @@ export function CharacterItemsPageClient({
                                 </p>
                             ) : (
                                 <div className="mt-6 space-y-4">
-                                    {character.items.map((item) => (
-                                        <article
-                                            key={item.id}
-                                            className="rounded-2xl border border-white/10 bg-black/30 p-4 transition-all hover:border-white/30 hover:bg-black/40 cursor-pointer"
-                                            onClick={() => setSelectedItem(item)}
-                                        >
-                                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                    {character.items.map((item) => {
+                                        const defaultSlot = item.isShield
+                                            ? "SHIELD"
+                                            : item.isArmor
+                                                ? "ARMOR"
+                                                : item.isWeapon
+                                                    ? "MAIN_HAND"
+                                                    : null;
+
+                                        return (
+                                            <Card
+                                                key={item.id}
+                                                className="rounded-2xl border border-white/10 bg-black/30 p-4 transition-all hover:border-white/30 hover:bg-black/40 cursor-pointer"
+                                                onClick={() => setSelectedItem(item)}
+                                            >
+                                                <div className="flex flex-wrap items-center justify-between gap-3">
                                                 <div className="flex items-center gap-2">
                                                     <div>
                                                         <p className="text-xs uppercase tracking-[0.35em] text-white/50">{item.category ?? "Misc gear"}</p>
@@ -178,19 +188,21 @@ export function CharacterItemsPageClient({
                                             <p className="mt-3 text-xs uppercase tracking-[0.3em] text-white/50">Updated {item.updatedAt.toLocaleDateString()}</p>
                                             <div className="mt-4 flex flex-wrap items-center justify-between gap-3" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex flex-wrap items-center gap-2 text-[0.65rem] uppercase tracking-[0.3em]">
+                                                    {defaultSlot && (!item.equippedSlot || item.equippedSlot !== defaultSlot) && (
+                                                        <form action={equipItem}>
+                                                            <input type="hidden" name="characterId" value={character.id} />
+                                                            <input type="hidden" name="itemId" value={item.id} />
+                                                            <input type="hidden" name="slot" value={defaultSlot} />
+                                                            <button
+                                                                type="submit"
+                                                                className="rounded-full border border-emerald-400/40 px-3 py-1 text-emerald-200 transition hover:border-emerald-200 hover:text-white"
+                                                            >
+                                                                Equip
+                                                            </button>
+                                                        </form>
+                                                    )}
                                                     {item.isWeapon && (
                                                         <>
-                                                            <form action={equipItem}>
-                                                                <input type="hidden" name="characterId" value={character.id} />
-                                                                <input type="hidden" name="itemId" value={item.id} />
-                                                                <input type="hidden" name="slot" value="MAIN_HAND" />
-                                                                <button
-                                                                    type="submit"
-                                                                    className="rounded-full border border-emerald-400/40 px-3 py-1 text-emerald-200 transition hover:border-emerald-200 hover:text-white"
-                                                                >
-                                                                    Main-hand
-                                                                </button>
-                                                            </form>
                                                             <form action={equipItem}>
                                                                 <input type="hidden" name="characterId" value={character.id} />
                                                                 <input type="hidden" name="itemId" value={item.id} />
@@ -203,32 +215,6 @@ export function CharacterItemsPageClient({
                                                                 </button>
                                                             </form>
                                                         </>
-                                                    )}
-                                                    {item.isArmor && (
-                                                        <form action={equipItem}>
-                                                            <input type="hidden" name="characterId" value={character.id} />
-                                                            <input type="hidden" name="itemId" value={item.id} />
-                                                            <input type="hidden" name="slot" value="ARMOR" />
-                                                            <button
-                                                                type="submit"
-                                                                className="rounded-full border border-blue-400/40 px-3 py-1 text-blue-200 transition hover:border-blue-200 hover:text-white"
-                                                            >
-                                                                Armor
-                                                            </button>
-                                                        </form>
-                                                    )}
-                                                    {item.isShield && (
-                                                        <form action={equipItem}>
-                                                            <input type="hidden" name="characterId" value={character.id} />
-                                                            <input type="hidden" name="itemId" value={item.id} />
-                                                            <input type="hidden" name="slot" value="SHIELD" />
-                                                            <button
-                                                                type="submit"
-                                                                className="rounded-full border border-amber-400/40 px-3 py-1 text-amber-200 transition hover:border-amber-200 hover:text-white"
-                                                            >
-                                                                Shield
-                                                            </button>
-                                                        </form>
                                                     )}
                                                     {item.equippedSlot && (
                                                         <form action={equipItem}>
@@ -255,11 +241,12 @@ export function CharacterItemsPageClient({
                                                     </button>
                                                 </form>
                                             </div>
-                                        </article>
-                                    ))}
+                                            </Card>
+                                        );
+                                    })}
                                 </div>
                             )}
-                        </article>
+                        </Card>
                     </div>
 
                     <ItemLibraryForm

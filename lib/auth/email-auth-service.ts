@@ -1,5 +1,7 @@
 import { randomBytes } from "node:crypto";
 
+import type { UserPlan, UserRole } from "@prisma/client";
+
 import { hashPassword } from "@/lib/auth/password-utils";
 import { prisma } from "@/lib/prisma";
 
@@ -9,10 +11,27 @@ interface RegisterEmailInput {
     name?: string | null;
     email: string;
     password: string;
+    plan?: string | null;
 }
 
-export async function registerEmailAccount({ name, email, password }: RegisterEmailInput) {
+const ALLOWED_PLANS: UserPlan[] = ["paid_player", "basic_dm", "premium_dm"];
+
+function normalizePlan(plan?: string | null): UserPlan {
+    if (plan && ALLOWED_PLANS.includes(plan as UserPlan)) {
+        return plan as UserPlan;
+    }
+    return "paid_player";
+}
+
+function resolveRole(plan: UserPlan): UserRole {
+    return plan === "basic_dm" || plan === "premium_dm" ? "dm" : "player";
+}
+
+export async function registerEmailAccount({ name, email, password, plan }: RegisterEmailInput) {
     const normalizedEmail = email.trim().toLowerCase();
+
+    const normalizedPlan = normalizePlan(plan);
+    const role = resolveRole(normalizedPlan);
 
     if (!normalizedEmail) {
         throw new Error("Email is required.");
@@ -41,8 +60,8 @@ export async function registerEmailAccount({ name, email, password }: RegisterEm
                 emailVerificationToken: verificationToken,
                 emailVerificationExpires: verificationExpires,
                 emailVerified: null,
-                role: "player",
-                plan: "paid_player",
+                role,
+                plan: normalizedPlan,
             },
         });
     } else {
@@ -53,8 +72,8 @@ export async function registerEmailAccount({ name, email, password }: RegisterEm
                 hashedPassword,
                 emailVerificationToken: verificationToken,
                 emailVerificationExpires: verificationExpires,
-                role: "player",
-                plan: "paid_player",
+                role,
+                plan: normalizedPlan,
             },
         });
     }

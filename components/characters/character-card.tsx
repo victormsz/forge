@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { deleteCharacter } from "@/app/characters/actions";
+import { Card } from "@/components/ui/card";
 import { MAX_CHARACTER_LEVEL } from "@/lib/characters/constants";
 
 type AbilityScores = Record<string, number>;
@@ -34,7 +35,7 @@ interface CharacterCardProps {
             languages: string[];
         };
         spellsCount: number;
-        updatedAt: Date;
+        updatedAt: Date | string;
     };
     disableLevelUp?: boolean;
 }
@@ -59,6 +60,7 @@ export function CharacterCard({ character, disableLevelUp = false }: CharacterCa
         spellsCount,
         updatedAt,
     } = character;
+    const updatedAtValue = updatedAt instanceof Date ? updatedAt : new Date(updatedAt);
     const subtitle = [
         charClass ? `Lvl ${level} ${charClass}` : `Level ${level}`,
         ancestry,
@@ -79,12 +81,27 @@ export function CharacterCard({ character, disableLevelUp = false }: CharacterCa
     const topSkills = proficiencies.skills.slice(0, 4);
     const topWeapons = proficiencies.weapons.slice(0, 3);
     const topArmor = proficiencies.armor.slice(0, 2);
+    const summary = (
+        <div className="flex items-center justify-between gap-4">
+            <h3 className="text-lg font-bold text-white truncate">{name}</h3>
+            <span className="rounded-full border border-white/20 px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-white/70 transition hover:border-rose-200 hover:text-white">
+                <span className="group-open:hidden">Minimize</span>
+                <span className="hidden group-open:inline">Expand</span>
+            </span>
+        </div>
+    );
 
     return (
-        <article className="group relative rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-6 text-white transition-all duration-300 hover:-translate-y-2 hover:border-rose-300/80 hover:shadow-2xl hover:shadow-rose-500/20">
+        <Card
+            collapsible
+            summary={summary}
+            headerClassName="relative z-20 flex items-center justify-between gap-4"
+            bodyClassName="mt-5"
+            className="group relative rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-6 text-white transition-all duration-300 hover:-translate-y-2 hover:border-rose-300/80 hover:shadow-2xl hover:shadow-rose-500/20"
+        >
             <Link
                 href={`/characters/${id}`}
-                className="absolute inset-0 rounded-2xl z-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+                className="absolute inset-0 rounded-2xl z-10 pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 group-open:pointer-events-auto"
                 aria-label={`Open sheet for ${name}`}
             >
                 <span className="sr-only">Open sheet</span>
@@ -200,7 +217,7 @@ export function CharacterCard({ character, disableLevelUp = false }: CharacterCa
                 )}
 
                 <div className="flex items-center justify-between border-t border-white/10 pt-4 text-xs">
-                    <span className="text-white/50">Updated {updatedAt.toLocaleDateString()}</span>
+                    <span className="text-white/50">Updated {updatedAtValue.toLocaleDateString()}</span>
                     <div className="flex items-center gap-3 pointer-events-auto">
                         <Link
                             href={`/api/characters/${id}/sheet`}
@@ -218,6 +235,6 @@ export function CharacterCard({ character, disableLevelUp = false }: CharacterCa
                     </div>
                 </div>
             </div>
-        </article>
+        </Card>
     );
 }

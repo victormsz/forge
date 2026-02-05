@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { EmailLoginForm } from "@/components/auth/email-login-form";
+import { Card } from "@/components/ui/card";
 
 export default function EmailLoginPage() {
     return (
@@ -11,12 +12,12 @@ export default function EmailLoginPage() {
                     <h1 className="text-3xl font-semibold">Email + password login</h1>
                     <p className="text-sm text-white/70">Enter your credentials, review the confirmation step, and you will land in the dashboard. Verified accounts only.</p>
                 </div>
-                <section className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+                <Card as="section" className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
                     <EmailLoginForm />
                     <p className="mt-6 text-center text-xs text-white/70">
                         Need an account? <Link href="/auth/email/register" className="text-rose-200 underline-offset-4 hover:underline">Register first</Link>
                     </p>
-                </section>
+                </Card>
             </main>
         </div>
     );

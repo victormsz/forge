@@ -12,6 +12,7 @@ export async function registerWithEmail(_: RegisterFormState, formData: FormData
     const email = formData.get("email");
     const password = formData.get("password");
     const confirm = formData.get("confirmPassword");
+    const plan = formData.get("plan");
 
     try {
         if (typeof email !== "string" || typeof password !== "string" || typeof confirm !== "string") {
@@ -26,12 +27,13 @@ export async function registerWithEmail(_: RegisterFormState, formData: FormData
             name: typeof name === "string" ? name : null,
             email,
             password,
+            plan: typeof plan === "string" ? plan : null,
         });
 
         const verificationUrl = `${getBaseUrl()}/auth/email/verify?token=${result.verificationToken}`;
 
         if (process.env.NODE_ENV !== "production") {
-            console.info(`📧 Email verification link for ${email}: ${verificationUrl}`);
+            console.info(`Email verification link for ${email}: ${verificationUrl}`);
         }
 
         return {

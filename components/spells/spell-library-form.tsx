@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
+import { Card } from "@/components/ui/card";
 import type { SpellReference } from "@/lib/spells/reference";
 
 const MAX_REFERENCE_RESULTS = 25;
@@ -158,7 +159,7 @@ export function SpellLibraryForm({ characterId, characterClass, references, maxS
         : "No spells match the current search or level filter.";
 
     return (
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+        <Card className="rounded-3xl border border-white/10 bg-white/5 p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h2 className="text-lg font-semibold text-white">Add spells</h2>
@@ -381,7 +382,7 @@ export function SpellLibraryForm({ characterId, characterClass, references, maxS
                     <SubmitButton disabled={!canSubmit} />
                 </form>
             </div>
-        </div>
+        </Card>
     );
 }
 

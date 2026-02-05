@@ -15,6 +15,8 @@ import {
 } from "@/lib/characters/statistics";
 import { calculateMaxHp, getHitDieValue } from "@/lib/characters/hit-dice";
 import type { CharacterProficiencies } from "@/lib/characters/types";
+import { findReferenceItemById, type ItemReference } from "@/lib/items/reference";
+import { SPELL_AFFINITY_LABELS } from "@/lib/spells/labels";
 
 function slugify(value: string) {
     return value
@@ -24,7 +26,22 @@ function slugify(value: string) {
         .slice(0, 60) || "character";
 }
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+type EquippedSlot = "MAIN_HAND" | "OFF_HAND" | "ARMOR" | "SHIELD";
+
+function computeArmorBase(reference: ItemReference | null, dexModifier: number) {
+    if (!reference?.armorClass) {
+        return 10 + dexModifier;
+    }
+    const { base, dexBonus, maxBonus } = reference.armorClass;
+    if (!dexBonus) {
+        return base;
+    }
+    const dexApplied = typeof maxBonus === "number" ? Math.min(dexModifier, maxBonus) : dexModifier;
+    return base + dexApplied;
+}
+
+export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     const actor = await getCurrentActor();
 
     if (!actor) {
@@ -33,7 +50,7 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
 
     const character = await prisma.character.findFirst({
         where: {
-            id: params.id,
+            id,
         },
         include: {
             spells: {
@@ -48,6 +65,14 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
                     isPrepared: true,
                     school: true,
                     range: true,
+                    affinity: true,
+                    damage: true,
+                },
+            },
+            items: {
+                select: {
+                    referenceId: true,
+                    equippedSlot: true,
                 },
             },
         },
@@ -72,14 +97,32 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     const armorBonus = character.armorBonus ?? 0;
     const shieldBonus = character.shieldBonus ?? 0;
     const miscBonus = character.miscBonus ?? 0;
-    const armorClass = 10 + abilityModifiers.dex + armorBonus + shieldBonus + miscBonus;
+    const equippedArmor = character.items.find((item) => item.equippedSlot === "ARMOR") ?? null;
+    const equippedShield = character.items.find((item) => item.equippedSlot === "SHIELD") ?? null;
+    const armorReference = equippedArmor?.referenceId ? findReferenceItemById(equippedArmor.referenceId) : null;
+    const shieldReference = equippedShield?.referenceId ? findReferenceItemById(equippedShield.referenceId) : null;
+    const armorBase = computeArmorBase(armorReference, abilityModifiers.dex);
+    const shieldGearBonus = shieldReference?.armorClass?.base ?? 0;
+    const armorClass = armorBase + shieldGearBonus + armorBonus + shieldBonus + miscBonus;
     const armorBreakdown = [
-        "10 base",
-        `${formatModifier(abilityModifiers.dex)} DEX`,
+        armorReference?.armorClass
+            ? `${armorReference.name} base ${armorReference.armorClass.base}`
+            : "10 base",
+        armorReference?.armorClass
+            ? armorReference.armorClass.dexBonus
+                ? (() => {
+                    const maxBonus = armorReference.armorClass?.maxBonus;
+                    const dexApplied = typeof maxBonus === "number" ? Math.min(abilityModifiers.dex, maxBonus) : abilityModifiers.dex;
+                    return `${formatModifier(dexApplied)} DEX${typeof maxBonus === "number" ? ` (max +${maxBonus})` : ""}`;
+                })()
+                : "DEX not applied"
+            : `${formatModifier(abilityModifiers.dex)} DEX`,
+        shieldGearBonus ? `+${shieldGearBonus} shield` : null,
+        armorBonus ? `+${armorBonus} armor` : null,
+        shieldBonus ? `+${shieldBonus} shield` : null,
+        miscBonus ? `+${miscBonus} misc` : null,
     ]
-        .concat(armorBonus ? [`+${armorBonus} armor`] : [])
-        .concat(shieldBonus ? [`+${shieldBonus} shield`] : [])
-        .concat(miscBonus ? [`+${miscBonus} misc`] : [])
+        .filter(Boolean)
         .join(" · ");
     const walkingSpeed = 30;
     const initiativeModifier = abilityModifiers.dex;
@@ -114,6 +157,8 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
                 isPrepared: spell.isPrepared,
                 school: spell.school,
                 range: spell.range,
+                affinityLabel: SPELL_AFFINITY_LABELS[spell.affinity],
+                damage: spell.damage,
             })),
         });
 

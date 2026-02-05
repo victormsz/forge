@@ -1,13 +1,12 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 type Step = "credentials" | "confirm";
 
 export function EmailLoginForm() {
-    const router = useRouter();
     const searchParams = useSearchParams();
     const oauthError = searchParams?.get("error");
     const [step, setStep] = useState<Step>("credentials");
@@ -38,19 +37,13 @@ export function EmailLoginForm() {
         const response = await signIn("credentials", {
             email,
             password,
-            redirect: false,
             callbackUrl: "/dashboard",
         });
-
         if (response?.error) {
             setError(response.error);
             setBusy(false);
             setStep("credentials");
-            return;
         }
-
-        router.refresh();
-        router.push("/dashboard");
     };
 
     return (

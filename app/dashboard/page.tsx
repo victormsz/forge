@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { AbilityGenerationMethod } from "@prisma/client";
 
 import { CharacterCard } from "@/components/characters/character-card";
+import { Card } from "@/components/ui/card";
 import { getCurrentActor } from "@/lib/current-actor";
 import { prisma } from "@/lib/prisma";
 
@@ -136,15 +137,21 @@ export default async function DashboardPage() {
 
                 <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {summaryCards.map((card) => (
-                        <article key={card.title} className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                            <p className="text-xs uppercase tracking-[0.25em] text-white/60">{card.title}</p>
+                        <Card
+                            key={card.title}
+                            collapsible
+                            title={card.title}
+                            titleAs="p"
+                            titleClassName="text-xs uppercase tracking-[0.25em] text-white/60"
+                            className="rounded-3xl border border-white/10 bg-white/5 p-5"
+                        >
                             <p className="mt-3 text-3xl font-semibold text-white">{card.value}</p>
                             <p className="mt-2 text-sm text-white/70">{card.detail}</p>
-                        </article>
+                        </Card>
                     ))}
                 </section>
 
-                <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+                <Card as="section" className="rounded-3xl border border-white/10 bg-white/5 p-6">
                     <h2 className="text-lg font-semibold text-white">Latest character activity</h2>
                     {latestCharacter ? (
                         <div className="mt-4">
@@ -174,9 +181,9 @@ export default async function DashboardPage() {
                     ) : (
                         <p className="mt-6 text-sm text-white/60">No characters yet. Use the forge to create your first adventurer.</p>
                     )}
-                </section>
+                </Card>
 
-                <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+                <Card as="section" className="rounded-3xl border border-white/10 bg-white/5 p-6">
                     <div className="flex items-center justify-between flex-wrap gap-3">
                         <div>
                             <h2 className="text-lg font-semibold text-white">Roster snapshot</h2>
@@ -195,7 +202,7 @@ export default async function DashboardPage() {
                     ) : (
                         <p className="mt-6 text-sm text-white/60">No roster yet. Create a hero to populate your dashboard.</p>
                     )}
-                </section>
+                </Card>
             </main>
         </div>
     );

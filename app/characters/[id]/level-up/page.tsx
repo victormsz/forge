@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { HitDiceRoller } from "@/components/characters/hit-dice-roller";
 import { SubclassSelector } from "@/components/characters/subclass-selector";
 import { levelUpCharacter } from "@/app/characters/actions";
+import { Card } from "@/components/ui/card";
 import { ABILITY_SCORE_PICKLIST, GLOBAL_FEAT_OPTIONS, getSubclassOptions, SUBCLASS_DESCRIPTIONS } from "@/lib/characters/level-up-options";
 import { MAX_CHARACTER_LEVEL } from "@/lib/characters/constants";
 import { getLevelRequirement } from "@/lib/characters/leveling/level-requirements";
@@ -81,7 +82,7 @@ export default async function LevelUpPage({ params, searchParams }: LevelUpPageP
                     <p className="uppercase tracking-[0.3em] text-rose-200">Level Up</p>
                 </div>
 
-                <section className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+                <Card as="section" className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
                     <header className="space-y-2">
                         <p className="text-xs uppercase tracking-[0.4em] text-white/60">{character.charClass ?? "Hero"}</p>
                         <h1 className="text-3xl font-semibold">Advance {character.name}</h1>
@@ -198,9 +199,9 @@ export default async function LevelUpPage({ params, searchParams }: LevelUpPageP
                             </div>
                         ))}
                     </dl>
-                </section>
+                </Card>
 
-                <section className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+                <Card as="section" className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
                     <LevelUpForm
                         characterId={character.id}
                         showHitDiceError={showHitDiceError}
@@ -213,7 +214,7 @@ export default async function LevelUpPage({ params, searchParams }: LevelUpPageP
                         characterName={character.name}
                         subclassOptions={subclassOptions}
                     />
-                </section>
+                </Card>
             </main>
         </div>
     );

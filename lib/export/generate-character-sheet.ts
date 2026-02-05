@@ -43,6 +43,8 @@ export interface SpellListEntry {
     isPrepared: boolean;
     school?: string | null;
     range?: string | null;
+    affinityLabel?: string | null;
+    damage?: string | null;
 }
 
 interface DrawContext {
@@ -281,8 +283,14 @@ function drawSpellList(layout: SpellListPageLayout, spells: SpellListEntry[], ct
         if (spell.school) {
             segments.push(spell.school);
         }
+        if (spell.affinityLabel) {
+            segments.push(spell.affinityLabel);
+        }
         if (spell.range) {
             segments.push(spell.range);
+        }
+        if (spell.damage) {
+            segments.push(spell.damage);
         }
         const detail = segments.join(" · ");
         const wrapped = wrapLines(detail, column.width, fontSize, ctx.font, 2);
@@ -298,6 +306,7 @@ function drawSpellList(layout: SpellListPageLayout, spells: SpellListEntry[], ct
         });
     });
 }
+
 
 function drawText(value: string | undefined, position: SheetFieldPosition, ctx: DrawContext) {
     if (!value) {

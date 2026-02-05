@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
+import { Card } from "@/components/ui/card";
 import type { ItemCategoryOption, ItemReference } from "@/lib/items/reference";
 
 interface ItemLibraryFormProps {
@@ -102,7 +103,7 @@ export function ItemLibraryForm({ characterId, references, categoryOptions, acti
         : "No items match the current search or category filter.";
 
     return (
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+        <Card className="rounded-3xl border border-white/10 bg-white/5 p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h2 className="text-lg font-semibold text-white">Add equipment</h2>
@@ -312,7 +313,7 @@ export function ItemLibraryForm({ characterId, references, categoryOptions, acti
                     <SubmitButton disabled={!canSubmit} />
                 </form>
             </div>
-        </div>
+        </Card>
     );
 }
 

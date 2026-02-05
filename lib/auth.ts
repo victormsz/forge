@@ -11,6 +11,7 @@ const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
 const discordClientId = process.env.DISCORD_CLIENT_ID;
 const discordClientSecret = process.env.DISCORD_CLIENT_SECRET;
+const isProduction = process.env.NODE_ENV === "production";
 
 if (!googleClientId || !googleClientSecret) {
     console.warn("Google OAuth credentials are missing. Add them to your .env file to enable Google sign-in.");
@@ -25,6 +26,7 @@ export const authOptions: NextAuthOptions = {
     session: {
         strategy: "database",
     },
+    useSecureCookies: isProduction,
     providers: [
         GoogleProvider({
             clientId: googleClientId ?? "",
@@ -71,12 +73,25 @@ export const authOptions: NextAuthOptions = {
     ],
     callbacks: {
         async session({ session, user }) {
-            if (session.user) {
-                session.user.id = user.id;
-                session.user.name = user.name ?? session.user.name;
-                session.user.email = user.email ?? session.user.email;
-                session.user.role = user.role;
-                session.user.plan = user.plan;
+            if (!session.user) {
+                return session;
+            }
+
+            let sessionUser = user;
+
+            if (!sessionUser && session.user.email) {
+                sessionUser = await prisma.user.findUnique({
+                    where: { email: session.user.email },
+                    select: { id: true, name: true, email: true, role: true, plan: true },
+                });
+            }
+
+            if (sessionUser) {
+                session.user.id = sessionUser.id;
+                session.user.name = sessionUser.name ?? session.user.name;
+                session.user.email = sessionUser.email ?? session.user.email;
+                session.user.role = sessionUser.role;
+                session.user.plan = sessionUser.plan;
             }
             return session;
         },

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { verifyEmailToken } from "@/lib/auth/email-auth-service";
+import { Card } from "@/components/ui/card";
 
 interface VerifyPageProps {
     searchParams: Promise<{
@@ -37,7 +38,7 @@ export default async function EmailVerifyPage({ searchParams }: VerifyPageProps)
                     <h1 className="text-3xl font-semibold">{title}</h1>
                     <p className="text-sm text-white/70">{message}</p>
                 </div>
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-center">
+                <Card className="rounded-3xl border border-white/10 bg-white/5 p-6 text-center">
                     {status === "success" ? (
                         <Link
                             href="/auth/email/login"
@@ -58,7 +59,7 @@ export default async function EmailVerifyPage({ searchParams }: VerifyPageProps)
                             </p>
                         </div>
                     )}
-                </div>
+                </Card>
             </main>
         </div>
     );

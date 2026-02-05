@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 
 import { continueAsGuest } from "@/app/guest/actions";
 import { SignInButtons, SignOutButton } from "@/components/auth/auth-buttons";
+import { Card } from "@/components/ui/card";
 import { authOptions } from "@/lib/auth";
 import { getCurrentActor } from "@/lib/current-actor";
 
@@ -194,9 +195,15 @@ export default async function Home() {
             </div>
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {accountOptions.map((option) => (
-                <div key={option.title} className="rounded-2xl border border-white/10 bg-black/30 p-5">
-                  <p className="text-xs uppercase tracking-[0.25em] text-white/50">{option.tag}</p>
-                  <h3 className="mt-2 text-lg font-semibold text-white">{option.title}</h3>
+                <Card
+                  key={option.title}
+                  collapsible
+                  title={option.title}
+                  titleAs="h3"
+                  titleClassName="mt-2 text-lg font-semibold text-white"
+                  leading={<p className="hidden text-xs uppercase tracking-[0.25em] text-white/50 group-open:block">{option.tag}</p>}
+                  className="rounded-2xl border border-white/10 bg-black/30 p-5"
+                >
                   <p className="mt-2 text-sm text-white/70">{option.detail}</p>
                   {option.href ? (
                     <Link
@@ -215,7 +222,7 @@ export default async function Home() {
                       </button>
                     </form>
                   )}
-                </div>
+                </Card>
               ))}
             </div>
           </section>
@@ -223,13 +230,16 @@ export default async function Home() {
 
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {featureCards.map((card) => (
-            <article
+            <Card
               key={card.title}
+              collapsible
+              title={card.title}
+              titleAs="h3"
+              titleClassName="text-lg font-semibold text-white"
               className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur"
             >
-              <h3 className="text-lg font-semibold text-white">{card.title}</h3>
               <p className="mt-2 text-sm text-white/70">{card.body}</p>
-            </article>
+            </Card>
           ))}
         </section>
       </main>

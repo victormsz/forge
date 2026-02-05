@@ -20,11 +20,16 @@ function SubmitButton() {
     );
 }
 
-export function RegisterForm() {
+type RegisterFormProps = {
+    defaultPlan?: string;
+};
+
+export function RegisterForm({ defaultPlan }: RegisterFormProps) {
     const [state, formAction] = useActionState(registerWithEmail, REGISTER_FORM_INITIAL_STATE);
 
     return (
         <form action={formAction} className="space-y-4">
+            {defaultPlan && <input type="hidden" name="plan" value={defaultPlan} />}
             <div className="space-y-2">
                 <label htmlFor="name" className="text-sm font-semibold text-white/80">Display name</label>
                 <input

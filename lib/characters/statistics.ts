@@ -25,7 +25,7 @@ export const SKILL_CONFIG = [
 
 export type SkillConfig = (typeof SKILL_CONFIG)[number];
 
-export interface SkillSummary extends SkillConfig {
+export interface SkillSummary extends Omit<SkillConfig, never> {
     proficient: boolean;
     total: number;
     base: number;

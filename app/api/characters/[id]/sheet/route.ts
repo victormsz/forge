@@ -162,7 +162,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
             })),
         });
 
-        return new NextResponse(pdfBytes, {
+        return new NextResponse(Buffer.from(pdfBytes), {
             headers: {
                 "Content-Type": "application/pdf",
                 "Content-Disposition": `attachment; filename="${slugify(character.name)}.pdf"`,

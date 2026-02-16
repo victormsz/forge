@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 
 import { Card } from "@/components/ui/card";
+import { AttackRoller } from "@/components/characters/attack-roller";
 import type { CharacterProficiencies, LevelUpChoicesMeta } from "@/lib/characters/types";
 import { getCurrentActor } from "@/lib/current-actor";
 import { prisma } from "@/lib/prisma";
@@ -157,6 +158,32 @@ function formatWeaponDamage(reference: ItemReference | null, abilityModifiers: R
     return `${parsed.dice}${modifierLabel}${typeLabel}`;
 }
 
+function isWeaponProficient(reference: ItemReference | null, proficiencies: CharacterProficiencies) {
+    if (!reference) {
+        return false;
+    }
+    const proficiencyNames = proficiencies.weapons.map((item) => item.toLowerCase());
+    const categories = (reference.categories ?? []).map((category) => category.toLowerCase());
+    const name = reference.name.toLowerCase();
+    return proficiencyNames.some((proficiency) => {
+        if (!proficiency.trim()) {
+            return false;
+        }
+        if (proficiency.includes("all weapon")) {
+            return categories.some((category) => category.includes("weapon"));
+        }
+        return (
+            name.includes(proficiency) ||
+            categories.some((category) => category.includes(proficiency) || proficiency.includes(category))
+        );
+    });
+}
+
+function formatUnarmedDamage(strModifier: number) {
+    const modifierLabel = formatModifier(strModifier);
+    return `1 ${modifierLabel} bludgeoning`;
+}
+
 function computeArmorBase(reference: ItemReference | null, dexModifier: number) {
     if (!reference?.armorClass) {
         return 10 + dexModifier;
@@ -272,6 +299,19 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
 
     const mainHandDamage = formatWeaponDamage(mainHandReference, abilityModifiers);
     const offHandDamage = formatWeaponDamage(offHandReference, abilityModifiers);
+    const mainHandAttackBonus =
+        mainHandReference && isWeaponProficient(mainHandReference, proficiencies)
+            ? chooseWeaponAbilityModifier(mainHandReference, abilityModifiers) + proficiencyBonus
+            : mainHandReference
+                ? chooseWeaponAbilityModifier(mainHandReference, abilityModifiers)
+                : abilityModifiers.str + proficiencyBonus;
+    const offHandAttackBonus =
+        offHandReference && isWeaponProficient(offHandReference, proficiencies)
+            ? chooseWeaponAbilityModifier(offHandReference, abilityModifiers) + proficiencyBonus
+            : offHandReference
+                ? chooseWeaponAbilityModifier(offHandReference, abilityModifiers)
+                : abilityModifiers.str;
+    const unarmedDamage = formatUnarmedDamage(abilityModifiers.str);
 
     const armorBase = computeArmorBase(armorReference, abilityModifiers.dex);
     const shieldGearBonus = shieldReference?.armorClass?.base ?? 0;
@@ -549,9 +589,30 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                             className="rounded-3xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm"
                         >
                             <p className="mb-4 text-sm text-white/60">
-                                Corebook action, bonus action, reaction, and movement options for a turn.
+                                Corebook action, bonus action, reaction, and movement options for a turn. Attack rolls use your equipped
+                                weapon, proficiency, and the correct ability modifier from D&D 5e.
                             </p>
                             <div className="grid gap-4 lg:grid-cols-2">
+                                <Card className="rounded-2xl border border-white/15 bg-gradient-to-br from-black/40 to-black/20 p-4 lg:col-span-2">
+                                    <AttackRoller
+                                        attackBonus={mainHandAttackBonus}
+                                        damage={mainHandDamage}
+                                        weaponName={equippedMainHand?.name ?? "Unarmed Strike"}
+                                        proficiencyApplied={isWeaponProficient(mainHandReference, proficiencies)}
+                                        unarmedFallbackDamage={unarmedDamage}
+                                    />
+                                    {equippedOffHand && (
+                                        <div className="mt-3">
+                                            <AttackRoller
+                                                attackBonus={offHandAttackBonus}
+                                                damage={offHandDamage}
+                                                weaponName={`${equippedOffHand.name} (Off-hand)`}
+                                                proficiencyApplied={isWeaponProficient(offHandReference, proficiencies)}
+                                                unarmedFallbackDamage={unarmedDamage}
+                                            />
+                                        </div>
+                                    )}
+                                </Card>
                                 {COREBOOK_ACTION_GROUPS.map((group) => (
                                     <Card
                                         key={group.title}

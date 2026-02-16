@@ -9,6 +9,7 @@ import type { SkillSummary } from "@/lib/characters/statistics";
 import {
     DEFAULT_CHARACTER_SHEET_TEMPLATE,
     type AbilityCode,
+    type SheetTemplateConfig,
     type SheetFieldPosition,
     type SheetTextBlockPosition,
     type SkillColumnLayout,
@@ -54,6 +55,11 @@ interface DrawContext {
 }
 
 const TEXT_COLOR = rgb(15 / 255, 15 / 255, 18 / 255);
+const SHOW_REFERENCE_GRID = true;
+const GRID_STEP = 50;
+const GRID_LINE_COLOR = rgb(200 / 255, 200 / 255, 200 / 255);
+const GRID_LABEL_COLOR = rgb(90 / 255, 90 / 255, 90 / 255);
+const GRID_LABEL_FONT_SIZE = 6;
 
 interface ScaleFactors {
     x: number;
@@ -64,7 +70,6 @@ interface ScaleFactors {
 interface ScaledSkillColumn {
     keys: string[];
     valueX: number;
-    labelX: number;
     startY: number;
     lineHeight: number;
     fontSize: number;
@@ -80,14 +85,68 @@ function resolveTemplateAsset(relativePath: string) {
     return path.join(process.cwd(), "public", relativePath);
 }
 
+function getLayoutDimensions(template: SheetTemplateConfig) {
+    return template.layoutDimensions ?? template.dimensions;
+}
+
 function getScaleFactors(template: SheetTemplateConfig, pageWidth: number, pageHeight: number): ScaleFactors {
-    const layoutWidth = template.layoutDimensions?.width ?? template.dimensions.width;
-    const layoutHeight = template.layoutDimensions?.height ?? template.dimensions.height;
+    const { width: layoutWidth, height: layoutHeight } = getLayoutDimensions(template);
     return {
         x: pageWidth / layoutWidth,
         y: pageHeight / layoutHeight,
         font: (pageWidth / layoutWidth + pageHeight / layoutHeight) / 2,
     };
+}
+
+function drawReferenceGrid(
+    page: PDFPage,
+    font: PDFFont,
+    scale: ScaleFactors,
+    layoutWidth: number,
+    layoutHeight: number,
+) {
+    const pageWidth = page.getWidth();
+    const pageHeight = page.getHeight();
+    const lineOptions = { thickness: 0.5, color: GRID_LINE_COLOR, opacity: 0.6 };
+    const labelOffset = 2;
+
+    for (let x = 0; x <= layoutWidth; x += GRID_STEP) {
+        const scaledX = x * scale.x;
+        page.drawLine({
+            start: { x: scaledX, y: 0 },
+            end: { x: scaledX, y: pageHeight },
+            ...lineOptions,
+        });
+
+        const labelX = Math.min(pageWidth - GRID_LABEL_FONT_SIZE, scaledX + labelOffset);
+        const labelY = pageHeight - GRID_LABEL_FONT_SIZE - labelOffset;
+        page.drawText(String(x), {
+            x: labelX,
+            y: labelY,
+            size: GRID_LABEL_FONT_SIZE,
+            font,
+            color: GRID_LABEL_COLOR,
+        });
+    }
+
+    for (let yFromTop = 0; yFromTop <= layoutHeight; yFromTop += GRID_STEP) {
+        const scaledY = pageHeight - yFromTop * scale.y;
+        page.drawLine({
+            start: { x: 0, y: scaledY },
+            end: { x: pageWidth, y: scaledY },
+            ...lineOptions,
+        });
+
+        const unclampedY = scaledY - GRID_LABEL_FONT_SIZE - labelOffset;
+        const labelY = Math.min(pageHeight - GRID_LABEL_FONT_SIZE - labelOffset, Math.max(labelOffset, unclampedY));
+        page.drawText(String(yFromTop), {
+            x: labelOffset,
+            y: labelY,
+            size: GRID_LABEL_FONT_SIZE,
+            font,
+            color: GRID_LABEL_COLOR,
+        });
+    }
 }
 
 function scalePosition(position: SheetFieldPosition, scale: ScaleFactors): SheetFieldPosition {
@@ -114,7 +173,6 @@ function scaleSkillColumn(column: SkillColumnLayout, scale: ScaleFactors): Scale
     return {
         keys: column.keys,
         valueX: column.valueX * scale.x,
-        labelX: column.labelX * scale.x,
         startY: column.yFromTop * scale.y,
         lineHeight: column.lineHeight * scale.y,
         fontSize: column.fontSize * scale.font,
@@ -207,22 +265,11 @@ function drawTextBlock(value: string | string[] | undefined, position: SheetText
 
 function drawSkillEntry(skill: SkillSummary, column: ScaledSkillColumn, index: number, ctx: DrawContext) {
     const modifier = formatModifier(skill.total);
-    const descriptor = skill.proficient
-        ? `${skill.label} (${skill.ability.toUpperCase()}) · Proficient`
-        : `${skill.label} (${skill.ability.toUpperCase()})`;
     const y = ctx.pageHeight - column.startY - column.fontSize - index * column.lineHeight;
     const modifierWidth = ctx.font.widthOfTextAtSize(modifier, column.fontSize);
 
     ctx.page.drawText(modifier, {
         x: column.valueX - modifierWidth,
-        y,
-        size: column.fontSize,
-        font: ctx.font,
-        color: TEXT_COLOR,
-    });
-
-    ctx.page.drawText(descriptor, {
-        x: column.labelX,
         y,
         size: column.fontSize,
         font: ctx.font,
@@ -376,6 +423,11 @@ export async function generateCharacterSheetPdf(payload: CharacterSheetPayload) 
     };
 
     const scale = getScaleFactors(template, page.getWidth(), page.getHeight());
+    const { width: layoutWidth, height: layoutHeight } = getLayoutDimensions(template);
+
+    if (SHOW_REFERENCE_GRID) {
+        drawReferenceGrid(page, font, scale, layoutWidth, layoutHeight);
+    }
     const ancestryLine = [payload.ancestry, payload.background, payload.alignment]
         .filter((entry): entry is string => Boolean(entry))
         .join(" · ");
@@ -452,6 +504,9 @@ export async function generateCharacterSheetPdf(payload: CharacterSheetPayload) 
             page: spellPage,
         };
         const spellScale = getScaleFactors(template, spellPage.getWidth(), spellPage.getHeight());
+        if (SHOW_REFERENCE_GRID) {
+            drawReferenceGrid(spellPage, font, spellScale, layoutWidth, layoutHeight);
+        }
         drawSpellList(template.spellPage, payload.spells, spellCtx, spellScale);
     }
 

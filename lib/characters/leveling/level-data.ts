@@ -43,7 +43,7 @@ export type ClassSpecificValue =
 
 export interface LevelData {
     level: number;
-    ability_score_bonuses: number;
+    ability_score_bonuses?: number;
     prof_bonus: number;
     features: ClassFeature[];
     class_specific?: Record<string, ClassSpecificValue>;
@@ -56,7 +56,7 @@ export interface LevelData {
 
 type LevelDataArray = LevelData[];
 
-const typedLevelData = levelData as LevelDataArray;
+const typedLevelData = levelData as unknown as LevelDataArray;
 
 /**
  * Get level information for a specific class and level

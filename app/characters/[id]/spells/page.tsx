@@ -137,7 +137,7 @@ export default async function CharacterSpellsPage({ params }: CharacterSpellsPag
                                         <div className="rounded-2xl border border-emerald-400/40 bg-emerald-400/10 p-4 text-sm text-white">
                                             <p className="text-xs uppercase tracking-[0.3em] text-emerald-200">Pact slots</p>
                                             <p className="mt-1 text-lg font-semibold text-white">
-                                                {slotSummary.pact.slots} × {formatSpellLevelLabel(slotSummary.pact.slotLevel)}-level
+                                                {slotSummary.pact.slots} × {formatSpellLevelLabel(slotSummary.pact.spellLevel)}-level
                                             </p>
                                             <p className="text-xs text-white/70">Refresh on a short rest.</p>
                                         </div>

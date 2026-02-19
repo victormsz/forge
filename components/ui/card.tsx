@@ -53,7 +53,7 @@ export function Card<T extends ElementType = "article">({
 
     if (collapsible) {
         return (
-            <details className={`group w-full self-start ${className ?? ""}`} defaultOpen={defaultOpen} {...rest}>
+            <details className={`group w-full self-start ${className ?? ""}`} open={defaultOpen} {...rest}>
                 <summary
                     className={`cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden ${headerClassName ?? "flex items-start justify-between gap-3"}`}
                 >

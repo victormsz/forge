@@ -4,7 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { Card } from "@/components/ui/card";
+import { ItemStatsEditor } from "@/components/items/item-stats-editor";
 import type { ItemCategoryOption, ItemReference } from "@/lib/items/reference";
+import type { ItemCustomStats } from "@/lib/items/custom-stats";
 
 interface ItemLibraryFormProps {
     characterId: string;
@@ -22,6 +24,7 @@ interface FormValues {
     description: string;
     notes: string;
     isCustom: boolean;
+    customStats: ItemCustomStats | null;
 }
 
 const MAX_RESULTS = 30;
@@ -37,6 +40,7 @@ function createDefaults(): FormValues {
         description: "",
         notes: "",
         isCustom: false,
+        customStats: null,
     };
 }
 
@@ -295,6 +299,20 @@ export function ItemLibraryForm({ characterId, references, categoryOptions, acti
                             className="rounded-3xl border border-white/15 bg-black/40 px-3 py-3 text-sm text-white"
                         />
                     </label>
+
+                    {/* Custom Stats Editor */}
+                    <ItemStatsEditor
+                        itemName={formValues.name}
+                        category={formValues.category}
+                        currentStats={formValues.customStats}
+                        onStatsChange={(stats) => handleFieldChange("customStats", stats)}
+                    />
+
+                    <input
+                        type="hidden"
+                        name="customStats"
+                        value={formValues.customStats ? JSON.stringify(formValues.customStats) : ""}
+                    />
 
                     {!canSubmit && (
                         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-200">

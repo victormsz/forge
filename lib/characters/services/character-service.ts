@@ -16,6 +16,7 @@ import { getLevelRequirement } from "@/lib/characters/leveling/level-requirement
 import type { CurrentActor } from "@/lib/current-actor";
 import { prisma } from "@/lib/prisma";
 import { findReferenceItemById } from "@/lib/items/reference";
+import { normalizeCustomStats } from "@/lib/items/custom-stats";
 import { findReferenceSpellById, spellSupportsClass } from "@/lib/spells/reference";
 import { getSpellPreparationProfile } from "@/lib/spells/class-preparation";
 import { getSpellSlotSummary } from "@/lib/spells/slot-profiles";
@@ -453,6 +454,7 @@ export class CharacterService {
                 notes: input.notes,
                 referenceId: input.isCustom ? null : input.referenceId,
                 isCustom: input.isCustom,
+                customStats: input.customStats,
             },
         });
 
@@ -519,5 +521,35 @@ export class CharacterService {
         ]);
 
         return input.characterId;
+    }
+
+    async updateItemStats(itemId: string, customStatsRaw: unknown) {
+        if (this.actor.role === "guest") {
+            throw new Error("Guest access cannot modify items.");
+        }
+
+        const item = await prisma.item.findUnique({
+            where: { id: itemId },
+            select: {
+                id: true,
+                characterId: true,
+                character: { select: { userId: true } },
+            },
+        });
+
+        if (!item) {
+            throw new Error("Item not found or access denied.");
+        }
+
+        this.ensureOwnership(item.character.userId);
+
+        const customStats = normalizeCustomStats(customStatsRaw);
+
+        await prisma.item.update({
+            where: { id: itemId },
+            data: { customStats },
+        });
+
+        return item.characterId;
     }
 }

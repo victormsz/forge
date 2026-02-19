@@ -13,6 +13,8 @@ import {
     type AbilityScores,
 } from "@/lib/point-buy";
 
+import { normalizeCustomStats } from "@/lib/items/custom-stats";
+
 import {
     type AbilityIncreaseChoice,
     EMPTY_PROFICIENCIES,
@@ -405,6 +407,18 @@ export function parseAddItemFormData(formData: FormData): AddItemInput {
         throw new Error("Item name is required.");
     }
 
+    const customStatsJson = readString(formData.get("customStats"), null);
+    let customStats = null;
+    if (customStatsJson) {
+        try {
+            const parsed = JSON.parse(customStatsJson);
+            customStats = normalizeCustomStats(parsed);
+        } catch {
+            // Invalid JSON, ignore custom stats
+            customStats = null;
+        }
+    }
+
     return {
         characterId,
         name,
@@ -416,6 +430,7 @@ export function parseAddItemFormData(formData: FormData): AddItemInput {
         notes: readString(formData.get("notes"), null, 800),
         referenceId: readString(formData.get("referenceId")),
         isCustom: readBoolean(formData.get("isCustom"), false),
+        customStats,
     };
 }
 

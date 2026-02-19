@@ -134,3 +134,14 @@ export async function equipItem(formData: FormData) {
     revalidatePath("/characters");
     revalidatePath("/dashboard");
 }
+
+export async function updateItemStats(itemId: string, customStats: unknown) {
+    const actor = ensureActor(await getCurrentActor(), "Authentication required to modify items.");
+    const service = new CharacterService(actor);
+
+    const characterId = await service.updateItemStats(itemId, customStats);
+    revalidatePath(`/characters/${characterId}`);
+    revalidatePath(`/characters/${characterId}/items`);
+    revalidatePath("/characters");
+    revalidatePath("/dashboard");
+}

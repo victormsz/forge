@@ -3,11 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 
-import { deleteItem, equipItem } from "@/app/characters/actions";
+import { deleteItem, equipItem, updateItemStats } from "@/app/characters/actions";
 import { ItemLibraryForm } from "@/components/items/item-library-form";
+import { EditItemDialog } from "@/components/items/edit-item-dialog";
 import { Card } from "@/components/ui/card";
 import type { ItemCategoryOption, ItemReference } from "@/lib/items/reference";
 import type { EquipmentSlot } from "@/lib/characters/types";
+import type { ItemCustomStats } from "@/lib/items/custom-stats";
 
 type Item = {
     id: string;
@@ -24,6 +26,7 @@ type Item = {
     isArmor: boolean;
     isShield: boolean;
     isCustom: boolean;
+    customStats: ItemCustomStats | null;
     updatedAt: Date;
 };
 
@@ -49,6 +52,23 @@ export function CharacterItemsPageClient({
     addItemAction: (formData: FormData) => Promise<void>;
 }) {
     const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+    const [editingItem, setEditingItem] = useState<Item | null>(null);
+
+    async function handleSaveItemStats(itemId: string, customStats: ItemCustomStats | null) {
+        await updateItemStats(itemId, customStats);
+    }
+
+    function getMagicalBonusLabel(item: Item): string | null {
+        if (!item.customStats) return null;
+
+        const parts: string[] = [];
+        if (item.customStats.attackBonus) parts.push(`+${item.customStats.attackBonus} ATK`);
+        if (item.customStats.damageBonus) parts.push(`+${item.customStats.damageBonus} DMG`);
+        if (item.customStats.acBonus) parts.push(`+${item.customStats.acBonus} AC`);
+        if (item.customStats.rarity) parts.push(item.customStats.rarity);
+
+        return parts.length > 0 ? parts.join(" · ") : null;
+    }
 
     return (
         <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(134,200,255,0.12),_transparent_55%),_#02050b] text-white">
@@ -142,105 +162,117 @@ export function CharacterItemsPageClient({
                                                 onClick={() => setSelectedItem(item)}
                                             >
                                                 <div className="flex flex-wrap items-center justify-between gap-3">
-                                                <div className="flex items-center gap-2">
-                                                    <div>
-                                                        <p className="text-xs uppercase tracking-[0.35em] text-white/50">{item.category ?? "Misc gear"}</p>
-                                                        <h3 className="text-xl font-semibold text-white">{item.name}</h3>
+                                                    <div className="flex items-center gap-2">
+                                                        <div>
+                                                            <p className="text-xs uppercase tracking-[0.35em] text-white/50">{item.category ?? "Misc gear"}</p>
+                                                            <h3 className="text-xl font-semibold text-white">{item.name}</h3>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedItem(item);
+                                                            }}
+                                                            className="text-white/50 hover:text-white transition-colors"
+                                                            title="View details"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                                            </svg>
+                                                        </button>
                                                     </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setSelectedItem(item);
-                                                        }}
-                                                        className="text-white/50 hover:text-white transition-colors"
-                                                        title="View details"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                                <div className="flex flex-wrap items-center gap-2 text-xs text-white/70">
-                                                    <span className="rounded-full border border-white/15 px-3 py-1">Qty {item.quantity}</span>
-                                                    {typeof item.weight === "number" && (
-                                                        <span className="rounded-full border border-white/15 px-3 py-1">{(item.weight * item.quantity).toFixed(1)} lb</span>
-                                                    )}
-                                                    {item.cost && (
-                                                        <span className="rounded-full border border-white/15 px-3 py-1">{item.cost}</span>
-                                                    )}
-                                                    {item.equippedSlot && (
-                                                        <span className="rounded-full border border-emerald-400/40 bg-emerald-400/10 px-3 py-1 text-emerald-200">
-                                                            Equipped
+                                                    <div className="flex flex-wrap items-center gap-2 text-xs text-white/70">
+                                                        <span className="rounded-full border border-white/15 px-3 py-1">Qty {item.quantity}</span>
+                                                        {typeof item.weight === "number" && (
+                                                            <span className="rounded-full border border-white/15 px-3 py-1">{(item.weight * item.quantity).toFixed(1)} lb</span>
+                                                        )}
+                                                        {item.cost && (
+                                                            <span className="rounded-full border border-white/15 px-3 py-1">{item.cost}</span>
+                                                        )}
+                                                        {item.equippedSlot && (
+                                                            <span className="rounded-full border border-emerald-400/40 bg-emerald-400/10 px-3 py-1 text-emerald-200">
+                                                                Equipped
+                                                            </span>
+                                                        )}
+                                                        {getMagicalBonusLabel(item) && (
+                                                            <span className="rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-amber-200">
+                                                                ✨ {getMagicalBonusLabel(item)}
+                                                            </span>
+                                                        )}
+                                                        <span className="rounded-full border border-white/15 px-3 py-1">
+                                                            {item.isCustom ? "Custom" : "SRD"}
                                                         </span>
-                                                    )}
-                                                    <span className="rounded-full border border-white/15 px-3 py-1">
-                                                        {item.isCustom ? "Custom" : "SRD"}
-                                                    </span>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            {item.description && (
-                                                <p className="mt-3 text-sm text-white/70">{item.description}</p>
-                                            )}
-                                            {item.notes && (
-                                                <p className="mt-3 text-sm text-sky-200">{item.notes}</p>
-                                            )}
-                                            <p className="mt-3 text-xs uppercase tracking-[0.3em] text-white/50">Updated {item.updatedAt.toLocaleDateString()}</p>
-                                            <div className="mt-4 flex flex-wrap items-center justify-between gap-3" onClick={(e) => e.stopPropagation()}>
-                                                <div className="flex flex-wrap items-center gap-2 text-[0.65rem] uppercase tracking-[0.3em]">
-                                                    {defaultSlot && (!item.equippedSlot || item.equippedSlot !== defaultSlot) && (
-                                                        <form action={equipItem}>
-                                                            <input type="hidden" name="characterId" value={character.id} />
-                                                            <input type="hidden" name="itemId" value={item.id} />
-                                                            <input type="hidden" name="slot" value={defaultSlot} />
-                                                            <button
-                                                                type="submit"
-                                                                className="rounded-full border border-emerald-400/40 px-3 py-1 text-emerald-200 transition hover:border-emerald-200 hover:text-white"
-                                                            >
-                                                                Equip
-                                                            </button>
-                                                        </form>
-                                                    )}
-                                                    {item.isWeapon && (
-                                                        <>
+                                                {item.description && (
+                                                    <p className="mt-3 text-sm text-white/70">{item.description}</p>
+                                                )}
+                                                {item.notes && (
+                                                    <p className="mt-3 text-sm text-sky-200">{item.notes}</p>
+                                                )}
+                                                <p className="mt-3 text-xs uppercase tracking-[0.3em] text-white/50">Updated {item.updatedAt.toLocaleDateString()}</p>
+                                                <div className="mt-4 flex flex-wrap items-center justify-between gap-3" onClick={(e) => e.stopPropagation()}>
+                                                    <div className="flex flex-wrap items-center gap-2 text-[0.65rem] uppercase tracking-[0.3em]">
+                                                        {defaultSlot && (!item.equippedSlot || item.equippedSlot !== defaultSlot) && (
                                                             <form action={equipItem}>
                                                                 <input type="hidden" name="characterId" value={character.id} />
                                                                 <input type="hidden" name="itemId" value={item.id} />
-                                                                <input type="hidden" name="slot" value="OFF_HAND" />
+                                                                <input type="hidden" name="slot" value={defaultSlot} />
                                                                 <button
                                                                     type="submit"
                                                                     className="rounded-full border border-emerald-400/40 px-3 py-1 text-emerald-200 transition hover:border-emerald-200 hover:text-white"
                                                                 >
-                                                                    Off-hand
+                                                                    Equip
                                                                 </button>
                                                             </form>
-                                                        </>
-                                                    )}
-                                                    {item.equippedSlot && (
-                                                        <form action={equipItem}>
-                                                            <input type="hidden" name="characterId" value={character.id} />
-                                                            <input type="hidden" name="itemId" value={item.id} />
-                                                            <input type="hidden" name="slot" value="" />
-                                                            <button
-                                                                type="submit"
-                                                                className="rounded-full border border-white/20 px-3 py-1 text-white/70 transition hover:border-white/50 hover:text-white"
-                                                            >
-                                                                Unequip
-                                                            </button>
-                                                        </form>
-                                                    )}
+                                                        )}
+                                                        {item.isWeapon && (
+                                                            <>
+                                                                <form action={equipItem}>
+                                                                    <input type="hidden" name="characterId" value={character.id} />
+                                                                    <input type="hidden" name="itemId" value={item.id} />
+                                                                    <input type="hidden" name="slot" value="OFF_HAND" />
+                                                                    <button
+                                                                        type="submit"
+                                                                        className="rounded-full border border-emerald-400/40 px-3 py-1 text-emerald-200 transition hover:border-emerald-200 hover:text-white"
+                                                                    >
+                                                                        Off-hand
+                                                                    </button>
+                                                                </form>
+                                                            </>
+                                                        )}
+                                                        {item.equippedSlot && (
+                                                            <form action={equipItem}>
+                                                                <input type="hidden" name="characterId" value={character.id} />
+                                                                <input type="hidden" name="itemId" value={item.id} />
+                                                                <input type="hidden" name="slot" value="" />
+                                                                <button
+                                                                    type="submit"
+                                                                    className="rounded-full border border-white/20 px-3 py-1 text-white/70 transition hover:border-white/50 hover:text-white"
+                                                                >
+                                                                    Unequip
+                                                                </button>
+                                                            </form>
+                                                        )}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setEditingItem(item)}
+                                                            className="rounded-full border border-sky-400/40 px-3 py-1 text-sky-200 transition hover:border-sky-200 hover:text-white"
+                                                        >
+                                                            ✨ Edit Stats
+                                                        </button>
+                                                    </div>
+                                                    <form action={deleteItem} className="flex items-center gap-3">
+                                                        <input type="hidden" name="itemId" value={item.id} />
+                                                        <input type="hidden" name="characterId" value={character.id} />
+                                                        <button
+                                                            type="submit"
+                                                            className="rounded-full border border-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white/80 transition hover:border-rose-300 hover:text-white"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </form>
                                                 </div>
-                                                <form action={deleteItem} className="flex items-center gap-3">
-                                                    <input type="hidden" name="itemId" value={item.id} />
-                                                    <input type="hidden" name="characterId" value={character.id} />
-                                                    <button
-                                                        type="submit"
-                                                        className="rounded-full border border-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white/80 transition hover:border-rose-300 hover:text-white"
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                </form>
-                                            </div>
                                             </Card>
                                         );
                                     })}
@@ -348,6 +380,16 @@ export function CharacterItemsPageClient({
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Edit Item Dialog */}
+            {editingItem && (
+                <EditItemDialog
+                    item={editingItem}
+                    characterId={character.id}
+                    onClose={() => setEditingItem(null)}
+                    onSave={handleSaveItemStats}
+                />
             )}
         </div>
     );

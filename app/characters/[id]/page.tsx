@@ -14,6 +14,7 @@ import { formatSubclassName } from "@/lib/characters/level-up-options";
 import { getFeaturesUpToLevel, getSubclassFeaturesUpToLevel } from "@/lib/characters/leveling/level-data";
 import { withFeatureDescriptions } from "@/lib/characters/leveling/feature-data";
 import { findReferenceItemById, type ItemReference } from "@/lib/items/reference";
+import { normalizeCustomStats } from "@/lib/items/custom-stats";
 import { canViewCharacterSheet } from "@/lib/parties/access";
 import {
     abilityModifier,
@@ -153,6 +154,7 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                     referenceId: true,
                     equippedSlot: true,
                     isCustom: true,
+                    customStats: true,
                     updatedAt: true,
                 },
             },
@@ -216,6 +218,7 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
             slot: item.equippedSlot!,
             referenceId: item.referenceId,
             reference: item.referenceId ? findReferenceItemById(item.referenceId) : null,
+            customStats: normalizeCustomStats(item.customStats),
         }));
 
     // Calculate equipment bonuses using the equipment calculator

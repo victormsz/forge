@@ -5,6 +5,7 @@ import { addItem } from "@/app/characters/actions";
 import { getCurrentActor } from "@/lib/current-actor";
 import { prisma } from "@/lib/prisma";
 import { findReferenceItemById, getItemCategoryOptions, getReferenceItems } from "@/lib/items/reference";
+import { normalizeCustomStats } from "@/lib/items/custom-stats";
 import type { EquipmentSlot } from "@/lib/characters/types";
 import { CharacterItemsPageClient } from "./character-items-client";
 
@@ -67,6 +68,7 @@ export default async function CharacterItemsPage({ params }: CharacterItemsPageP
                     referenceId: true,
                     equippedSlot: true,
                     isCustom: true,
+                    customStats: true,
                     updatedAt: true,
                 },
             },
@@ -101,6 +103,7 @@ export default async function CharacterItemsPage({ params }: CharacterItemsPageP
         return {
             ...item,
             equippedSlot: item.equippedSlot ?? null,
+            customStats: normalizeCustomStats(item.customStats),
             isWeapon,
             isArmor,
             isShield,

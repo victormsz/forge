@@ -1,6 +1,7 @@
 import type { AbilityGenerationMethod, SpellTargetAffinity, SpellTargetShape } from "@prisma/client";
 
 import type { AbilityKey, AbilityScores } from "@/lib/point-buy";
+import type { ItemCustomStats } from "@/lib/items/custom-stats";
 
 export interface CharacterProficiencies {
     armor: string[];
@@ -81,6 +82,7 @@ export interface AddItemInput {
     notes: string | null;
     referenceId: string | null;
     isCustom: boolean;
+    customStats: ItemCustomStats | null;
 }
 
 export interface EquipItemInput {

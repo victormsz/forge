@@ -1,4 +1,5 @@
 import type { ItemReference } from "@/lib/items/reference";
+import type { ItemCustomStats } from "@/lib/items/custom-stats";
 import type { CharacterProficiencies } from "@/lib/characters/types";
 import type { AbilityKey } from "@/lib/point-buy";
 import { formatModifier } from "@/lib/characters/statistics";
@@ -6,6 +7,9 @@ import {
     extractArmorStats,
     extractWeaponStats,
     extractShieldStats,
+    getAttackBonus,
+    getDamageBonus,
+    getACBonus,
 } from "@/lib/characters/equipment-stats-extractor";
 import type {
     EquippedItem,
@@ -49,15 +53,22 @@ export class EquipmentCalculator {
         const equippedArmor = this.findEquippedItem("ARMOR");
         const equippedShield = this.findEquippedItem("SHIELD");
 
-        const armorStats = extractArmorStats(equippedArmor?.reference ?? null);
-        const shieldStats = extractShieldStats(equippedShield?.reference ?? null);
+        const armorStats = extractArmorStats(
+            equippedArmor?.reference ?? null,
+            equippedArmor?.customStats ?? null
+        );
+        const shieldStats = extractShieldStats(
+            equippedShield?.reference ?? null,
+            equippedShield?.customStats ?? null
+        );
 
         const base = this.calculateArmorBase(armorStats);
         const dexModifier = this.calculateDexModifier(armorStats);
         const shield = shieldStats?.acBonus ?? 0;
+        const magicalACBonus = getACBonus(equippedArmor?.customStats ?? null);
         const legacyBonuses = this.calculateLegacyBonuses();
 
-        const total = base + dexModifier + shield + legacyBonuses;
+        const total = base + dexModifier + shield + magicalACBonus + legacyBonuses;
         const breakdown = this.buildArmorBreakdown(
             armorStats,
             equippedArmor?.reference,
@@ -88,15 +99,17 @@ export class EquipmentCalculator {
             return this.calculateUnarmedStrike();
         }
 
-        const weaponStats = extractWeaponStats(equipped.reference);
+        const weaponStats = extractWeaponStats(equipped.reference, equipped.customStats);
         if (!weaponStats) {
             return this.calculateUnarmedStrike();
         }
 
-        const abilityModifier = this.chooseWeaponAbilityModifier(equipped.reference);
-        const proficient = this.isWeaponProficient(equipped.reference);
-        const attackBonus = abilityModifier + (proficient ? this.input.proficiencyBonus : 0);
-        const totalDamageBonus = abilityModifier + weaponStats.damageBonus;
+        const abilityModifier = this.chooseWeaponAbilityModifier(equipped.reference, equipped.customStats);
+        const proficient = this.isWeaponProficient(equipped.reference, equipped.customStats);
+        const magicalAttackBonus = getAttackBonus(equipped.customStats);
+        const magicalDamageBonus = getDamageBonus(equipped.customStats);
+        const attackBonus = abilityModifier + (proficient ? this.input.proficiencyBonus : 0) + magicalAttackBonus;
+        const totalDamageBonus = abilityModifier + weaponStats.damageBonus + magicalDamageBonus;
         const damage = this.formatWeaponDamage(weaponStats.damageDice, totalDamageBonus, weaponStats.damageType);
 
         return {
@@ -116,15 +129,17 @@ export class EquipmentCalculator {
             return null;
         }
 
-        const weaponStats = extractWeaponStats(equipped.reference);
+        const weaponStats = extractWeaponStats(equipped.reference, equipped.customStats);
         if (!weaponStats) {
             return null;
         }
 
-        const abilityModifier = this.chooseWeaponAbilityModifier(equipped.reference);
-        const proficient = this.isWeaponProficient(equipped.reference);
-        const attackBonus = abilityModifier + (proficient ? this.input.proficiencyBonus : 0);
-        const totalDamageBonus = abilityModifier + weaponStats.damageBonus;
+        const abilityModifier = this.chooseWeaponAbilityModifier(equipped.reference, equipped.customStats);
+        const proficient = this.isWeaponProficient(equipped.reference, equipped.customStats);
+        const magicalAttackBonus = getAttackBonus(equipped.customStats);
+        const magicalDamageBonus = getDamageBonus(equipped.customStats);
+        const attackBonus = abilityModifier + (proficient ? this.input.proficiencyBonus : 0) + magicalAttackBonus;
+        const totalDamageBonus = abilityModifier + weaponStats.damageBonus + magicalDamageBonus;
         const damage = this.formatWeaponDamage(weaponStats.damageDice, totalDamageBonus, weaponStats.damageType);
 
         return {
@@ -235,12 +250,12 @@ export class EquipmentCalculator {
     /**
      * Chooses the appropriate ability modifier for a weapon.
      */
-    private chooseWeaponAbilityModifier(reference: ItemReference | null): number {
-        if (!reference) {
+    private chooseWeaponAbilityModifier(reference: ItemReference | null, customStats: ItemCustomStats | null): number {
+        if (!reference && !customStats) {
             return this.input.abilityModifiers.str;
         }
 
-        const properties = reference.properties?.map(p => p.toLowerCase()) ?? [];
+        const properties = (customStats?.properties ?? reference?.properties ?? []).map(p => p.toLowerCase());
         const isFinesse = properties.includes("finesse");
         const isRanged = properties.includes("range") || properties.includes("ammunition");
 
@@ -258,8 +273,8 @@ export class EquipmentCalculator {
     /**
      * Checks if character is proficient with a weapon.
      */
-    private isWeaponProficient(reference: ItemReference | null): boolean {
-        if (!reference) {
+    private isWeaponProficient(reference: ItemReference | null, customStats: ItemCustomStats | null): boolean {
+        if (!reference && !customStats) {
             return false;
         }
 

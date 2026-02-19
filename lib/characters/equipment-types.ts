@@ -1,4 +1,5 @@
 import type { ItemReference } from "@/lib/items/reference";
+import type { ItemCustomStats } from "@/lib/items/custom-stats";
 import type { EquipmentSlot, CharacterProficiencies } from "@/lib/characters/types";
 import type { AbilityKey } from "@/lib/point-buy";
 
@@ -8,6 +9,7 @@ export interface EquippedItem {
     slot: EquipmentSlot;
     referenceId: string | null;
     reference: ItemReference | null;
+    customStats: ItemCustomStats | null;
 }
 
 export interface ArmorStats {

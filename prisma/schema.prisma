@@ -166,6 +166,10 @@ model Item {
   referenceId String?
   isCustom    Boolean  @default(true)
   equippedSlot EquipmentSlot?
+  
+  // Custom stat overrides/bonuses
+  customStats Json?
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

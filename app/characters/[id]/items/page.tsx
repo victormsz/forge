@@ -17,10 +17,6 @@ export const metadata: Metadata = {
 const referenceItems = getReferenceItems();
 const categoryOptions = getItemCategoryOptions();
 
-interface CharacterItemsPageProps {
-    params: Promise<{ id: string }>;
-}
-
 type Item = {
     id: string;
     name: string;
@@ -33,8 +29,29 @@ type Item = {
     referenceId: string | null;
     equippedSlot: EquipmentSlot | null;
     isCustom: boolean;
+    customStats: unknown;
     updatedAt: Date;
 };
+
+const ITEM_SELECT_FIELDS: Record<keyof Item, boolean> = {
+    id: true,
+    name: true,
+    category: true,
+    cost: true,
+    weight: true,
+    quantity: true,
+    description: true,
+    notes: true,
+    referenceId: true,
+    equippedSlot: true,
+    isCustom: true,
+    customStats: true,
+    updatedAt: true,
+};
+
+interface CharacterItemsPageProps {
+    params: Promise<{ id: string }>;
+}
 
 export default async function CharacterItemsPage({ params }: CharacterItemsPageProps) {
     const { id } = await params;
@@ -56,24 +73,12 @@ export default async function CharacterItemsPage({ params }: CharacterItemsPageP
                     { category: "asc" },
                     { name: "asc" },
                 ],
-                select: {
-                    id: true,
-                    name: true,
-                    category: true,
-                    cost: true,
-                    weight: true,
-                    quantity: true,
-                    description: true,
-                    notes: true,
-                    referenceId: true,
-                    equippedSlot: true,
-                    isCustom: true,
-                    customStats: true,
-                    updatedAt: true,
-                },
+                select: ITEM_SELECT_FIELDS,
             },
         },
     });
+
+    // ...existing code...
 
     if (!character) {
         notFound();

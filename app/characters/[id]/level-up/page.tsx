@@ -213,6 +213,8 @@ export default async function LevelUpPage({ params, searchParams }: LevelUpPageP
                         conModifier={conModifier}
                         characterName={character.name}
                         subclassOptions={subclassOptions}
+                        charClassName={character.charClass || "Unknown"}
+                        charClassIndex={character.charClass?.toLowerCase() || "unknown"}
                     />
                 </Card>
             </main>

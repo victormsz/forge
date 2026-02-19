@@ -2,6 +2,7 @@ import type { AbilityGenerationMethod, SpellTargetAffinity, SpellTargetShape } f
 
 import type { AbilityKey, AbilityScores } from "@/lib/point-buy";
 import type { ItemCustomStats } from "@/lib/items/custom-stats";
+import type { CustomSubclass } from "@/lib/classes/custom-subclass";
 
 export interface CharacterProficiencies {
     armor: string[];
@@ -27,6 +28,7 @@ export interface CreateCharacterInput {
     equipmentChoices: EquipmentChoices;
     ancestryAbilityChoices?: Partial<Record<AbilityKey, number>>;
     backgroundAbilityChoice?: AbilityKey | null;
+    customSubclass?: CustomSubclass | null;
 }
 
 export interface AbilityIncreaseChoice {

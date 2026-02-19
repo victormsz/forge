@@ -98,6 +98,19 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
     const hitDieValue = getHitDieValue(character.charClass);
     const maxHpEstimate = calculateMaxHp(character.level, hitDieValue, abilityModifiers.con);
 
+    // ── Spellcasting stats ────────────────────────────────────────────────
+    const spellcastingAbility = (() => {
+        const cls = character.charClass?.trim().toLowerCase() ?? "";
+        if (!cls) return null;
+        if (["bard", "sorcerer", "warlock", "paladin"].some((c) => cls.includes(c))) return "cha" as const;
+        if (["cleric", "druid", "ranger"].some((c) => cls.includes(c))) return "wis" as const;
+        if (["wizard", "artificer"].some((c) => cls.includes(c))) return "int" as const;
+        return null;
+    })();
+    const spellcastingMod = spellcastingAbility ? abilityModifiers[spellcastingAbility] : null;
+    const spellSaveDC = spellcastingMod !== null ? 8 + proficiencyBonus + spellcastingMod : undefined;
+    const spellAttackBonus = spellcastingMod !== null ? proficiencyBonus + spellcastingMod : undefined;
+
     // ── Equipment ────────────────────────────────────────────────────────
     const rawItems = character.items ?? [];
     const equippedItems: EquippedItem[] = rawItems
@@ -219,6 +232,9 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                             mainHandDamage={equipmentBonuses.mainHand?.damage ?? null}
                             offHandAttackBonus={equipmentBonuses.offHand?.attackBonus ?? 0}
                             offHandDamage={equipmentBonuses.offHand?.damage ?? null}
+                            spells={character.spells}
+                            spellSaveDC={spellSaveDC}
+                            spellAttackBonus={spellAttackBonus}
                         />
                     </div>
 

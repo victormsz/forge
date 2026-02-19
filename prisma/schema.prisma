@@ -112,6 +112,7 @@ model Character {
   ancestry          String?                  @map("race")
   charClass         String?
   subclass          String?
+  customSubclass    Json? // Custom subclass data matching db Subclass model
   background        String?
   alignment         String?
   armorBonus        Int                      @default(0)

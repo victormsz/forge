@@ -21,6 +21,8 @@ import { getClassOptions } from "@/lib/classes/load-classes";
 import { getBackgroundBonuses, applyBackgroundBonus } from "@/lib/characters/background-bonuses";
 import { getAncestryBonuses, applyAncestryBonuses } from "@/lib/characters/ancestry-bonuses";
 import { abilityModifier, formatModifier } from "@/lib/characters/statistics";
+import { CustomSubclassModal } from "@/components/characters/custom-subclass-modal";
+import { customSubclassToOption, type CustomSubclass } from "@/lib/classes/custom-subclass";
 import equipmentCategoriesData from "@/db/2014/5e-SRD-Equipment-Categories.json";
 
 type AbilityGenerationMethod = "POINT_BUY" | "RANDOM";
@@ -432,6 +434,8 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
     const [manualScores, setManualScores] = useState<Record<AbilityKey, string>>(() => createManualScoreState());
     const [hoveredAncestry, setHoveredAncestry] = useState<string | null>(null);
     const [hoveredBackground, setHoveredBackground] = useState<string | null>(null);
+    const [customSubclasses, setCustomSubclasses] = useState<CustomSubclass[]>([]);
+    const [showCustomSubclassModal, setShowCustomSubclassModal] = useState(false);
 
     const isPointBuy = formState.method === "POINT_BUY";
 
@@ -954,547 +958,427 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
     };
 
     return (
-        <form action={action} className="mt-2 flex flex-col gap-6" aria-labelledby="character-wizard-title">
-            <input type="hidden" name="name" value={formState.name} />
-            <input type="hidden" name="method" value={formState.method} />
-            <input type="hidden" name="ancestry" value={formState.ancestry} />
-            <input type="hidden" name="class" value={formState.charClass} />
-            <input type="hidden" name="subclass" value={formState.subclass} />
-            <input type="hidden" name="background" value={formState.background} />
-            <input type="hidden" name="alignment" value={formState.alignment} />
-            <input type="hidden" name="abilityScores" value={JSON.stringify(formState.abilityScores)} />
-            <input type="hidden" name="selectedSkills" value={JSON.stringify(formState.selectedSkills)} />
-            <input type="hidden" name="equipmentChoices" value={JSON.stringify(formState.equipmentChoices)} />
-            <input type="hidden" name="ancestryAbilityChoices" value={JSON.stringify(formState.ancestryAbilityChoices)} />
-            <input type="hidden" name="backgroundAbilityChoice" value={formState.backgroundAbilityChoice} />
-            <div className="space-y-6">
-                <section className="rounded-3xl border border-white/10 bg-gradient-to-b from-white/10 to-white/0 p-6 shadow-lg">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                        <div>
-                            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-rose-200">Live preview</p>
-                            <h2 className="text-3xl font-semibold text-white">{formState.name.trim() || "Unnamed hero"}</h2>
+        <>
+            <form action={action} className="mt-2 flex flex-col gap-6" aria-labelledby="character-wizard-title">
+                <input type="hidden" name="name" value={formState.name} />
+                <input type="hidden" name="method" value={formState.method} />
+                <input type="hidden" name="ancestry" value={formState.ancestry} />
+                <input type="hidden" name="class" value={formState.charClass} />
+                <input type="hidden" name="subclass" value={formState.subclass} />
+                <input type="hidden" name="background" value={formState.background} />
+                <input type="hidden" name="alignment" value={formState.alignment} />
+                <input type="hidden" name="abilityScores" value={JSON.stringify(formState.abilityScores)} />
+                <input type="hidden" name="selectedSkills" value={JSON.stringify(formState.selectedSkills)} />
+                <input type="hidden" name="proficiencies" value={JSON.stringify(combinedProficiencies)} />
+                <input type="hidden" name="equipmentChoices" value={JSON.stringify(formState.equipmentChoices)} />
+                <input type="hidden" name="ancestryAbilityChoices" value={JSON.stringify(formState.ancestryAbilityChoices)} />
+                <input type="hidden" name="backgroundAbilityChoice" value={formState.backgroundAbilityChoice} />
+                {customSubclasses.length > 0 && (
+                    <input type="hidden" name="customSubclasses" value={JSON.stringify(customSubclasses)} />
+                )}
+                {/* Find the selected custom subclass if any */}
+                {(() => {
+                    const selectedCustom = customSubclasses.find((cs) => cs.name === formState.subclass);
+                    if (selectedCustom) {
+                        return <input type="hidden" name="selectedCustomSubclass" value={JSON.stringify(selectedCustom)} />;
+                    }
+                    return null;
+                })()}
+                <div className="space-y-6">
+                    <section className="rounded-3xl border border-white/10 bg-gradient-to-b from-white/10 to-white/0 p-6 shadow-lg">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-rose-200">Live preview</p>
+                                <h2 className="text-3xl font-semibold text-white">{formState.name.trim() || "Unnamed hero"}</h2>
+                            </div>
+                            <p className="text-xs uppercase tracking-[0.3em] text-white/60">
+                                Step {String(step + 1).padStart(2, "0")} / {String(activeSteps.length).padStart(2, "0")}
+                            </p>
                         </div>
-                        <p className="text-xs uppercase tracking-[0.3em] text-white/60">
-                            Step {String(step + 1).padStart(2, "0")} / {String(activeSteps.length).padStart(2, "0")}
-                        </p>
-                    </div>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                        <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                            <p className="text-[0.6rem] uppercase tracking-[0.4em] text-white/60">Ability Method</p>
-                            <p className="mt-1 text-lg font-semibold text-white">{methodLabel}</p>
+                        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                            <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                                <p className="text-[0.6rem] uppercase tracking-[0.4em] text-white/60">Ability Method</p>
+                                <p className="mt-1 text-lg font-semibold text-white">{methodLabel}</p>
+                            </div>
+                            <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                                <p className="text-[0.6rem] uppercase tracking-[0.4em] text-white/60">Ancestry</p>
+                                <p className="mt-1 text-lg font-semibold text-white">{formState.ancestry || "Pending"}</p>
+                            </div>
+                            <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                                <p className="text-[0.6rem] uppercase tracking-[0.4em] text-white/60">Class</p>
+                                <p className="mt-1 text-lg font-semibold text-white">{formState.charClass || "Pending"}</p>
+                                {formState.subclass && (
+                                    <p className="mt-1 text-xs text-white/60">{formState.subclass}</p>
+                                )}
+                            </div>
+                            <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                                <p className="text-[0.6rem] uppercase tracking-[0.4em] text-white/60">Background</p>
+                                <p className="mt-1 text-lg font-semibold text-white">{formState.background || "Pending"}</p>
+                            </div>
+                            <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                                <p className="text-[0.6rem] uppercase tracking-[0.4em] text-white/60">Alignment</p>
+                                <p className="mt-1 text-lg font-semibold text-white">{formState.alignment || "Pending"}</p>
+                            </div>
                         </div>
-                        <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                            <p className="text-[0.6rem] uppercase tracking-[0.4em] text-white/60">Ancestry</p>
-                            <p className="mt-1 text-lg font-semibold text-white">{formState.ancestry || "Pending"}</p>
-                        </div>
-                        <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                            <p className="text-[0.6rem] uppercase tracking-[0.4em] text-white/60">Class</p>
-                            <p className="mt-1 text-lg font-semibold text-white">{formState.charClass || "Pending"}</p>
-                            {formState.subclass && (
-                                <p className="mt-1 text-xs text-white/60">{formState.subclass}</p>
-                            )}
-                        </div>
-                        <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                            <p className="text-[0.6rem] uppercase tracking-[0.4em] text-white/60">Background</p>
-                            <p className="mt-1 text-lg font-semibold text-white">{formState.background || "Pending"}</p>
-                        </div>
-                        <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                            <p className="text-[0.6rem] uppercase tracking-[0.4em] text-white/60">Alignment</p>
-                            <p className="mt-1 text-lg font-semibold text-white">{formState.alignment || "Pending"}</p>
-                        </div>
-                    </div>
-                    <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                        {ABILITY_KEYS.map((ability) => {
-                            const baseScore = formState.abilityScores[ability];
-                            const finalScore = finalAbilityScores[ability];
-                            const modifier = abilityModifier(finalScore);
-                            const hasBonus = baseScore !== finalScore;
+                        <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                            {ABILITY_KEYS.map((ability) => {
+                                const baseScore = formState.abilityScores[ability];
+                                const finalScore = finalAbilityScores[ability];
+                                const modifier = abilityModifier(finalScore);
+                                const hasBonus = baseScore !== finalScore;
 
-                            return (
-                                <div key={ability} className="rounded-2xl border border-white/10 bg-black/20 p-3">
-                                    <p className="text-[0.55rem] uppercase tracking-[0.35em] text-white/50">{abilityMeta[ability].label}</p>
-                                    <div className="mt-1 flex items-baseline gap-2">
-                                        <p className="text-2xl font-semibold text-white">{finalScore}</p>
-                                        <p className="text-xs text-white/50">{ability.toUpperCase()}</p>
-                                    </div>
-                                    <div className="mt-1 flex items-center gap-2">
-                                        <p className={`text-sm font-medium ${modifier >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                            {formatModifier(modifier)}
-                                        </p>
-                                        {hasBonus && (
-                                            <p className="text-xs text-rose-300">
-                                                ({baseScore} + {finalScore - baseScore})
+                                return (
+                                    <div key={ability} className="rounded-2xl border border-white/10 bg-black/20 p-3">
+                                        <p className="text-[0.55rem] uppercase tracking-[0.35em] text-white/50">{abilityMeta[ability].label}</p>
+                                        <div className="mt-1 flex items-baseline gap-2">
+                                            <p className="text-2xl font-semibold text-white">{finalScore}</p>
+                                            <p className="text-xs text-white/50">{ability.toUpperCase()}</p>
+                                        </div>
+                                        <div className="mt-1 flex items-center gap-2">
+                                            <p className={`text-sm font-medium ${modifier >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                {formatModifier(modifier)}
                                             </p>
+                                            {hasBonus && (
+                                                <p className="text-xs text-rose-300">
+                                                    ({baseScore} + {finalScore - baseScore})
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {(combinedProficiencies.skills.length > 0 ||
+                            combinedProficiencies.armor.length > 0 ||
+                            combinedProficiencies.weapons.length > 0 ||
+                            combinedProficiencies.tools.length > 0 ||
+                            combinedProficiencies.languages.length > 0) && (
+                                <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4">
+                                    <p className="text-[0.6rem] uppercase tracking-[0.4em] text-white/60 mb-3">Proficiencies & Skills</p>
+                                    <div className="grid gap-3 sm:grid-cols-2">
+                                        {combinedProficiencies.skills.length > 0 && (
+                                            <div>
+                                                <p className="text-xs font-semibold text-rose-200 mb-1">Skills</p>
+                                                <p className="text-xs text-white/70 leading-relaxed">{combinedProficiencies.skills.join(", ")}</p>
+                                            </div>
+                                        )}
+                                        {combinedProficiencies.armor.length > 0 && (
+                                            <div>
+                                                <p className="text-xs font-semibold text-rose-200 mb-1">Armor</p>
+                                                <p className="text-xs text-white/70 leading-relaxed">{combinedProficiencies.armor.join(", ")}</p>
+                                            </div>
+                                        )}
+                                        {combinedProficiencies.weapons.length > 0 && (
+                                            <div>
+                                                <p className="text-xs font-semibold text-rose-200 mb-1">Weapons</p>
+                                                <p className="text-xs text-white/70 leading-relaxed">{combinedProficiencies.weapons.join(", ")}</p>
+                                            </div>
+                                        )}
+                                        {combinedProficiencies.tools.length > 0 && (
+                                            <div>
+                                                <p className="text-xs font-semibold text-rose-200 mb-1">Tools</p>
+                                                <p className="text-xs text-white/70 leading-relaxed">{combinedProficiencies.tools.join(", ")}</p>
+                                            </div>
+                                        )}
+                                        {combinedProficiencies.languages.length > 0 && (
+                                            <div>
+                                                <p className="text-xs font-semibold text-rose-200 mb-1">Languages</p>
+                                                <p className="text-xs text-white/70 leading-relaxed">{combinedProficiencies.languages.join(", ")}</p>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
-                            );
-                        })}
-                    </div>
-
-                    {(combinedProficiencies.skills.length > 0 ||
-                        combinedProficiencies.armor.length > 0 ||
-                        combinedProficiencies.weapons.length > 0 ||
-                        combinedProficiencies.tools.length > 0 ||
-                        combinedProficiencies.languages.length > 0) && (
-                            <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4">
-                                <p className="text-[0.6rem] uppercase tracking-[0.4em] text-white/60 mb-3">Proficiencies & Skills</p>
-                                <div className="grid gap-3 sm:grid-cols-2">
-                                    {combinedProficiencies.skills.length > 0 && (
-                                        <div>
-                                            <p className="text-xs font-semibold text-rose-200 mb-1">Skills</p>
-                                            <p className="text-xs text-white/70 leading-relaxed">{combinedProficiencies.skills.join(", ")}</p>
-                                        </div>
-                                    )}
-                                    {combinedProficiencies.armor.length > 0 && (
-                                        <div>
-                                            <p className="text-xs font-semibold text-rose-200 mb-1">Armor</p>
-                                            <p className="text-xs text-white/70 leading-relaxed">{combinedProficiencies.armor.join(", ")}</p>
-                                        </div>
-                                    )}
-                                    {combinedProficiencies.weapons.length > 0 && (
-                                        <div>
-                                            <p className="text-xs font-semibold text-rose-200 mb-1">Weapons</p>
-                                            <p className="text-xs text-white/70 leading-relaxed">{combinedProficiencies.weapons.join(", ")}</p>
-                                        </div>
-                                    )}
-                                    {combinedProficiencies.tools.length > 0 && (
-                                        <div>
-                                            <p className="text-xs font-semibold text-rose-200 mb-1">Tools</p>
-                                            <p className="text-xs text-white/70 leading-relaxed">{combinedProficiencies.tools.join(", ")}</p>
-                                        </div>
-                                    )}
-                                    {combinedProficiencies.languages.length > 0 && (
-                                        <div>
-                                            <p className="text-xs font-semibold text-rose-200 mb-1">Languages</p>
-                                            <p className="text-xs text-white/70 leading-relaxed">{combinedProficiencies.languages.join(", ")}</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                    <div className="mt-6 h-2 w-full rounded-full bg-white/10">
-                        <div className="h-full rounded-full bg-rose-400 transition-all" style={{ width: `${progress}%` }} />
-                    </div>
-                </section>
-
-                <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
-                    <div className="space-y-2">
-                        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">{currentStep.title}</p>
-                        <p className="text-sm text-white/70">{currentStep.description}</p>
-                    </div>
-
-                    {currentStep.id === "core" && (
-                        <div className="mt-6 space-y-4">
-                            <label className="flex w-full flex-col text-sm font-semibold uppercase tracking-wide text-white/70">
-                                Hero name
-                                <input
-                                    type="text"
-                                    name="display-name"
-                                    placeholder="E.g. Nyx Stormveil"
-                                    value={formState.name}
-                                    onChange={(event) => setFormState((prev) => ({ ...prev, name: event.target.value }))}
-                                    className="mt-2 rounded-2xl border border-white/15 bg-black/40 px-4 py-3 text-base font-normal text-white placeholder:text-white/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
-                                />
-                            </label>
-                            <div className="grid gap-3 md:grid-cols-2">
-                                {abilityOptions.map((option) => (
-                                    <button
-                                        type="button"
-                                        key={option.value}
-                                        onClick={() => {
-                                            if (formState.method === option.value) {
-                                                return;
-                                            }
-                                            resetRandomAssignments();
-                                            setManualEntryMode(false);
-                                            setManualScores(createManualScoreState());
-                                            setFormState((prev) => ({
-                                                ...prev,
-                                                method: option.value,
-                                                abilityScores: { ...DEFAULT_ABILITY_SCORES },
-                                            }));
-                                            setStep(0);
-                                        }}
-                                        className={`rounded-2xl border px-4 py-4 text-left transition ${formState.method === option.value
-                                            ? "border-rose-300 bg-rose-300/10"
-                                            : "border-white/15 bg-black/30 hover:border-white/30"
-                                            }`}
-                                    >
-                                        <p className="text-sm font-semibold text-white">{option.label}</p>
-                                        <p className="mt-1 text-xs text-white/70">{option.description}</p>
-                                    </button>
-                                ))}
-                            </div>
-                            {isPointBuy && (
-                                <div className="rounded-3xl border border-white/10 bg-black/40 p-5">
-                                    <div className="flex flex-wrap items-center justify-between gap-3">
-                                        <div>
-                                            <p className="text-xs uppercase tracking-[0.35em] text-white/60">Point buy pool</p>
-                                            <p className={`text-xl font-semibold ${pointsRemaining >= 0 ? "text-white" : "text-rose-300"}`}>
-                                                {pointsRemaining} pts remaining
-                                            </p>
-                                        </div>
-                                        <p className="text-xs text-white/60">
-                                            Scores stay between {MIN_ABILITY_SCORE} and {MAX_ABILITY_SCORE} following the PHB cost curve.
-                                        </p>
-                                    </div>
-                                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                        {ABILITY_KEYS.map((ability) => {
-                                            const score = formState.abilityScores[ability];
-                                            const incrementCost = getIncrementalPointCost(score);
-                                            const canDecrease = score > MIN_ABILITY_SCORE;
-                                            const canIncrease = incrementCost !== Infinity && incrementCost <= pointsRemaining;
-
-                                            return (
-                                                <div key={ability} className="rounded-2xl border border-white/15 bg-black/50 p-4">
-                                                    <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">
-                                                        {abilityMeta[ability].label}
-                                                    </p>
-                                                    <p className="text-xs text-white/50">{abilityMeta[ability].summary}</p>
-                                                    <div className="mt-4 flex items-center gap-3">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => adjustAbilityScore(ability, -1)}
-                                                            disabled={!canDecrease}
-                                                            className="rounded-full border border-white/20 px-2 py-1 text-sm text-white transition hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-40"
-                                                            aria-label={`Decrease ${abilityMeta[ability].label}`}
-                                                        >
-                                                            -
-                                                        </button>
-                                                        <div className="flex flex-col items-center text-white">
-                                                            <span className="text-3xl font-semibold">{score}</span>
-                                                            {incrementCost !== Infinity && (
-                                                                <span className="text-[0.6rem] uppercase tracking-[0.3em] text-white/50">
-                                                                    +{incrementCost} pts
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => adjustAbilityScore(ability, 1)}
-                                                            disabled={!canIncrease}
-                                                            className="rounded-full border border-white/20 px-2 py-1 text-sm text-white transition hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-40"
-                                                            aria-label={`Increase ${abilityMeta[ability].label}`}
-                                                        >
-                                                            +
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
                             )}
+
+                        <div className="mt-6 h-2 w-full rounded-full bg-white/10">
+                            <div className="h-full rounded-full bg-rose-400 transition-all" style={{ width: `${progress}%` }} />
                         </div>
-                    )}
+                    </section>
 
-                    {currentStep.id === "random-abilities" && (
-                        <div className="mt-6 space-y-6">
-                            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                                <div className="rounded-2xl border border-white/15 bg-black/30 p-5 text-sm text-white/70">
-                                    <p>
-                                        Six pools of 4d6 roll at once when you advance from Core Details. Each pool shows four dice with the
-                                        lowest die automatically faded and removed from the total.
-                                    </p>
-                                    <p className="mt-2 text-xs text-white/60">
-                                        Drag any total onto the stat cards below to lock it in or switch to manual entry if you already have your
-                                        rolls.
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={toggleManualEntryMode}
-                                    className="rounded-full border border-white/20 px-5 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:border-rose-300 hover:text-rose-200"
-                                >
-                                    {manualEntryMode ? "Use generated pools" : "I will roll them myself"}
-                                </button>
-                            </div>
-
-                            {manualEntryMode ? (
-                                <div className="rounded-2xl border border-white/15 bg-black/40 p-6">
-                                    <div className="flex flex-col gap-2 text-sm text-white/70">
-                                        <p>Type each ability result you rolled. We will keep everything between {RANDOM_MIN_ABILITY_SCORE} and {RANDOM_MAX_ABILITY_SCORE}.</p>
-                                        {!manualEntryValid && (
-                                            <p className="text-xs text-rose-200">
-                                                Enter six totals between {RANDOM_MIN_ABILITY_SCORE} and {RANDOM_MAX_ABILITY_SCORE} to continue.
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                                        {ABILITY_KEYS.map((ability) => {
-                                            const value = manualScores[ability] ?? "";
-                                            const trimmed = value.trim();
-                                            const numericValue = trimmed === "" ? NaN : Number(trimmed);
-                                            const hasError =
-                                                trimmed !== "" &&
-                                                (!Number.isFinite(numericValue) ||
-                                                    numericValue < RANDOM_MIN_ABILITY_SCORE ||
-                                                    numericValue > RANDOM_MAX_ABILITY_SCORE);
-                                            return (
-                                                <label key={ability} className={`flex flex-col rounded-2xl border px-4 py-4 ${hasError ? "border-rose-400 bg-rose-400/10" : "border-white/15 bg-black/40"}`}>
-                                                    <span className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">
-                                                        {abilityMeta[ability].label}
-                                                    </span>
-                                                    <span className="text-xs text-white/50">{abilityMeta[ability].summary}</span>
-                                                    <input
-                                                        type="text"
-                                                        inputMode="numeric"
-                                                        pattern="[0-9]*"
-                                                        value={value}
-                                                        onChange={(event) => handleManualScoreChange(ability, event.target.value)}
-                                                        placeholder="--"
-                                                        className="mt-3 rounded-2xl border border-white/20 bg-black/50 px-4 py-3 text-center text-2xl font-semibold text-white placeholder:text-white/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
-                                                    />
-                                                    <span className="mt-1 text-[0.55rem] uppercase tracking-[0.3em] text-white/50">
-                                                        {RANDOM_MIN_ABILITY_SCORE}-{RANDOM_MAX_ABILITY_SCORE}
-                                                    </span>
-                                                </label>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            ) : rolledSets.length === 0 ? (
-                                <div className="rounded-2xl border border-white/10 bg-black/40 p-6 text-center text-sm text-white/70">
-                                    Click Next on the previous step to roll your dice pools.
-                                </div>
-                            ) : (
-                                <div className="flex flex-col gap-6 lg:flex-row">
-                                    <div className="lg:w-5/12">
-                                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-                                            {rolledSets.map((roll, index) => {
-                                                const assignedAbility = rollAssignments[roll.id];
-                                                return (
-                                                    <div
-                                                        key={roll.id}
-                                                        className={`group rounded-2xl border px-4 py-4 transition ${assignedAbility ? "border-rose-300 bg-rose-300/5" : "border-white/15 bg-black/40"}`}
-                                                        draggable
-                                                        onDragStart={(event) => handleRollDragStart(event, roll.id)}
-                                                        onDragEnd={() => setDraggedRollId(null)}
-                                                    >
-                                                        <div className="flex items-center justify-between text-[0.6rem] uppercase tracking-[0.35em] text-white/60">
-                                                            <span>Pool {String(index + 1).padStart(2, "0")}</span>
-                                                            <span>{assignedAbility ? abilityMeta[assignedAbility].label : "Unassigned"}</span>
-                                                        </div>
-                                                        <div className="mt-3 flex gap-2">
-                                                            {roll.dice.map((dieValue, dieIndex) => (
-                                                                <div
-                                                                    key={`${roll.id}-die-${dieIndex}`}
-                                                                    className={`flex h-12 w-12 items-center justify-center rounded-xl border text-lg font-semibold text-white ${dieIndex === roll.droppedIndex
-                                                                        ? "border-dashed border-white/30 bg-black/10 text-white/30"
-                                                                        : "border-white/30 bg-white/10"
-                                                                        }`}
-                                                                >
-                                                                    {dieValue}
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                        <p className="mt-3 text-sm text-white/80">
-                                                            <span className="text-2xl font-semibold text-white">{roll.keptTotal}</span> total after drop-lowest
-                                                        </p>
-                                                        <p className="text-[0.6rem] uppercase tracking-[0.4em] text-white/50">Drag onto a stat</p>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                    <div className="flex-1 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                                        {ABILITY_KEYS.map((ability) => {
-                                            const assignedRollId = rollByAbility[ability];
-                                            const assignedRoll = assignedRollId ? rollLookup.get(assignedRollId) : undefined;
-                                            const isActiveDrop = Boolean(draggedRollId) && !assignedRoll;
-
-                                            return (
-                                                <div
-                                                    key={ability}
-                                                    onDragOver={handleAbilityDragOver}
-                                                    onDrop={(event) => handleAbilityDrop(event, ability)}
-                                                    className={`rounded-2xl border p-4 transition ${assignedRoll
-                                                        ? "border-rose-300 bg-rose-300/10"
-                                                        : isActiveDrop
-                                                            ? "border-white/40 bg-white/10"
-                                                            : "border-white/15 bg-black/40"
-                                                        }`}
-                                                >
-                                                    <div className="flex items-center justify-between">
-                                                        <div>
-                                                            <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">
-                                                                {abilityMeta[ability].label}
-                                                            </p>
-                                                            <p className="text-xs text-white/50">{abilityMeta[ability].summary}</p>
-                                                        </div>
-                                                        {assignedRoll && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => clearAbilitySlot(ability)}
-                                                                className="rounded-full border border-white/20 px-3 py-1 text-[0.55rem] uppercase tracking-[0.3em] text-white/70 transition hover:border-white/40"
-                                                            >
-                                                                Clear
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                    <div className="mt-4 text-center text-4xl font-semibold text-white">
-                                                        {assignedRoll ? assignedRoll.keptTotal : "--"}
-                                                    </div>
-                                                    <p className="mt-1 text-center text-xs text-white/60">
-                                                        {assignedRoll ? "Locked from pool" : "Drop a roll here"}
-                                                    </p>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
+                    <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+                        <div className="space-y-2">
+                            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">{currentStep.title}</p>
+                            <p className="text-sm text-white/70">{currentStep.description}</p>
                         </div>
-                    )}
 
-                    {currentStep.id === "ancestry" && (
-                        <div className="mt-6 flex flex-col gap-6 lg:flex-row">
-                            <div className="grid flex-1 gap-3 md:grid-cols-2">
-                                {ancestryOptions.map((option) => {
-                                    const active = formState.ancestry === option.value;
-                                    return (
+                        {currentStep.id === "core" && (
+                            <div className="mt-6 space-y-4">
+                                <label className="flex w-full flex-col text-sm font-semibold uppercase tracking-wide text-white/70">
+                                    Hero name
+                                    <input
+                                        type="text"
+                                        name="display-name"
+                                        placeholder="E.g. Nyx Stormveil"
+                                        value={formState.name}
+                                        onChange={(event) => setFormState((prev) => ({ ...prev, name: event.target.value }))}
+                                        className="mt-2 rounded-2xl border border-white/15 bg-black/40 px-4 py-3 text-base font-normal text-white placeholder:text-white/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
+                                    />
+                                </label>
+                                <div className="grid gap-3 md:grid-cols-2">
+                                    {abilityOptions.map((option) => (
                                         <button
                                             type="button"
                                             key={option.value}
-                                            onClick={() => setFormState((prev) => ({ ...prev, ancestry: option.value }))}
-                                            onMouseEnter={() => setHoveredAncestry(option.value)}
-                                            onMouseLeave={() => setHoveredAncestry(null)}
-                                            onFocus={() => setHoveredAncestry(option.value)}
-                                            className={`rounded-2xl border px-4 py-4 text-left transition ${active ? "border-rose-300 bg-rose-300/10" : "border-white/15 bg-black/30 hover:border-white/30"
+                                            onClick={() => {
+                                                if (formState.method === option.value) {
+                                                    return;
+                                                }
+                                                resetRandomAssignments();
+                                                setManualEntryMode(false);
+                                                setManualScores(createManualScoreState());
+                                                setFormState((prev) => ({
+                                                    ...prev,
+                                                    method: option.value,
+                                                    abilityScores: { ...DEFAULT_ABILITY_SCORES },
+                                                }));
+                                                setStep(0);
+                                            }}
+                                            className={`rounded-2xl border px-4 py-4 text-left transition ${formState.method === option.value
+                                                ? "border-rose-300 bg-rose-300/10"
+                                                : "border-white/15 bg-black/30 hover:border-white/30"
                                                 }`}
                                         >
                                             <p className="text-sm font-semibold text-white">{option.label}</p>
                                             <p className="mt-1 text-xs text-white/70">{option.description}</p>
                                         </button>
-                                    );
-                                })}
+                                    ))}
+                                </div>
+                                {isPointBuy && (
+                                    <div className="rounded-3xl border border-white/10 bg-black/40 p-5">
+                                        <div className="flex flex-wrap items-center justify-between gap-3">
+                                            <div>
+                                                <p className="text-xs uppercase tracking-[0.35em] text-white/60">Point buy pool</p>
+                                                <p className={`text-xl font-semibold ${pointsRemaining >= 0 ? "text-white" : "text-rose-300"}`}>
+                                                    {pointsRemaining} pts remaining
+                                                </p>
+                                            </div>
+                                            <p className="text-xs text-white/60">
+                                                Scores stay between {MIN_ABILITY_SCORE} and {MAX_ABILITY_SCORE} following the PHB cost curve.
+                                            </p>
+                                        </div>
+                                        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                            {ABILITY_KEYS.map((ability) => {
+                                                const score = formState.abilityScores[ability];
+                                                const incrementCost = getIncrementalPointCost(score);
+                                                const canDecrease = score > MIN_ABILITY_SCORE;
+                                                const canIncrease = incrementCost !== Infinity && incrementCost <= pointsRemaining;
+
+                                                return (
+                                                    <div key={ability} className="rounded-2xl border border-white/15 bg-black/50 p-4">
+                                                        <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">
+                                                            {abilityMeta[ability].label}
+                                                        </p>
+                                                        <p className="text-xs text-white/50">{abilityMeta[ability].summary}</p>
+                                                        <div className="mt-4 flex items-center gap-3">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => adjustAbilityScore(ability, -1)}
+                                                                disabled={!canDecrease}
+                                                                className="rounded-full border border-white/20 px-2 py-1 text-sm text-white transition hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-40"
+                                                                aria-label={`Decrease ${abilityMeta[ability].label}`}
+                                                            >
+                                                                -
+                                                            </button>
+                                                            <div className="flex flex-col items-center text-white">
+                                                                <span className="text-3xl font-semibold">{score}</span>
+                                                                {incrementCost !== Infinity && (
+                                                                    <span className="text-[0.6rem] uppercase tracking-[0.3em] text-white/50">
+                                                                        +{incrementCost} pts
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => adjustAbilityScore(ability, 1)}
+                                                                disabled={!canIncrease}
+                                                                className="rounded-full border border-white/20 px-2 py-1 text-sm text-white transition hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-40"
+                                                                aria-label={`Increase ${abilityMeta[ability].label}`}
+                                                            >
+                                                                +
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                            <div className="lg:w-1/3">
-                                {(() => {
-                                    const insight = ancestryOptions.find((option) => option.value === (hoveredAncestry ?? formState.ancestry)) ?? ancestryOptions[0];
-                                    const detailParts = insight.detail.split('\n\n');
+                        )}
 
-                                    return (
-                                        <div className="rounded-2xl border border-white/15 bg-black/30 p-5 overflow-y-auto max-h-[600px]">
-                                            <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Ancestry Details</p>
-                                            <p className="mt-2 text-lg font-semibold text-white">{insight.label}</p>
+                        {currentStep.id === "random-abilities" && (
+                            <div className="mt-6 space-y-6">
+                                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                    <div className="rounded-2xl border border-white/15 bg-black/30 p-5 text-sm text-white/70">
+                                        <p>
+                                            Six pools of 4d6 roll at once when you advance from Core Details. Each pool shows four dice with the
+                                            lowest die automatically faded and removed from the total.
+                                        </p>
+                                        <p className="mt-2 text-xs text-white/60">
+                                            Drag any total onto the stat cards below to lock it in or switch to manual entry if you already have your
+                                            rolls.
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={toggleManualEntryMode}
+                                        className="rounded-full border border-white/20 px-5 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:border-rose-300 hover:text-rose-200"
+                                    >
+                                        {manualEntryMode ? "Use generated pools" : "I will roll them myself"}
+                                    </button>
+                                </div>
 
-                                            <div className="mt-3 space-y-3">
-                                                {detailParts.map((part, idx) => {
-                                                    if (part.startsWith('**')) {
-                                                        // Format stat blocks (Ability Bonuses, Speed, Size, Age)
-                                                        const lines = part.split('\n');
-                                                        return (
-                                                            <div key={idx} className="text-xs space-y-1">
-                                                                {lines.map((line, lineIdx) => {
-                                                                    const match = line.match(/\*\*(.*?):\*\*(.*)/);
-                                                                    if (match) {
-                                                                        return (
-                                                                            <div key={lineIdx} className="flex gap-2">
-                                                                                <span className="font-semibold text-rose-300 min-w-[100px]">{match[1]}:</span>
-                                                                                <span className="text-white/80">{match[2].trim()}</span>
-                                                                            </div>
-                                                                        );
-                                                                    }
-                                                                    return null;
-                                                                })}
+                                {manualEntryMode ? (
+                                    <div className="rounded-2xl border border-white/15 bg-black/40 p-6">
+                                        <div className="flex flex-col gap-2 text-sm text-white/70">
+                                            <p>Type each ability result you rolled. We will keep everything between {RANDOM_MIN_ABILITY_SCORE} and {RANDOM_MAX_ABILITY_SCORE}.</p>
+                                            {!manualEntryValid && (
+                                                <p className="text-xs text-rose-200">
+                                                    Enter six totals between {RANDOM_MIN_ABILITY_SCORE} and {RANDOM_MAX_ABILITY_SCORE} to continue.
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                                            {ABILITY_KEYS.map((ability) => {
+                                                const value = manualScores[ability] ?? "";
+                                                const trimmed = value.trim();
+                                                const numericValue = trimmed === "" ? NaN : Number(trimmed);
+                                                const hasError =
+                                                    trimmed !== "" &&
+                                                    (!Number.isFinite(numericValue) ||
+                                                        numericValue < RANDOM_MIN_ABILITY_SCORE ||
+                                                        numericValue > RANDOM_MAX_ABILITY_SCORE);
+                                                return (
+                                                    <label key={ability} className={`flex flex-col rounded-2xl border px-4 py-4 ${hasError ? "border-rose-400 bg-rose-400/10" : "border-white/15 bg-black/40"}`}>
+                                                        <span className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">
+                                                            {abilityMeta[ability].label}
+                                                        </span>
+                                                        <span className="text-xs text-white/50">{abilityMeta[ability].summary}</span>
+                                                        <input
+                                                            type="text"
+                                                            inputMode="numeric"
+                                                            pattern="[0-9]*"
+                                                            value={value}
+                                                            onChange={(event) => handleManualScoreChange(ability, event.target.value)}
+                                                            placeholder="--"
+                                                            className="mt-3 rounded-2xl border border-white/20 bg-black/50 px-4 py-3 text-center text-2xl font-semibold text-white placeholder:text-white/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
+                                                        />
+                                                        <span className="mt-1 text-[0.55rem] uppercase tracking-[0.3em] text-white/50">
+                                                            {RANDOM_MIN_ABILITY_SCORE}-{RANDOM_MAX_ABILITY_SCORE}
+                                                        </span>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ) : rolledSets.length === 0 ? (
+                                    <div className="rounded-2xl border border-white/10 bg-black/40 p-6 text-center text-sm text-white/70">
+                                        Click Next on the previous step to roll your dice pools.
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col gap-6 lg:flex-row">
+                                        <div className="lg:w-5/12">
+                                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+                                                {rolledSets.map((roll, index) => {
+                                                    const assignedAbility = rollAssignments[roll.id];
+                                                    return (
+                                                        <div
+                                                            key={roll.id}
+                                                            className={`group rounded-2xl border px-4 py-4 transition ${assignedAbility ? "border-rose-300 bg-rose-300/5" : "border-white/15 bg-black/40"}`}
+                                                            draggable
+                                                            onDragStart={(event) => handleRollDragStart(event, roll.id)}
+                                                            onDragEnd={() => setDraggedRollId(null)}
+                                                        >
+                                                            <div className="flex items-center justify-between text-[0.6rem] uppercase tracking-[0.35em] text-white/60">
+                                                                <span>Pool {String(index + 1).padStart(2, "0")}</span>
+                                                                <span>{assignedAbility ? abilityMeta[assignedAbility].label : "Unassigned"}</span>
                                                             </div>
-                                                        );
-                                                    } else if (part.includes('•')) {
-                                                        // Format trait lists
-                                                        const lines = part.split('\n').filter(l => l.trim());
-                                                        return (
-                                                            <div key={idx} className="text-xs space-y-1.5">
-                                                                {lines.map((line, lineIdx) => {
-                                                                    if (line.includes('•')) {
-                                                                        const match = line.match(/• \*\*(.*?):\*\*(.*)/);
-                                                                        if (match) {
-                                                                            return (
-                                                                                <div key={lineIdx} className="flex gap-2">
-                                                                                    <span className="text-white/50">•</span>
-                                                                                    <div>
-                                                                                        <span className="font-semibold text-white">{match[1]}: </span>
-                                                                                        <span className="text-white/70">{match[2].trim()}</span>
-                                                                                    </div>
-                                                                                </div>
-                                                                            );
-                                                                        }
-                                                                        return (
-                                                                            <div key={lineIdx} className="flex gap-2">
-                                                                                <span className="text-white/50">•</span>
-                                                                                <span className="text-white/70">{line.replace('•', '').trim()}</span>
-                                                                            </div>
-                                                                        );
-                                                                    }
-                                                                    return null;
-                                                                })}
+                                                            <div className="mt-3 flex gap-2">
+                                                                {roll.dice.map((dieValue, dieIndex) => (
+                                                                    <div
+                                                                        key={`${roll.id}-die-${dieIndex}`}
+                                                                        className={`flex h-12 w-12 items-center justify-center rounded-xl border text-lg font-semibold text-white ${dieIndex === roll.droppedIndex
+                                                                            ? "border-dashed border-white/30 bg-black/10 text-white/30"
+                                                                            : "border-white/30 bg-white/10"
+                                                                            }`}
+                                                                    >
+                                                                        {dieValue}
+                                                                    </div>
+                                                                ))}
                                                             </div>
-                                                        );
-                                                    } else {
-                                                        // Regular paragraph
-                                                        return (
-                                                            <p key={idx} className="text-sm text-white/70 leading-relaxed">
-                                                                {part}
+                                                            <p className="mt-3 text-sm text-white/80">
+                                                                <span className="text-2xl font-semibold text-white">{roll.keptTotal}</span> total after drop-lowest
                                                             </p>
-                                                        );
-                                                    }
+                                                            <p className="text-[0.6rem] uppercase tracking-[0.4em] text-white/50">Drag onto a stat</p>
+                                                        </div>
+                                                    );
                                                 })}
                                             </div>
-
-                                            {insight.proficiencies && (
-                                                <div className="mt-4 pt-4 border-t border-white/10 space-y-2">
-                                                    <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Proficiencies</p>
-                                                    {insight.proficiencies.skills.length > 0 && (
-                                                        <div className="text-xs">
-                                                            <span className="font-semibold text-rose-300">Skills: </span>
-                                                            <span className="text-white/70">{insight.proficiencies.skills.join(', ')}</span>
-                                                        </div>
-                                                    )}
-                                                    {insight.proficiencies.weapons.length > 0 && (
-                                                        <div className="text-xs">
-                                                            <span className="font-semibold text-rose-300">Weapons: </span>
-                                                            <span className="text-white/70">{insight.proficiencies.weapons.join(', ')}</span>
-                                                        </div>
-                                                    )}
-                                                    {insight.proficiencies.tools.length > 0 && (
-                                                        <div className="text-xs">
-                                                            <span className="font-semibold text-rose-300">Tools: </span>
-                                                            <span className="text-white/70">{insight.proficiencies.tools.join(', ')}</span>
-                                                        </div>
-                                                    )}
-                                                    {insight.proficiencies.languages.length > 0 && (
-                                                        <div className="text-xs">
-                                                            <span className="font-semibold text-rose-300">Languages: </span>
-                                                            <span className="text-white/70">{insight.proficiencies.languages.join(', ')}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            <p className="mt-4 text-xs text-white/40 italic">Hover or focus a race to update.</p>
                                         </div>
-                                    );
-                                })()}
-                            </div>
-                        </div>
-                    )}
+                                        <div className="flex-1 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                                            {ABILITY_KEYS.map((ability) => {
+                                                const assignedRollId = rollByAbility[ability];
+                                                const assignedRoll = assignedRollId ? rollLookup.get(assignedRollId) : undefined;
+                                                const isActiveDrop = Boolean(draggedRollId) && !assignedRoll;
 
-                    {currentStep.id === "background" && (
-                        <div className="mt-6 space-y-6">
-                            <div className="flex flex-col gap-6 lg:flex-row">
+                                                return (
+                                                    <div
+                                                        key={ability}
+                                                        onDragOver={handleAbilityDragOver}
+                                                        onDrop={(event) => handleAbilityDrop(event, ability)}
+                                                        className={`rounded-2xl border p-4 transition ${assignedRoll
+                                                            ? "border-rose-300 bg-rose-300/10"
+                                                            : isActiveDrop
+                                                                ? "border-white/40 bg-white/10"
+                                                                : "border-white/15 bg-black/40"
+                                                            }`}
+                                                    >
+                                                        <div className="flex items-center justify-between">
+                                                            <div>
+                                                                <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">
+                                                                    {abilityMeta[ability].label}
+                                                                </p>
+                                                                <p className="text-xs text-white/50">{abilityMeta[ability].summary}</p>
+                                                            </div>
+                                                            {assignedRoll && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => clearAbilitySlot(ability)}
+                                                                    className="rounded-full border border-white/20 px-3 py-1 text-[0.55rem] uppercase tracking-[0.3em] text-white/70 transition hover:border-white/40"
+                                                                >
+                                                                    Clear
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        <div className="mt-4 text-center text-4xl font-semibold text-white">
+                                                            {assignedRoll ? assignedRoll.keptTotal : "--"}
+                                                        </div>
+                                                        <p className="mt-1 text-center text-xs text-white/60">
+                                                            {assignedRoll ? "Locked from pool" : "Drop a roll here"}
+                                                        </p>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {currentStep.id === "ancestry" && (
+                            <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-start">
                                 <div className="grid flex-1 gap-3 md:grid-cols-2">
-                                    {backgroundOptions.map((option) => {
-                                        const active = formState.background === option.value;
+                                    {ancestryOptions.map((option) => {
+                                        const active = formState.ancestry === option.value;
                                         return (
                                             <button
                                                 type="button"
                                                 key={option.value}
-                                                onClick={() => setFormState((prev) => ({ ...prev, background: option.value }))}
-                                                onMouseEnter={() => setHoveredBackground(option.value)}
-                                                onMouseLeave={() => setHoveredBackground(null)}
-                                                onFocus={() => setHoveredBackground(option.value)}
+                                                onClick={() => setFormState((prev) => ({ ...prev, ancestry: option.value }))}
+                                                onMouseEnter={() => setHoveredAncestry(option.value)}
+                                                onMouseLeave={() => setHoveredAncestry(null)}
+                                                onFocus={() => setHoveredAncestry(option.value)}
                                                 className={`rounded-2xl border px-4 py-4 text-left transition ${active ? "border-rose-300 bg-rose-300/10" : "border-white/15 bg-black/30 hover:border-white/30"
                                                     }`}
                                             >
@@ -1506,20 +1390,18 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                                 </div>
                                 <div className="lg:w-1/3">
                                     {(() => {
-                                        const insight =
-                                            backgroundOptions.find((option) => option.value === (hoveredBackground ?? formState.background)) ??
-                                            backgroundOptions[0];
+                                        const insight = ancestryOptions.find((option) => option.value === (hoveredAncestry ?? formState.ancestry)) ?? ancestryOptions[0];
                                         const detailParts = insight.detail.split('\n\n');
 
                                         return (
                                             <div className="rounded-2xl border border-white/15 bg-black/30 p-5 overflow-y-auto max-h-[600px]">
-                                                <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Background Details</p>
+                                                <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Ancestry Details</p>
                                                 <p className="mt-2 text-lg font-semibold text-white">{insight.label}</p>
 
                                                 <div className="mt-3 space-y-3">
                                                     {detailParts.map((part, idx) => {
                                                         if (part.startsWith('**')) {
-                                                            // Format stat blocks
+                                                            // Format stat blocks (Ability Bonuses, Speed, Size, Age)
                                                             const lines = part.split('\n');
                                                             return (
                                                                 <div key={idx} className="text-xs space-y-1">
@@ -1528,7 +1410,7 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                                                                         if (match) {
                                                                             return (
                                                                                 <div key={lineIdx} className="flex gap-2">
-                                                                                    <span className="font-semibold text-rose-300 min-w-[130px]">{match[1]}:</span>
+                                                                                    <span className="font-semibold text-rose-300 min-w-[100px]">{match[1]}:</span>
                                                                                     <span className="text-white/80">{match[2].trim()}</span>
                                                                                 </div>
                                                                             );
@@ -1538,7 +1420,7 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                                                                 </div>
                                                             );
                                                         } else if (part.includes('•')) {
-                                                            // Format proficiency lists
+                                                            // Format trait lists
                                                             const lines = part.split('\n').filter(l => l.trim());
                                                             return (
                                                                 <div key={idx} className="text-xs space-y-1.5">
@@ -1580,16 +1462,22 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
 
                                                 {insight.proficiencies && (
                                                     <div className="mt-4 pt-4 border-t border-white/10 space-y-2">
-                                                        <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Additional Info</p>
+                                                        <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Proficiencies</p>
                                                         {insight.proficiencies.skills.length > 0 && (
                                                             <div className="text-xs">
-                                                                <span className="font-semibold text-rose-300">Skill Proficiencies: </span>
+                                                                <span className="font-semibold text-rose-300">Skills: </span>
                                                                 <span className="text-white/70">{insight.proficiencies.skills.join(', ')}</span>
+                                                            </div>
+                                                        )}
+                                                        {insight.proficiencies.weapons.length > 0 && (
+                                                            <div className="text-xs">
+                                                                <span className="font-semibold text-rose-300">Weapons: </span>
+                                                                <span className="text-white/70">{insight.proficiencies.weapons.join(', ')}</span>
                                                             </div>
                                                         )}
                                                         {insight.proficiencies.tools.length > 0 && (
                                                             <div className="text-xs">
-                                                                <span className="font-semibold text-rose-300">Tool Proficiencies: </span>
+                                                                <span className="font-semibold text-rose-300">Tools: </span>
                                                                 <span className="text-white/70">{insight.proficiencies.tools.join(', ')}</span>
                                                             </div>
                                                         )}
@@ -1602,458 +1490,633 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                                                     </div>
                                                 )}
 
-                                                <p className="mt-4 text-xs text-white/40 italic">Hover or focus a background to update.</p>
+                                                <p className="mt-4 text-xs text-white/40 italic">Hover or focus a race to update.</p>
                                             </div>
                                         );
                                     })()}
                                 </div>
                             </div>
+                        )}
 
-                            {formState.background && (() => {
-                                const bgBonuses = getBackgroundBonuses(formState.background);
-                                if (!bgBonuses || bgBonuses.choices.length <= 1) {
-                                    return null;
-                                }
-
-                                return (
-                                    <div className="rounded-2xl border border-white/15 bg-black/30 p-5">
-                                        <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Ability Score Increase</p>
-                                        <p className="mt-2 text-sm text-white/70">
-                                            Choose which ability score to increase by +{bgBonuses.amount}:
-                                        </p>
-                                        <div className="mt-4 flex flex-wrap gap-3">
-                                            {bgBonuses.choices.map((ability) => {
-                                                const isSelected = formState.backgroundAbilityChoice === ability;
-                                                const meta = abilityMeta[ability];
-
-                                                return (
-                                                    <button
-                                                        key={ability}
-                                                        type="button"
-                                                        onClick={() => setFormState((prev) => ({ ...prev, backgroundAbilityChoice: ability }))}
-                                                        className={`flex-1 min-w-[140px] rounded-2xl border px-4 py-3 text-left transition ${isSelected
-                                                            ? "border-rose-300 bg-rose-300/10"
-                                                            : "border-white/15 bg-black/40 hover:border-white/30"
-                                                            }`}
-                                                    >
-                                                        <p className="text-sm font-semibold text-white">
-                                                            {meta.label}
-                                                            {isSelected && <span className="ml-2 text-rose-300">✓</span>}
-                                                        </p>
-                                                        <p className="mt-1 text-xs text-white/60">{meta.summary}</p>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
+                        {currentStep.id === "background" && (
+                            <div className="mt-6 space-y-6">
+                                <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+                                    <div className="grid flex-1 gap-3 md:grid-cols-2">
+                                        {backgroundOptions.map((option) => {
+                                            const active = formState.background === option.value;
+                                            return (
+                                                <button
+                                                    type="button"
+                                                    key={option.value}
+                                                    onClick={() => setFormState((prev) => ({ ...prev, background: option.value }))}
+                                                    onMouseEnter={() => setHoveredBackground(option.value)}
+                                                    onMouseLeave={() => setHoveredBackground(null)}
+                                                    onFocus={() => setHoveredBackground(option.value)}
+                                                    className={`rounded-2xl border px-4 py-4 text-left transition ${active ? "border-rose-300 bg-rose-300/10" : "border-white/15 bg-black/30 hover:border-white/30"
+                                                        }`}
+                                                >
+                                                    <p className="text-sm font-semibold text-white">{option.label}</p>
+                                                    <p className="mt-1 text-xs text-white/70">{option.description}</p>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
-                                );
-                            })()}
-                        </div>
-                    )}
+                                    <div className="lg:w-1/3">
+                                        {(() => {
+                                            const insight =
+                                                backgroundOptions.find((option) => option.value === (hoveredBackground ?? formState.background)) ??
+                                                backgroundOptions[0];
+                                            const detailParts = insight.detail.split('\n\n');
 
-                    {currentStep.id === "class" && (
-                        <div className="mt-6 flex flex-col gap-6 lg:flex-row">
-                            <div className="grid gap-3 md:grid-cols-3 lg:w-2/3">
-                                {classOptions.map((option) => {
-                                    const active = formState.charClass === option.value;
-                                    return (
-                                        <button
-                                            type="button"
-                                            key={option.value}
-                                            onClick={() => setFormState((prev) => ({ ...prev, charClass: option.value, subclass: "", selectedSkills: [] }))}
-                                            onMouseEnter={() => setHoveredBackground(option.value)}
-                                            onMouseLeave={() => setHoveredBackground(null)}
-                                            onFocus={() => setHoveredBackground(option.value)}
-                                            onBlur={() => setHoveredBackground(null)}
-                                            className={`rounded-2xl border px-4 py-4 text-left transition ${active ? "border-rose-300 bg-rose-300/10" : "border-white/15 bg-black/30 hover:border-white/30"
-                                                }`}
-                                        >
-                                            <p className="text-sm font-semibold text-white">{option.label}</p>
-                                            <p className="mt-1 text-xs text-white/70">{option.description}</p>
-                                            <div className="mt-2 flex items-center gap-2 text-[0.6rem] uppercase tracking-[0.3em] text-white/50">
-                                                <span>d{option.hitDie} HD</span>
-                                                <span>•</span>
-                                                <span>{option.savingThrows.join(", ")}</span>
-                                            </div>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                            <div className="lg:w-1/3">
-                                {(() => {
-                                    const selectedClass =
-                                        classOptions.find((option) => option.value === (hoveredBackground ?? formState.charClass)) ??
-                                        classOptions[0];
+                                            return (
+                                                <div className="rounded-2xl border border-white/15 bg-black/30 p-5 overflow-y-auto max-h-[600px]">
+                                                    <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Background Details</p>
+                                                    <p className="mt-2 text-lg font-semibold text-white">{insight.label}</p>
 
-                                    const hasSkillChoices = selectedClass.proficiencies.skills.choices;
-                                    const hasFixedSkills = selectedClass.proficiencies.skills.fixed.length > 0;
-                                    const hasArmor = selectedClass.proficiencies.armor.length > 0;
-                                    const hasWeapons = selectedClass.proficiencies.weapons.length > 0;
-                                    const hasTools = selectedClass.proficiencies.tools.length > 0;
+                                                    <div className="mt-3 space-y-3">
+                                                        {detailParts.map((part, idx) => {
+                                                            if (part.startsWith('**')) {
+                                                                // Format stat blocks
+                                                                const lines = part.split('\n');
+                                                                return (
+                                                                    <div key={idx} className="text-xs space-y-1">
+                                                                        {lines.map((line, lineIdx) => {
+                                                                            const match = line.match(/\*\*(.*?):\*\*(.*)/);
+                                                                            if (match) {
+                                                                                return (
+                                                                                    <div key={lineIdx} className="flex gap-2">
+                                                                                        <span className="font-semibold text-rose-300 min-w-[130px]">{match[1]}:</span>
+                                                                                        <span className="text-white/80">{match[2].trim()}</span>
+                                                                                    </div>
+                                                                                );
+                                                                            }
+                                                                            return null;
+                                                                        })}
+                                                                    </div>
+                                                                );
+                                                            } else if (part.includes('•')) {
+                                                                // Format proficiency lists
+                                                                const lines = part.split('\n').filter(l => l.trim());
+                                                                return (
+                                                                    <div key={idx} className="text-xs space-y-1.5">
+                                                                        {lines.map((line, lineIdx) => {
+                                                                            if (line.includes('•')) {
+                                                                                const match = line.match(/• \*\*(.*?):\*\*(.*)/);
+                                                                                if (match) {
+                                                                                    return (
+                                                                                        <div key={lineIdx} className="flex gap-2">
+                                                                                            <span className="text-white/50">•</span>
+                                                                                            <div>
+                                                                                                <span className="font-semibold text-white">{match[1]}: </span>
+                                                                                                <span className="text-white/70">{match[2].trim()}</span>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    );
+                                                                                }
+                                                                                return (
+                                                                                    <div key={lineIdx} className="flex gap-2">
+                                                                                        <span className="text-white/50">•</span>
+                                                                                        <span className="text-white/70">{line.replace('•', '').trim()}</span>
+                                                                                    </div>
+                                                                                );
+                                                                            }
+                                                                            return null;
+                                                                        })}
+                                                                    </div>
+                                                                );
+                                                            } else {
+                                                                // Regular paragraph
+                                                                return (
+                                                                    <p key={idx} className="text-sm text-white/70 leading-relaxed">
+                                                                        {part}
+                                                                    </p>
+                                                                );
+                                                            }
+                                                        })}
+                                                    </div>
 
-                                    return (
-                                        <div className="rounded-2xl border border-white/15 bg-black/30 p-5 space-y-4">
-                                            <div>
-                                                <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Class Spotlight</p>
-                                                <p className="mt-2 text-lg font-semibold text-white">{selectedClass.label}</p>
-                                                <p className="mt-2 text-sm text-white/70">{selectedClass.detail}</p>
-                                            </div>
+                                                    {insight.proficiencies && (
+                                                        <div className="mt-4 pt-4 border-t border-white/10 space-y-2">
+                                                            <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Additional Info</p>
+                                                            {insight.proficiencies.skills.length > 0 && (
+                                                                <div className="text-xs">
+                                                                    <span className="font-semibold text-rose-300">Skill Proficiencies: </span>
+                                                                    <span className="text-white/70">{insight.proficiencies.skills.join(', ')}</span>
+                                                                </div>
+                                                            )}
+                                                            {insight.proficiencies.tools.length > 0 && (
+                                                                <div className="text-xs">
+                                                                    <span className="font-semibold text-rose-300">Tool Proficiencies: </span>
+                                                                    <span className="text-white/70">{insight.proficiencies.tools.join(', ')}</span>
+                                                                </div>
+                                                            )}
+                                                            {insight.proficiencies.languages.length > 0 && (
+                                                                <div className="text-xs">
+                                                                    <span className="font-semibold text-rose-300">Languages: </span>
+                                                                    <span className="text-white/70">{insight.proficiencies.languages.join(', ')}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
 
-                                            <div className="space-y-3 pt-3 border-t border-white/10">
-                                                <div>
-                                                    <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Hit Die</p>
-                                                    <p className="mt-1 text-xs text-white/70">1d{selectedClass.hitDie} per level</p>
+                                                    <p className="mt-4 text-xs text-white/40 italic">Hover or focus a background to update.</p>
                                                 </div>
+                                            );
+                                        })()}
+                                    </div>
+                                </div>
 
-                                                <div>
-                                                    <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Saving Throws</p>
-                                                    <p className="mt-1 text-xs text-white/70">{selectedClass.savingThrows.join(", ")}</p>
-                                                </div>
+                                {formState.background && (() => {
+                                    const bgBonuses = getBackgroundBonuses(formState.background);
+                                    if (!bgBonuses || bgBonuses.choices.length <= 1) {
+                                        return null;
+                                    }
 
-                                                {hasArmor && (
-                                                    <div>
-                                                        <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Armor</p>
-                                                        <p className="mt-1 text-xs text-white/70">{selectedClass.proficiencies.armor.join(", ")}</p>
-                                                    </div>
-                                                )}
+                                    return (
+                                        <div className="rounded-2xl border border-white/15 bg-black/30 p-5">
+                                            <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Ability Score Increase</p>
+                                            <p className="mt-2 text-sm text-white/70">
+                                                Choose which ability score to increase by +{bgBonuses.amount}:
+                                            </p>
+                                            <div className="mt-4 flex flex-wrap gap-3">
+                                                {bgBonuses.choices.map((ability) => {
+                                                    const isSelected = formState.backgroundAbilityChoice === ability;
+                                                    const meta = abilityMeta[ability];
 
-                                                {hasWeapons && (
-                                                    <div>
-                                                        <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Weapons</p>
-                                                        <p className="mt-1 text-xs text-white/70">{selectedClass.proficiencies.weapons.join(", ")}</p>
-                                                    </div>
-                                                )}
-
-                                                {hasTools && (
-                                                    <div>
-                                                        <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Tools</p>
-                                                        <p className="mt-1 text-xs text-white/70">{selectedClass.proficiencies.tools.join(", ")}</p>
-                                                    </div>
-                                                )}
-
-                                                {(hasSkillChoices || hasFixedSkills) && (
-                                                    <div>
-                                                        <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Skills</p>
-                                                        {hasFixedSkills && (
-                                                            <p className="mt-1 text-xs text-white/70">{selectedClass.proficiencies.skills.fixed.join(", ")}</p>
-                                                        )}
-                                                        {hasSkillChoices && (
-                                                            <p className="mt-1 text-xs text-white/70">
-                                                                Choose {hasSkillChoices.count} from: {hasSkillChoices.options.join(", ")}
+                                                    return (
+                                                        <button
+                                                            key={ability}
+                                                            type="button"
+                                                            onClick={() => setFormState((prev) => ({ ...prev, backgroundAbilityChoice: ability }))}
+                                                            className={`flex-1 min-w-[140px] rounded-2xl border px-4 py-3 text-left transition ${isSelected
+                                                                ? "border-rose-300 bg-rose-300/10"
+                                                                : "border-white/15 bg-black/40 hover:border-white/30"
+                                                                }`}
+                                                        >
+                                                            <p className="text-sm font-semibold text-white">
+                                                                {meta.label}
+                                                                {isSelected && <span className="ml-2 text-rose-300">✓</span>}
                                                             </p>
-                                                        )}
-                                                    </div>
-                                                )}
+                                                            <p className="mt-1 text-xs text-white/60">{meta.summary}</p>
+                                                        </button>
+                                                    );
+                                                })}
                                             </div>
-
-                                            <p className="mt-3 text-xs text-white/50">Hover or select a class to update.</p>
                                         </div>
                                     );
                                 })()}
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    {currentStep.id === "class" && availableSkillChoices && (
-                        <div className="mt-6 rounded-2xl border border-white/15 bg-black/30 p-6">
-                            <div className="mb-4">
-                                <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Skill Proficiencies</p>
-                                <p className="mt-1 text-sm text-white/70">
-                                    Choose {availableSkillChoices.count} skill{availableSkillChoices.count !== 1 ? 's' : ''} from the options below
-                                </p>
-                                <p className="mt-1 text-xs text-white/50">
-                                    {formState.selectedSkills.length} / {availableSkillChoices.count} selected
-                                </p>
-                            </div>
-                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                                {availableSkillChoices.options.map((skill) => {
-                                    const isSelected = formState.selectedSkills.includes(skill);
-                                    const canSelect = isSelected || formState.selectedSkills.length < availableSkillChoices.count;
-                                    return (
-                                        <button
-                                            type="button"
-                                            key={skill}
-                                            onClick={() => {
-                                                if (isSelected) {
-                                                    setFormState((prev) => ({
-                                                        ...prev,
-                                                        selectedSkills: prev.selectedSkills.filter((s) => s !== skill),
-                                                    }));
-                                                } else if (canSelect) {
-                                                    setFormState((prev) => ({
-                                                        ...prev,
-                                                        selectedSkills: [...prev.selectedSkills, skill],
-                                                    }));
-                                                }
-                                            }}
-                                            disabled={!canSelect && !isSelected}
-                                            className={`rounded-xl border px-3 py-2 text-left text-sm transition ${isSelected
-                                                ? "border-rose-300 bg-rose-300/10 text-white"
-                                                : canSelect
-                                                    ? "border-white/15 bg-black/30 text-white/70 hover:border-white/30"
-                                                    : "border-white/5 bg-black/20 text-white/30 cursor-not-allowed"
-                                                }`}
-                                        >
-                                            <div className="flex items-center gap-2">
-                                                <div className={`h-4 w-4 rounded border flex items-center justify-center ${isSelected ? "border-rose-300 bg-rose-300" : "border-white/30"
-                                                    }`}>
-                                                    {isSelected && (
-                                                        <svg className="h-3 w-3 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                                        </svg>
-                                                    )}
-                                                </div>
-                                                <span className="font-medium">{skill}</span>
-                                            </div>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
-
-                    {currentStep.id === "subclass" && (() => {
-                        const selectedClass = classOptions.find((c) => c.value === formState.charClass);
-                        const subclasses = selectedClass?.subclasses || [];
-
-                        // If no subclasses available, skip this step
-                        if (subclasses.length === 0) {
-                            return (
-                                <div className="mt-6 rounded-2xl border border-white/15 bg-black/30 p-6 text-center">
-                                    <p className="text-sm text-white/70">This class has no level 1 subclass choices.</p>
-                                    <p className="mt-2 text-xs text-white/50">Click Next to continue.</p>
-                                </div>
-                            );
-                        }
-
-                        const flavorText = subclasses[0]?.flavorText || "Subclass";
-
-                        return (
+                        {currentStep.id === "class" && (
                             <div className="mt-6 flex flex-col gap-6 lg:flex-row">
-                                <div className="grid gap-3 md:grid-cols-2 lg:w-2/3">
-                                    {subclasses.map((option) => {
-                                        const active = formState.subclass === option.name;
+                                <div className="grid gap-3 md:grid-cols-3 lg:w-2/3">
+                                    {classOptions.map((option) => {
+                                        const active = formState.charClass === option.value;
                                         return (
                                             <button
                                                 type="button"
-                                                key={option.index}
-                                                onClick={() => setFormState((prev) => ({ ...prev, subclass: option.name }))}
-                                                onMouseEnter={() => setHoveredBackground(option.name)}
+                                                key={option.value}
+                                                onClick={() => setFormState((prev) => ({ ...prev, charClass: option.value, subclass: "", selectedSkills: [] }))}
+                                                onMouseEnter={() => setHoveredBackground(option.value)}
                                                 onMouseLeave={() => setHoveredBackground(null)}
-                                                onFocus={() => setHoveredBackground(option.name)}
+                                                onFocus={() => setHoveredBackground(option.value)}
                                                 onBlur={() => setHoveredBackground(null)}
                                                 className={`rounded-2xl border px-4 py-4 text-left transition ${active ? "border-rose-300 bg-rose-300/10" : "border-white/15 bg-black/30 hover:border-white/30"
                                                     }`}
                                             >
-                                                <p className="text-sm font-semibold text-white">{option.name}</p>
-                                                <p className="mt-1 text-xs text-white/70">
-                                                    {option.description.length > 150
-                                                        ? `${option.description.substring(0, 150)}...`
-                                                        : option.description}
-                                                </p>
+                                                <p className="text-sm font-semibold text-white">{option.label}</p>
+                                                <p className="mt-1 text-xs text-white/70">{option.description}</p>
+                                                <div className="mt-2 flex items-center gap-2 text-[0.6rem] uppercase tracking-[0.3em] text-white/50">
+                                                    <span>d{option.hitDie} HD</span>
+                                                    <span>•</span>
+                                                    <span>{option.savingThrows.join(", ")}</span>
+                                                </div>
                                             </button>
                                         );
                                     })}
                                 </div>
                                 <div className="lg:w-1/3">
                                     {(() => {
-                                        const hoveredSubclass = subclasses.find(
-                                            (s) => s.name === (hoveredBackground ?? formState.subclass)
-                                        ) ?? subclasses[0];
+                                        const selectedClass =
+                                            classOptions.find((option) => option.value === (hoveredBackground ?? formState.charClass)) ??
+                                            classOptions[0];
+
+                                        const hasSkillChoices = selectedClass.proficiencies.skills.choices;
+                                        const hasFixedSkills = selectedClass.proficiencies.skills.fixed.length > 0;
+                                        const hasArmor = selectedClass.proficiencies.armor.length > 0;
+                                        const hasWeapons = selectedClass.proficiencies.weapons.length > 0;
+                                        const hasTools = selectedClass.proficiencies.tools.length > 0;
 
                                         return (
                                             <div className="rounded-2xl border border-white/15 bg-black/30 p-5 space-y-4">
                                                 <div>
-                                                    <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">{flavorText}</p>
-                                                    <p className="mt-2 text-lg font-semibold text-white">{hoveredSubclass.name}</p>
-                                                    <p className="mt-2 text-sm text-white/70 leading-relaxed">{hoveredSubclass.description}</p>
+                                                    <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Class Spotlight</p>
+                                                    <p className="mt-2 text-lg font-semibold text-white">{selectedClass.label}</p>
+                                                    <p className="mt-2 text-sm text-white/70">{selectedClass.detail}</p>
                                                 </div>
-                                                <p className="mt-3 text-xs text-white/50 pt-3 border-t border-white/10">
-                                                    Hover or select a {flavorText.toLowerCase()} to update.
-                                                </p>
+
+                                                <div className="space-y-3 pt-3 border-t border-white/10">
+                                                    <div>
+                                                        <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Hit Die</p>
+                                                        <p className="mt-1 text-xs text-white/70">1d{selectedClass.hitDie} per level</p>
+                                                    </div>
+
+                                                    <div>
+                                                        <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Saving Throws</p>
+                                                        <p className="mt-1 text-xs text-white/70">{selectedClass.savingThrows.join(", ")}</p>
+                                                    </div>
+
+                                                    {hasArmor && (
+                                                        <div>
+                                                            <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Armor</p>
+                                                            <p className="mt-1 text-xs text-white/70">{selectedClass.proficiencies.armor.join(", ")}</p>
+                                                        </div>
+                                                    )}
+
+                                                    {hasWeapons && (
+                                                        <div>
+                                                            <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Weapons</p>
+                                                            <p className="mt-1 text-xs text-white/70">{selectedClass.proficiencies.weapons.join(", ")}</p>
+                                                        </div>
+                                                    )}
+
+                                                    {hasTools && (
+                                                        <div>
+                                                            <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Tools</p>
+                                                            <p className="mt-1 text-xs text-white/70">{selectedClass.proficiencies.tools.join(", ")}</p>
+                                                        </div>
+                                                    )}
+
+                                                    {(hasSkillChoices || hasFixedSkills) && (
+                                                        <div>
+                                                            <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Skills</p>
+                                                            {hasFixedSkills && (
+                                                                <p className="mt-1 text-xs text-white/70">{selectedClass.proficiencies.skills.fixed.join(", ")}</p>
+                                                            )}
+                                                            {hasSkillChoices && (
+                                                                <p className="mt-1 text-xs text-white/70">
+                                                                    Choose {hasSkillChoices.count} from: {hasSkillChoices.options.join(", ")}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <p className="mt-3 text-xs text-white/50">Hover or select a class to update.</p>
                                             </div>
                                         );
                                     })()}
                                 </div>
                             </div>
-                        );
-                    })()}
+                        )}
 
-                    {currentStep.id === "equipment" && (() => {
-                        const selectedClass = classOptions.find((c) => c.value === formState.charClass);
-                        if (!selectedClass) {
-                            return null;
-                        }
+                        {currentStep.id === "class" && availableSkillChoices && (
+                            <div className="mt-6 rounded-2xl border border-white/15 bg-black/30 p-6">
+                                <div className="mb-4">
+                                    <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">Skill Proficiencies</p>
+                                    <p className="mt-1 text-sm text-white/70">
+                                        Choose {availableSkillChoices.count} skill{availableSkillChoices.count !== 1 ? 's' : ''} from the options below
+                                    </p>
+                                    <p className="mt-1 text-xs text-white/50">
+                                        {formState.selectedSkills.length} / {availableSkillChoices.count} selected
+                                    </p>
+                                </div>
+                                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                    {availableSkillChoices.options.map((skill) => {
+                                        const isSelected = formState.selectedSkills.includes(skill);
+                                        const canSelect = isSelected || formState.selectedSkills.length < availableSkillChoices.count;
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={skill}
+                                                onClick={() => {
+                                                    if (isSelected) {
+                                                        setFormState((prev) => ({
+                                                            ...prev,
+                                                            selectedSkills: prev.selectedSkills.filter((s) => s !== skill),
+                                                        }));
+                                                    } else if (canSelect) {
+                                                        setFormState((prev) => ({
+                                                            ...prev,
+                                                            selectedSkills: [...prev.selectedSkills, skill],
+                                                        }));
+                                                    }
+                                                }}
+                                                disabled={!canSelect && !isSelected}
+                                                className={`rounded-xl border px-3 py-2 text-left text-sm transition ${isSelected
+                                                    ? "border-rose-300 bg-rose-300/10 text-white"
+                                                    : canSelect
+                                                        ? "border-white/15 bg-black/30 text-white/70 hover:border-white/30"
+                                                        : "border-white/5 bg-black/20 text-white/30 cursor-not-allowed"
+                                                    }`}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`h-4 w-4 rounded border flex items-center justify-center ${isSelected ? "border-rose-300 bg-rose-300" : "border-white/30"
+                                                        }`}>
+                                                        {isSelected && (
+                                                            <svg className="h-3 w-3 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                        )}
+                                                    </div>
+                                                    <span className="font-medium">{skill}</span>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
 
-                        const startingEquipment = selectedClass.startingEquipment || [];
-                        const equipmentOptions = selectedClass.startingEquipmentOptions || [];
+                        {currentStep.id === "subclass" && (() => {
+                            const selectedClass = classOptions.find((c) => c.value === formState.charClass);
+                            const builtinSubclasses = selectedClass?.subclasses || [];
+                            const classCustomSubclasses = customSubclasses.filter(
+                                (cs) => cs.class.index === selectedClass?.value.toLowerCase()
+                            );
+                            const customDisplayOptions = classCustomSubclasses.map(customSubclassToOption);
+                            const allSubclasses = [...builtinSubclasses, ...customDisplayOptions];
 
-                        // Helper to render equipment option
-                        const renderEquipmentOption = (option: any, optionIndex: number, choiceIndex: number) => {
-                            if (option.option_type === "counted_reference") {
-                                const count = option.count || 1;
-                                const name = option.of?.name || "Unknown";
+                            // If no subclasses available, show creation option
+                            if (allSubclasses.length === 0) {
                                 return (
-                                    <span key={`${optionIndex}-${choiceIndex}`}>
-                                        {count > 1 ? `${count}× ` : ""}{name}
-                                    </span>
+                                    <div className="mt-6 rounded-2xl border border-white/15 bg-black/30 p-6 text-center">
+                                        <p className="text-sm text-white/70">This class has no level 1 subclass choices.</p>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowCustomSubclassModal(true)}
+                                            className="mt-4 rounded-lg border border-sky-400/50 bg-sky-400/10 px-4 py-2 text-sm font-semibold text-sky-200 transition hover:border-sky-300 hover:bg-sky-400/20"
+                                        >
+                                            Create Custom Subclass
+                                        </button>
+                                    </div>
                                 );
                             }
-                            if (option.option_type === "choice") {
-                                const desc = option.choice?.desc || "Choose from category";
-                                return <span key={`${optionIndex}-${choiceIndex}`}>{desc}</span>;
-                            }
-                            return <span key={`${optionIndex}-${choiceIndex}`}>Unknown option</span>;
-                        };
 
-                        return (
-                            <div className="mt-6 space-y-6">
-                                {/* Starting Equipment (automatic) */}
-                                {startingEquipment.length > 0 && (
-                                    <div className="rounded-2xl border border-white/15 bg-black/30 p-6">
-                                        <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60 mb-4">
-                                            Automatic Starting Equipment
-                                        </p>
-                                        <div className="grid gap-2 sm:grid-cols-2">
-                                            {startingEquipment.map((item, index) => (
-                                                <div key={index} className="flex items-center gap-2 text-sm text-white/70">
-                                                    <div className="h-2 w-2 rounded-full bg-rose-300/50" />
-                                                    <span>
-                                                        {item.quantity > 1 ? `${item.quantity}× ` : ""}
-                                                        {item.equipment.name}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+                            const flavorText = allSubclasses[0]?.flavorText || "Subclass";
 
-                                {/* Equipment Choices */}
-                                {equipmentOptions.length > 0 && (
-                                    <div className="space-y-4">
-                                        <div className="rounded-2xl border border-white/15 bg-black/30 p-6">
-                                            <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60 mb-2">
-                                                Equipment Choices
-                                            </p>
-                                            <p className="text-sm text-white/70 mb-4">
-                                                Select one option from each choice below
-                                            </p>
-                                            <p className="text-xs text-white/50">
-                                                {Object.keys(formState.equipmentChoices).length} / {equipmentOptions.length} selected
-                                            </p>
-                                        </div>
-
-                                        {equipmentOptions.map((equipOption, optionIndex) => {
-                                            let options = equipOption.from?.options || [];
-                                            
-                                            // If it's an equipment_category type, expand it to actual equipment
-                                            if (equipOption.from?.option_set_type === "equipment_category" && equipOption.from?.equipment_category) {
-                                                options = expandEquipmentCategory(equipOption.from.equipment_category.index);
-                                            }
-                                            
-                                            const selectedChoice = formState.equipmentChoices[optionIndex];
-
+                            return (
+                                <div className="mt-6 flex flex-col gap-6 lg:flex-row">
+                                    <div className="grid gap-3 md:grid-cols-2 lg:w-2/3">
+                                        {allSubclasses.map((option) => {
+                                            const active = formState.subclass === option.name;
                                             return (
-                                                <div key={optionIndex} className="rounded-2xl border border-white/15 bg-black/30 p-6">
-                                                    <p className="text-sm font-semibold text-white mb-3">
-                                                        Choice {optionIndex + 1}: {equipOption.desc}
+                                                <button
+                                                    type="button"
+                                                    key={option.index}
+                                                    onClick={() => setFormState((prev) => ({ ...prev, subclass: option.name }))}
+                                                    onMouseEnter={() => setHoveredBackground(option.name)}
+                                                    onMouseLeave={() => setHoveredBackground(null)}
+                                                    onFocus={() => setHoveredBackground(option.name)}
+                                                    onBlur={() => setHoveredBackground(null)}
+                                                    className={`rounded-2xl border px-4 py-4 text-left transition ${active ? "border-rose-300 bg-rose-300/10" : "border-white/15 bg-black/30 hover:border-white/30"
+                                                        }`}
+                                                >
+                                                    <p className="text-sm font-semibold text-white">
+                                                        {option.name}
+                                                        {option.index.startsWith("custom-") && (
+                                                            <span className="ml-2 text-[0.6rem] font-bold uppercase tracking-[0.2em] text-sky-300">
+                                                                Custom
+                                                            </span>
+                                                        )}
                                                     </p>
-                                                    <div className="grid gap-3 sm:grid-cols-2">
-                                                        {options.map((choice: any, choiceIndex: number) => {
-                                                            const isSelected = selectedChoice === choiceIndex;
-                                                            return (
-                                                                <button
-                                                                    type="button"
-                                                                    key={choiceIndex}
-                                                                    onClick={() => {
-                                                                        setFormState((prev) => ({
-                                                                            ...prev,
-                                                                            equipmentChoices: {
-                                                                                ...prev.equipmentChoices,
-                                                                                [optionIndex]: choiceIndex,
-                                                                            },
-                                                                        }));
-                                                                    }}
-                                                                    className={`rounded-xl border px-4 py-3 text-left text-sm transition ${isSelected
-                                                                        ? "border-rose-300 bg-rose-300/10 text-white"
-                                                                        : "border-white/15 bg-black/30 text-white/70 hover:border-white/30"
-                                                                        }`}
-                                                                >
-                                                                    <div className="flex items-start gap-2">
-                                                                        <div className={`mt-0.5 h-4 w-4 rounded-full border flex-shrink-0 flex items-center justify-center ${isSelected ? "border-rose-300 bg-rose-300" : "border-white/30"
-                                                                            }`}>
-                                                                            {isSelected && (
-                                                                                <div className="h-2 w-2 rounded-full bg-black" />
-                                                                            )}
-                                                                        </div>
-                                                                        <div className="flex-1">
-                                                                            {renderEquipmentOption(choice, optionIndex, choiceIndex)}
-                                                                        </div>
-                                                                    </div>
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
+                                                    <p className="mt-1 text-xs text-white/70">
+                                                        {option.description.length > 150
+                                                            ? `${option.description.substring(0, 150)}...`
+                                                            : option.description}
+                                                    </p>
+                                                </button>
                                             );
                                         })}
+                                        {selectedClass && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowCustomSubclassModal(true)}
+                                                className="rounded-2xl border border-dashed border-sky-400/40 bg-sky-400/5 px-4 py-4 text-left transition hover:border-sky-400/60 hover:bg-sky-400/10"
+                                            >
+                                                <p className="text-sm font-semibold text-sky-300">+ Create Custom</p>
+                                                <p className="mt-1 text-xs text-sky-200/60">
+                                                    Build a unique subclass for {selectedClass.label}
+                                                </p>
+                                            </button>
+                                        )}
                                     </div>
-                                )}
+                                    <div className="lg:w-1/3">
+                                        {(() => {
+                                            const hoveredSubclass = allSubclasses.find(
+                                                (s) => s.name === (hoveredBackground ?? formState.subclass)
+                                            ) ?? allSubclasses[0];
 
-                                {startingEquipment.length === 0 && equipmentOptions.length === 0 && (
-                                    <div className="rounded-2xl border border-white/15 bg-black/30 p-6 text-center">
-                                        <p className="text-sm text-white/70">No starting equipment defined for this class.</p>
+                                            return (
+                                                <div className="rounded-2xl border border-white/15 bg-black/30 p-5 space-y-4">
+                                                    <div>
+                                                        <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60">{flavorText}</p>
+                                                        <p className="mt-2 text-lg font-semibold text-white">{hoveredSubclass.name}</p>
+                                                        <p className="mt-2 text-sm text-white/70 leading-relaxed">{hoveredSubclass.description}</p>
+                                                    </div>
+                                                    <p className="mt-3 text-xs text-white/50 pt-3 border-t border-white/10">
+                                                        Hover or select a {flavorText.toLowerCase()} to update.
+                                                    </p>
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
-                                )}
+                                </div>
+                            );
+                        })()}
+
+                        {currentStep.id === "equipment" && (() => {
+                            const selectedClass = classOptions.find((c) => c.value === formState.charClass);
+                            if (!selectedClass) {
+                                return null;
+                            }
+
+                            const startingEquipment = selectedClass.startingEquipment || [];
+                            const equipmentOptions = selectedClass.startingEquipmentOptions || [];
+
+                            // Helper to render equipment option
+                            const renderEquipmentOption = (option: any, optionIndex: number, choiceIndex: number) => {
+                                if (option.option_type === "counted_reference") {
+                                    const count = option.count || 1;
+                                    const name = option.of?.name || "Unknown";
+                                    return (
+                                        <span key={`${optionIndex}-${choiceIndex}`}>
+                                            {count > 1 ? `${count}× ` : ""}{name}
+                                        </span>
+                                    );
+                                }
+                                if (option.option_type === "choice") {
+                                    const desc = option.choice?.desc || "Choose from category";
+                                    return <span key={`${optionIndex}-${choiceIndex}`}>{desc}</span>;
+                                }
+                                return <span key={`${optionIndex}-${choiceIndex}`}>Unknown option</span>;
+                            };
+
+                            return (
+                                <div className="mt-6 space-y-6">
+                                    {/* Starting Equipment (automatic) */}
+                                    {startingEquipment.length > 0 && (
+                                        <div className="rounded-2xl border border-white/15 bg-black/30 p-6">
+                                            <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60 mb-4">
+                                                Automatic Starting Equipment
+                                            </p>
+                                            <div className="grid gap-2 sm:grid-cols-2">
+                                                {startingEquipment.map((item, index) => (
+                                                    <div key={index} className="flex items-center gap-2 text-sm text-white/70">
+                                                        <div className="h-2 w-2 rounded-full bg-rose-300/50" />
+                                                        <span>
+                                                            {item.quantity > 1 ? `${item.quantity}× ` : ""}
+                                                            {item.equipment.name}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Equipment Choices */}
+                                    {equipmentOptions.length > 0 && (
+                                        <div className="space-y-4">
+                                            <div className="rounded-2xl border border-white/15 bg-black/30 p-6">
+                                                <p className="text-[0.6rem] uppercase tracking-[0.35em] text-white/60 mb-2">
+                                                    Equipment Choices
+                                                </p>
+                                                <p className="text-sm text-white/70 mb-4">
+                                                    Select one option from each choice below
+                                                </p>
+                                                <p className="text-xs text-white/50">
+                                                    {Object.keys(formState.equipmentChoices).length} / {equipmentOptions.length} selected
+                                                </p>
+                                            </div>
+
+                                            {equipmentOptions.map((equipOption, optionIndex) => {
+                                                let options = equipOption.from?.options || [];
+
+                                                // If it's an equipment_category type, expand it to actual equipment
+                                                if (equipOption.from?.option_set_type === "equipment_category" && equipOption.from?.equipment_category) {
+                                                    options = expandEquipmentCategory(equipOption.from.equipment_category.index);
+                                                }
+
+                                                const selectedChoice = formState.equipmentChoices[optionIndex];
+
+                                                return (
+                                                    <div key={optionIndex} className="rounded-2xl border border-white/15 bg-black/30 p-6">
+                                                        <p className="text-sm font-semibold text-white mb-3">
+                                                            Choice {optionIndex + 1}: {equipOption.desc}
+                                                        </p>
+                                                        <div className="grid gap-3 sm:grid-cols-2">
+                                                            {options.map((choice: any, choiceIndex: number) => {
+                                                                const isSelected = selectedChoice === choiceIndex;
+                                                                return (
+                                                                    <button
+                                                                        type="button"
+                                                                        key={choiceIndex}
+                                                                        onClick={() => {
+                                                                            setFormState((prev) => ({
+                                                                                ...prev,
+                                                                                equipmentChoices: {
+                                                                                    ...prev.equipmentChoices,
+                                                                                    [optionIndex]: choiceIndex,
+                                                                                },
+                                                                            }));
+                                                                        }}
+                                                                        className={`rounded-xl border px-4 py-3 text-left text-sm transition ${isSelected
+                                                                            ? "border-rose-300 bg-rose-300/10 text-white"
+                                                                            : "border-white/15 bg-black/30 text-white/70 hover:border-white/30"
+                                                                            }`}
+                                                                    >
+                                                                        <div className="flex items-start gap-2">
+                                                                            <div className={`mt-0.5 h-4 w-4 rounded-full border flex-shrink-0 flex items-center justify-center ${isSelected ? "border-rose-300 bg-rose-300" : "border-white/30"
+                                                                                }`}>
+                                                                                {isSelected && (
+                                                                                    <div className="h-2 w-2 rounded-full bg-black" />
+                                                                                )}
+                                                                            </div>
+                                                                            <div className="flex-1">
+                                                                                {renderEquipmentOption(choice, optionIndex, choiceIndex)}
+                                                                            </div>
+                                                                        </div>
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+
+                                    {startingEquipment.length === 0 && equipmentOptions.length === 0 && (
+                                        <div className="rounded-2xl border border-white/15 bg-black/30 p-6 text-center">
+                                            <p className="text-sm text-white/70">No starting equipment defined for this class.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
+
+                        {currentStep.id === "alignment" && (
+                            <div className="mt-6 grid gap-3 md:grid-cols-3">
+                                {alignmentOptions.map((option) => {
+                                    const active = formState.alignment === option.value;
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={option.value}
+                                            onClick={() => setFormState((prev) => ({ ...prev, alignment: option.value }))}
+                                            className={`rounded-2xl border px-4 py-4 text-left transition ${active ? "border-rose-300 bg-rose-300/10" : "border-white/15 bg-black/30 hover:border-white/30"
+                                                }`}
+                                        >
+                                            <p className="text-sm font-semibold text-white">{option.label}</p>
+                                            <p className="mt-1 text-xs text-white/70">{option.description}</p>
+                                        </button>
+                                    );
+                                })}
                             </div>
-                        );
-                    })()}
+                        )}
 
-                    {currentStep.id === "alignment" && (
-                        <div className="mt-6 grid gap-3 md:grid-cols-3">
-                            {alignmentOptions.map((option) => {
-                                const active = formState.alignment === option.value;
-                                return (
-                                    <button
-                                        type="button"
-                                        key={option.value}
-                                        onClick={() => setFormState((prev) => ({ ...prev, alignment: option.value }))}
-                                        className={`rounded-2xl border px-4 py-4 text-left transition ${active ? "border-rose-300 bg-rose-300/10" : "border-white/15 bg-black/30 hover:border-white/30"
-                                            }`}
-                                    >
-                                        <p className="text-sm font-semibold text-white">{option.label}</p>
-                                        <p className="mt-1 text-xs text-white/70">{option.description}</p>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    )}
-
-                    <div className="mt-6 flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex w-full flex-1 gap-3">
-                            <button
-                                type="button"
-                                onClick={handleBack}
-                                disabled={step === 0}
-                                className="flex-1 rounded-2xl border border-white/20 px-4 py-3 text-sm font-semibold uppercase tracking-wide text-white transition hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-40"
-                            >
-                                Back
-                            </button>
-                            {step < activeSteps.length - 1 && (
+                        <div className="mt-6 flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex w-full flex-1 gap-3">
                                 <button
                                     type="button"
-                                    onClick={handleNext}
-                                    disabled={!canAdvance}
-                                    className="flex-1 rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+                                    onClick={handleBack}
+                                    disabled={step === 0}
+                                    className="flex-1 rounded-2xl border border-white/20 px-4 py-3 text-sm font-semibold uppercase tracking-wide text-white transition hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-40"
                                 >
-                                    Next
+                                    Back
                                 </button>
-                            )}
+                                {step < activeSteps.length - 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={handleNext}
+                                        disabled={!canAdvance}
+                                        className="flex-1 rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+                                    >
+                                        Next
+                                    </button>
+                                )}
+                            </div>
+                            {step === activeSteps.length - 1 && <SubmitButton disabled={!canSubmit} />}
                         </div>
-                        {step === activeSteps.length - 1 && <SubmitButton disabled={!canSubmit} />}
-                    </div>
-                </section>
-            </div>
-        </form>
+                    </section>
+                </div>
+            </form>
+
+            <CustomSubclassModal
+                isOpen={showCustomSubclassModal}
+                onClose={() => setShowCustomSubclassModal(false)}
+                onSubmit={(customSubclass: CustomSubclass) => {
+                    setCustomSubclasses((prev) => [...prev, customSubclass]);
+                    const selectedClass = classOptions.find((c) => c.value === formState.charClass);
+                    if (selectedClass) {
+                        setFormState((prev) => ({ ...prev, subclass: customSubclass.name }));
+                    }
+                    setShowCustomSubclassModal(false);
+                }}
+                parentClassName={classOptions.find((c) => c.value === formState.charClass)?.label || ""}
+                parentClassIndex={formState.charClass.toLowerCase()}
+            />
+        </>
     );
 }

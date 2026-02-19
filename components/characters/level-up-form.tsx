@@ -5,10 +5,12 @@ import Link from "next/link";
 
 import { HitDiceRoller } from "@/components/characters/hit-dice-roller";
 import { SubclassSelector } from "@/components/characters/subclass-selector";
+import { CustomSubclassModal } from "@/components/characters/custom-subclass-modal";
 import { levelUpCharacter } from "@/app/characters/actions";
 import { ABILITY_SCORE_PICKLIST, GLOBAL_FEAT_OPTIONS, SUBCLASS_DESCRIPTIONS } from "@/lib/characters/level-up-options";
 import { HIT_DICE_ROLL_REQUIRED_MESSAGE } from "@/lib/characters/form-parsers";
 import { getFeatDescription, featGrantsAbilityBonus } from "@/lib/characters/feats";
+import { customSubclassToOption, type CustomSubclass } from "@/lib/classes/custom-subclass";
 import type { SelectOption } from "@/lib/characters/level-up-options";
 
 interface LevelUpFormProps {
@@ -22,6 +24,8 @@ interface LevelUpFormProps {
     conModifier: number;
     characterName: string;
     subclassOptions: SelectOption[];
+    charClassName?: string;
+    charClassIndex?: string;
 }
 
 export function LevelUpForm({
@@ -34,13 +38,35 @@ export function LevelUpForm({
     hitDieValue,
     conModifier,
     characterName,
-    subclassOptions,
+    subclassOptions: initialSubclassOptions,
+    charClassName = "Unknown",
+    charClassIndex = "unknown",
 }: LevelUpFormProps) {
     const [selectedFeat, setSelectedFeat] = useState<string>("");
     const [hoveredFeat, setHoveredFeat] = useState<string>("");
+    const [showCustomSubclassModal, setShowCustomSubclassModal] = useState(false);
+    const [subclassOptions, setSubclassOptions] = useState<SelectOption[]>(initialSubclassOptions);
+    const [customSubclassDescriptions, setCustomSubclassDescriptions] = useState<Record<string, { name: string; subclass_flavor: string; desc: string[] }>>({});
 
     const isFeatSelected = selectedFeat !== "";
     const showAbilityScoreImprovements = !isFeatSelected && abilitySlots > 0;
+
+    const handleAddCustomSubclass = (customSubclass: CustomSubclass) => {
+        const newOption = customSubclassToOption(customSubclass);
+        setSubclassOptions((prev) => [...prev, newOption]);
+        // Store custom subclass description
+        setCustomSubclassDescriptions((prev) => ({
+            ...prev,
+            [customSubclass.index]: {
+                name: customSubclass.name,
+                subclass_flavor: customSubclass.subclass_flavor,
+                desc: customSubclass.desc,
+            },
+        }));
+    };
+
+    // Merge static descriptions with custom descriptions
+    const mergedDescriptions = { ...SUBCLASS_DESCRIPTIONS, ...customSubclassDescriptions };
 
     return (
         <form action={levelUpCharacter} className="space-y-6">
@@ -55,10 +81,19 @@ export function LevelUpForm({
             <input type="hidden" name="characterId" value={characterId} />
 
             {showSubclassChoice && (
-                <SubclassSelector
-                    subclassOptions={subclassOptions}
-                    subclassDescriptions={SUBCLASS_DESCRIPTIONS}
-                />
+                <>
+                    <SubclassSelector
+                        subclassOptions={subclassOptions}
+                        subclassDescriptions={mergedDescriptions}
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setShowCustomSubclassModal(true)}
+                        className="w-full rounded-2xl border border-dashed border-sky-400/50 bg-sky-400/5 px-4 py-3 text-sm font-semibold text-sky-200 transition hover:border-sky-300 hover:bg-sky-400/10"
+                    >
+                        + Add Custom Subclass
+                    </button>
+                </>
             )}
 
             {showFeatChoice && (
@@ -228,6 +263,14 @@ export function LevelUpForm({
                     Apply level up
                 </button>
             </div>
+
+            <CustomSubclassModal
+                isOpen={showCustomSubclassModal}
+                onClose={() => setShowCustomSubclassModal(false)}
+                onSubmit={handleAddCustomSubclass}
+                parentClassName={charClassName}
+                parentClassIndex={charClassIndex}
+            />
         </form>
     );
 }

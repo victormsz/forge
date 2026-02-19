@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
-import { Card } from "@/components/ui/card";
 import { ItemStatsEditor } from "@/components/items/item-stats-editor";
 import type { ItemCategoryOption, ItemReference } from "@/lib/items/reference";
 import type { ItemCustomStats } from "@/lib/items/custom-stats";
@@ -27,7 +26,7 @@ interface FormValues {
     customStats: ItemCustomStats | null;
 }
 
-const MAX_RESULTS = 30;
+const MAX_RESULTS = 40;
 const LOCKED_FIELDS: ReadonlyArray<keyof FormValues> = ["name", "category", "cost", "weight", "description"];
 
 function createDefaults(): FormValues {
@@ -44,44 +43,49 @@ function createDefaults(): FormValues {
     };
 }
 
+const inputCls =
+    "w-full rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-sky-400/50 focus:outline-none transition";
+const inputLockedCls =
+    "w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/60 cursor-default focus:outline-none";
+const labelCls = "flex flex-col gap-1.5 text-[0.6rem] font-semibold uppercase tracking-[0.3em] text-white/50";
+
 export function ItemLibraryForm({ characterId, references, categoryOptions, action }: ItemLibraryFormProps) {
     const [query, setQuery] = useState("");
     const [categoryFilter, setCategoryFilter] = useState("all");
     const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
     const [formValues, setFormValues] = useState<FormValues>(() => createDefaults());
     const [shouldResetAfterSubmit, setShouldResetAfterSubmit] = useState(false);
+    const listRef = useRef<HTMLDivElement>(null);
 
     const filteredReferences = useMemo(() => {
-        const normalizedQuery = query.trim().toLowerCase();
+        const q = query.trim().toLowerCase();
         return references
             .filter((item) => {
-                const matchesQuery = normalizedQuery.length === 0 || item.name.toLowerCase().includes(normalizedQuery);
-                const matchesCategory = categoryFilter === "all" || item.categoryIds.includes(categoryFilter);
-                return matchesQuery && matchesCategory;
+                const matchesQuery = q.length === 0 || item.name.toLowerCase().includes(q);
+                const matchesCat = categoryFilter === "all" || item.categoryIds.includes(categoryFilter);
+                return matchesQuery && matchesCat;
             })
             .slice(0, MAX_RESULTS);
     }, [references, query, categoryFilter]);
 
     function handleReferenceSelect(reference: ItemReference) {
-        setFormValues((current) => ({
-            ...current,
+        setFormValues((curr) => ({
+            ...curr,
             name: reference.name,
             category: reference.categories[0] ?? "",
             cost: reference.costLabel ?? "",
             weight: typeof reference.weight === "number" ? reference.weight.toString() : "",
             description: reference.description ?? "",
             isCustom: false,
+            customStats: null, // reset stats when switching items
         }));
         setSelectedItemId(reference.id);
-        setQuery(reference.name);
     }
 
-    function handleFieldChange<Key extends keyof FormValues>(key: Key, value: FormValues[Key]) {
-        setFormValues((current) => {
-            if (!current.isCustom && LOCKED_FIELDS.includes(key)) {
-                return current;
-            }
-            return { ...current, [key]: value };
+    function handleFieldChange<K extends keyof FormValues>(key: K, value: FormValues[K]) {
+        setFormValues((curr) => {
+            if (!curr.isCustom && LOCKED_FIELDS.includes(key)) return curr;
+            return { ...curr, [key]: value };
         });
     }
 
@@ -93,258 +97,325 @@ export function ItemLibraryForm({ characterId, references, categoryOptions, acti
     }
 
     function activateCustomMode() {
-        setFormValues((current) => ({ ...current, isCustom: true }));
+        setFormValues((curr) => ({ ...curr, isCustom: true }));
         setSelectedItemId(null);
     }
 
-    function restoreLibraryMode() {
-        setFormValues((current) => ({ ...current, isCustom: false }));
+    function activateSrdMode() {
+        setFormValues((curr) => ({ ...curr, isCustom: false }));
     }
 
-    const canSubmit = formValues.isCustom || Boolean(selectedItemId);
-    const emptyReferenceMessage = references.length === 0
-        ? "No SRD equipment available. Switch to custom mode to add entries."
-        : "No items match the current search or category filter.";
+    const canSubmit = formValues.isCustom ? Boolean(formValues.name.trim()) : Boolean(selectedItemId);
+
+    const selectedReference = selectedItemId
+        ? references.find((r) => r.id === selectedItemId) ?? null
+        : null;
 
     return (
-        <Card className="rounded-3xl border border-white/10 bg-white/5 p-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                    <h2 className="text-lg font-semibold text-white">Add equipment</h2>
-                    <p className="text-sm text-white/70">Load D&D 5.5e SRD items or craft bespoke inventory entries.</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.3em] text-white/60">
-                    <span className={`rounded-full border px-3 py-1 text-[0.65rem] ${formValues.isCustom ? "border-amber-300/60 text-amber-200" : selectedItemId ? "border-emerald-300/60 text-emerald-200" : "border-white/20 text-white/70"}`}>
-                        {formValues.isCustom ? "Custom entry" : selectedItemId ? "SRD item" : "Pick from SRD"}
-                    </span>
-                    <button type="button" onClick={resetForm} className="transition hover:text-white">
-                        Reset form
-                    </button>
-                    {formValues.isCustom ? (
-                        <button type="button" onClick={restoreLibraryMode} className="transition hover:text-white">
-                            Use SRD entry
-                        </button>
-                    ) : (
-                        <button type="button" onClick={activateCustomMode} className="transition hover:text-white">
-                            Make custom item
-                        </button>
-                    )}
-                </div>
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+            {/* ── Header ──────────────────────────────────────────────── */}
+            <div className="mb-5">
+                <p className="text-[0.6rem] font-semibold uppercase tracking-[0.35em] text-sky-300">
+                    Inventory Forge
+                </p>
+                <h2 className="text-base font-bold text-white">Add Equipment</h2>
+                <p className="mt-0.5 text-xs text-white/50">
+                    Pick from the SRD library or craft a custom entry.
+                </p>
             </div>
 
-            <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-                <div className="space-y-4">
-                    <div className="grid gap-3 sm:grid-cols-2">
-                        <label className="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-white/60">
-                            <span>Search</span>
-                            <input
-                                type="text"
-                                value={query}
-                                onChange={(event) => setQuery(event.target.value)}
-                                placeholder="Battleaxe, Rope, Toolkit..."
-                                className="rounded-2xl border border-white/15 bg-black/40 px-3 py-2 text-base text-white"
-                            />
-                        </label>
-                        <label className="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-white/60">
-                            <span>Category</span>
-                            <select
-                                value={categoryFilter}
-                                onChange={(event) => setCategoryFilter(event.target.value)}
-                                className="rounded-2xl border border-white/15 bg-black/40 px-3 py-2 text-white"
-                            >
-                                <option value="all">All categories</option>
-                                {categoryOptions.map((option) => (
-                                    <option key={option.id} value={option.id}>
-                                        {option.label} ({option.count})
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
+            {/* ── Mode tabs ───────────────────────────────────────────── */}
+            <div className="mb-5 flex rounded-xl border border-white/10 bg-black/30 p-0.5">
+                <button
+                    type="button"
+                    onClick={activateSrdMode}
+                    className={`flex-1 rounded-lg py-2 text-xs font-bold uppercase tracking-[0.2em] transition ${!formValues.isCustom
+                            ? "bg-sky-500/20 text-sky-200 border border-sky-400/30"
+                            : "text-white/40 hover:text-white/70"
+                        }`}
+                >
+                    SRD Library
+                </button>
+                <button
+                    type="button"
+                    onClick={activateCustomMode}
+                    className={`flex-1 rounded-lg py-2 text-xs font-bold uppercase tracking-[0.2em] transition ${formValues.isCustom
+                            ? "bg-amber-500/20 text-amber-200 border border-amber-400/30"
+                            : "text-white/40 hover:text-white/70"
+                        }`}
+                >
+                    Custom Entry
+                </button>
+            </div>
+
+            {/* ── SRD picker ──────────────────────────────────────────── */}
+            {!formValues.isCustom && (
+                <div className="mb-5 space-y-3">
+                    {/* Search + filter */}
+                    <div className="grid grid-cols-2 gap-2">
+                        <input
+                            type="text"
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            placeholder="Search items…"
+                            className={inputCls}
+                        />
+                        <select
+                            value={categoryFilter}
+                            onChange={(e) => setCategoryFilter(e.target.value)}
+                            className={inputCls}
+                        >
+                            <option value="all">All categories</option>
+                            {categoryOptions.map((opt) => (
+                                <option key={opt.id} value={opt.id}>
+                                    {opt.label} ({opt.count})
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
-                    <div className="space-y-3">
+                    {/* Scrollable results */}
+                    <div
+                        ref={listRef}
+                        className="max-h-52 overflow-y-auto space-y-1 pr-0.5 scrollbar-thin"
+                    >
                         {filteredReferences.length === 0 ? (
-                            <p className="rounded-2xl border border-dashed border-white/10 bg-black/30 px-4 py-6 text-sm text-white/60">
-                                {emptyReferenceMessage}
+                            <p className="rounded-xl border border-dashed border-white/10 bg-black/20 px-3 py-4 text-xs text-white/50 text-center">
+                                {references.length === 0
+                                    ? "No SRD data available."
+                                    : "No results — try a different search or category."}
                             </p>
                         ) : (
-                            filteredReferences.map((item) => (
+                            filteredReferences.map((ref) => (
                                 <button
+                                    key={ref.id}
                                     type="button"
-                                    key={item.id}
-                                    onClick={() => handleReferenceSelect(item)}
-                                    className={`w-full rounded-2xl border px-4 py-3 text-left transition ${selectedItemId === item.id ? "border-sky-300/70 bg-sky-400/10" : "border-white/10 bg-black/30 hover:border-white/30"}`}
+                                    onClick={() => handleReferenceSelect(ref)}
+                                    className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${selectedItemId === ref.id
+                                            ? "border-sky-400/50 bg-sky-400/10"
+                                            : "border-white/10 bg-black/20 hover:border-white/30 hover:bg-black/40"
+                                        }`}
                                 >
-                                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs uppercase tracking-[0.3em] text-white/60">
-                                        <span>{item.categories[0] ?? "Misc gear"}</span>
-                                        {item.costLabel && <span>{item.costLabel}</span>}
+                                    <div className="flex items-start justify-between gap-2">
+                                        <p className="text-sm font-semibold text-white leading-tight">{ref.name}</p>
+                                        {ref.costLabel && (
+                                            <span className="shrink-0 text-[0.6rem] text-white/40">{ref.costLabel}</span>
+                                        )}
                                     </div>
-                                    <p className="mt-1 text-lg font-semibold text-white">{item.name}</p>
-                                    {item.detailTags.length > 0 && (
-                                        <div className="mt-2 flex flex-wrap gap-2 text-[0.65rem] text-white/60">
-                                            {item.detailTags.slice(0, 3).map((tag) => (
-                                                <span key={`${item.id}-${tag}`} className="rounded-full border border-white/10 px-2 py-0.5">
-                                                    {tag}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
-                                    {item.description && (
-                                        <p className="mt-2 line-clamp-2 text-sm text-white/70">{item.description}</p>
-                                    )}
+                                    <div className="mt-1 flex flex-wrap gap-1">
+                                        {ref.categories[0] && (
+                                            <span className="text-[0.55rem] uppercase tracking-wider text-white/40">
+                                                {ref.categories[0]}
+                                            </span>
+                                        )}
+                                        {ref.detailTags.slice(0, 2).map((tag) => (
+                                            <span
+                                                key={`${ref.id}-${tag}`}
+                                                className="rounded-md border border-white/10 px-1.5 py-0.5 text-[0.55rem] text-white/50"
+                                            >
+                                                {tag}
+                                            </span>
+                                        ))}
+                                    </div>
                                 </button>
                             ))
                         )}
                     </div>
+
+                    {/* Selected item summary */}
+                    {selectedReference && (
+                        <div className="flex items-center justify-between rounded-xl border border-sky-400/30 bg-sky-400/10 px-3 py-2">
+                            <div className="min-w-0">
+                                <p className="text-[0.55rem] uppercase tracking-wider text-sky-300/70">Selected</p>
+                                <p className="truncate text-sm font-bold text-white">{selectedReference.name}</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSelectedItemId(null);
+                                    setFormValues(createDefaults());
+                                }}
+                                className="ml-2 shrink-0 rounded-lg border border-white/20 p-1 text-white/40 transition hover:border-white/40 hover:text-white"
+                                title="Deselect item"
+                            >
+                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* ── Form ────────────────────────────────────────────────── */}
+            <form
+                action={action}
+                className="space-y-3"
+                onSubmit={() => setShouldResetAfterSubmit(true)}
+            >
+                <input type="hidden" name="characterId" value={characterId} />
+                <input type="hidden" name="isCustom" value={formValues.isCustom ? "true" : "false"} />
+                <input type="hidden" name="referenceId" value={selectedItemId ?? ""} />
+
+                {/* Name + Category */}
+                <div className="grid grid-cols-2 gap-2">
+                    <label className={labelCls}>
+                        <span>Name</span>
+                        <input
+                            required
+                            name="name"
+                            type="text"
+                            value={formValues.name}
+                            onChange={(e) => handleFieldChange("name", e.target.value)}
+                            readOnly={!formValues.isCustom}
+                            placeholder={formValues.isCustom ? "Item name" : "Pick from library"}
+                            className={formValues.isCustom ? inputCls : inputLockedCls}
+                        />
+                    </label>
+                    <label className={labelCls}>
+                        <span>Category</span>
+                        <input
+                            name="category"
+                            type="text"
+                            value={formValues.category}
+                            onChange={(e) => handleFieldChange("category", e.target.value)}
+                            readOnly={!formValues.isCustom}
+                            placeholder="Adventuring Gear"
+                            className={formValues.isCustom ? inputCls : inputLockedCls}
+                        />
+                    </label>
                 </div>
 
-                <form
-                    action={action}
-                    className="space-y-4"
-                    onSubmit={() => {
-                        setShouldResetAfterSubmit(true);
-                    }}
-                >
-                    <input type="hidden" name="characterId" value={characterId} />
-                    <input type="hidden" name="isCustom" value={formValues.isCustom ? "true" : "false"} />
-                    <input type="hidden" name="referenceId" value={selectedItemId ?? ""} />
-                    <div className="grid gap-3 sm:grid-cols-2">
-                        <label className="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-white/60">
-                            <span>Name</span>
-                            <input
-                                required
-                                name="name"
-                                type="text"
-                                value={formValues.name}
-                                onChange={(event) => handleFieldChange("name", event.target.value)}
-                                readOnly={!formValues.isCustom}
-                                className="rounded-2xl border border-white/15 bg-black/40 px-3 py-2 text-base text-white"
-                            />
-                        </label>
-                        <label className="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-white/60">
-                            <span>Category</span>
-                            <input
-                                name="category"
-                                type="text"
-                                value={formValues.category}
-                                onChange={(event) => handleFieldChange("category", event.target.value)}
-                                readOnly={!formValues.isCustom}
-                                placeholder="Adventuring Gear"
-                                className="rounded-2xl border border-white/15 bg-black/40 px-3 py-2 text-base text-white"
-                            />
-                        </label>
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-3">
-                        <label className="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-white/60">
-                            <span>Cost</span>
-                            <input
-                                name="cost"
-                                type="text"
-                                value={formValues.cost}
-                                onChange={(event) => handleFieldChange("cost", event.target.value)}
-                                readOnly={!formValues.isCustom}
-                                placeholder="25 gp"
-                                className="rounded-2xl border border-white/15 bg-black/40 px-3 py-2 text-base text-white"
-                            />
-                        </label>
-                        <label className="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-white/60">
-                            <span>Weight (lb)</span>
-                            <input
-                                name="weight"
-                                type="number"
-                                min="0"
-                                step="0.1"
-                                value={formValues.weight}
-                                onChange={(event) => handleFieldChange("weight", event.target.value)}
-                                readOnly={!formValues.isCustom}
-                                className="rounded-2xl border border-white/15 bg-black/40 px-3 py-2 text-base text-white"
-                            />
-                        </label>
-                        <label className="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-white/60">
-                            <span>Quantity</span>
-                            <input
-                                required
-                                name="quantity"
-                                type="number"
-                                min="1"
-                                max="999"
-                                value={formValues.quantity}
-                                onChange={(event) => handleFieldChange("quantity", Math.max(1, Number(event.target.value) || 1))}
-                                className="rounded-2xl border border-white/15 bg-black/40 px-3 py-2 text-base text-white"
-                            />
-                        </label>
-                    </div>
-
-                    <label className="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-white/60">
-                        <span>Description</span>
-                        <textarea
-                            name="description"
-                            value={formValues.description}
-                            onChange={(event) => handleFieldChange("description", event.target.value)}
-                            rows={5}
+                {/* Cost + Weight + Quantity */}
+                <div className="grid grid-cols-3 gap-2">
+                    <label className={labelCls}>
+                        <span>Cost</span>
+                        <input
+                            name="cost"
+                            type="text"
+                            value={formValues.cost}
+                            onChange={(e) => handleFieldChange("cost", e.target.value)}
                             readOnly={!formValues.isCustom}
-                            className="rounded-3xl border border-white/15 bg-black/40 px-3 py-3 text-sm text-white"
+                            placeholder="25 gp"
+                            className={formValues.isCustom ? inputCls : inputLockedCls}
                         />
                     </label>
-
-                    <label className="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-white/60">
-                        <span>Notes</span>
-                        <textarea
-                            name="notes"
-                            value={formValues.notes}
-                            onChange={(event) => handleFieldChange("notes", event.target.value)}
-                            rows={3}
-                            placeholder="Attunement, owner, loadout slot..."
-                            className="rounded-3xl border border-white/15 bg-black/40 px-3 py-3 text-sm text-white"
+                    <label className={labelCls}>
+                        <span>Weight (lb)</span>
+                        <input
+                            name="weight"
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            value={formValues.weight}
+                            onChange={(e) => handleFieldChange("weight", e.target.value)}
+                            readOnly={!formValues.isCustom}
+                            placeholder="0"
+                            className={formValues.isCustom ? inputCls : inputLockedCls}
                         />
                     </label>
+                    <label className={labelCls}>
+                        <span>Qty</span>
+                        <input
+                            required
+                            name="quantity"
+                            type="number"
+                            min="1"
+                            max="999"
+                            value={formValues.quantity}
+                            onChange={(e) =>
+                                handleFieldChange("quantity", Math.max(1, Number(e.target.value) || 1))
+                            }
+                            className={inputCls}
+                        />
+                    </label>
+                </div>
 
-                    {/* Custom Stats Editor */}
+                {/* Description */}
+                <label className={labelCls}>
+                    <span>Description</span>
+                    <textarea
+                        name="description"
+                        value={formValues.description}
+                        onChange={(e) => handleFieldChange("description", e.target.value)}
+                        rows={3}
+                        readOnly={!formValues.isCustom}
+                        className={`resize-none ${formValues.isCustom ? inputCls : inputLockedCls}`}
+                    />
+                </label>
+
+                {/* Notes */}
+                <label className={labelCls}>
+                    <span>Notes</span>
+                    <textarea
+                        name="notes"
+                        value={formValues.notes}
+                        onChange={(e) => handleFieldChange("notes", e.target.value)}
+                        rows={2}
+                        placeholder="Attunement, owner, loadout note…"
+                        className={`resize-none ${inputCls}`}
+                    />
+                </label>
+
+                {/* Custom stats — key resets editor when item selection changes */}
+                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
                     <ItemStatsEditor
+                        key={selectedItemId ?? (formValues.isCustom ? "custom" : "none")}
                         itemName={formValues.name}
                         category={formValues.category}
                         currentStats={formValues.customStats}
                         onStatsChange={(stats) => handleFieldChange("customStats", stats)}
                     />
+                </div>
 
-                    <input
-                        type="hidden"
-                        name="customStats"
-                        value={formValues.customStats ? JSON.stringify(formValues.customStats) : ""}
-                    />
+                <input
+                    type="hidden"
+                    name="customStats"
+                    value={formValues.customStats ? JSON.stringify(formValues.customStats) : ""}
+                />
 
-                    {!canSubmit && (
-                        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-200">
-                            Select an SRD item or switch to custom mode to proceed.
-                        </p>
-                    )}
+                {/* Hint when nothing ready to submit */}
+                {!canSubmit && (formValues.name || selectedItemId !== null) === false && (
+                    <p className="text-[0.65rem] font-semibold uppercase tracking-[0.25em] text-amber-300/80">
+                        {formValues.isCustom
+                            ? "Enter a name for the custom item."
+                            : "Select an item from the library above."}
+                    </p>
+                )}
 
-                    <FormResetObserver
-                        shouldReset={shouldResetAfterSubmit}
-                        onReset={() => {
-                            resetForm();
-                            setShouldResetAfterSubmit(false);
-                        }}
-                    />
+                <FormResetObserver
+                    shouldReset={shouldResetAfterSubmit}
+                    onReset={() => {
+                        resetForm();
+                        setShouldResetAfterSubmit(false);
+                    }}
+                />
 
+                {/* Submit + Reset */}
+                <div className="flex gap-2 pt-1">
                     <SubmitButton disabled={!canSubmit} />
-                </form>
-            </div>
-        </Card>
+                    <button
+                        type="button"
+                        onClick={resetForm}
+                        className="rounded-xl border border-white/15 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.2em] text-white/50 transition hover:border-white/30 hover:text-white"
+                    >
+                        Reset
+                    </button>
+                </div>
+            </form>
+        </div>
     );
 }
 
 function SubmitButton({ disabled }: { disabled: boolean }) {
     const { pending } = useFormStatus();
-    const isDisabled = pending || disabled;
     return (
         <button
             type="submit"
-            disabled={isDisabled}
-            className="w-full rounded-2xl bg-gradient-to-r from-sky-400 to-teal-300 px-6 py-3 text-center text-sm font-semibold uppercase tracking-[0.3em] text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={pending || disabled}
+            className="flex-1 rounded-xl bg-gradient-to-r from-sky-500 to-teal-400 px-4 py-2.5 text-xs font-bold uppercase tracking-[0.2em] text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-            {pending ? "Saving..." : "Add item"}
+            {pending ? "Saving…" : "Add Item"}
         </button>
     );
 }

@@ -27,6 +27,7 @@ import {
     type EquipItemInput,
     type EquipmentSlot,
 } from "@/lib/characters/types";
+import { parseCustomSubclassJson, type CustomSubclassJsonInput } from "@/lib/classes/custom-subclass";
 
 const allowedMethods = new Set<AbilityGenerationMethod>([AbilityGenerationMethod.POINT_BUY, AbilityGenerationMethod.RANDOM]);
 const allowedShapes = new Set<SpellTargetShape>(Object.values(SpellTargetShape));
@@ -277,6 +278,16 @@ export function parseCreateCharacterFormData(formData: FormData): CreateCharacte
         ? (backgroundChoice as AbilityKey)
         : null;
 
+    // Parse custom subclass if present
+    let customSubclass = undefined;
+    const customSubclassInput = formData.get("selectedCustomSubclass");
+    if (customSubclassInput && typeof customSubclassInput === "string") {
+        const parsed = parseCustomSubclassJson(customSubclassInput);
+        if (parsed) {
+            customSubclass = parsed;
+        }
+    }
+
     return {
         name: readString(formData.get("name"), "New Adventurer", 120)!,
         generationMethod,
@@ -289,6 +300,7 @@ export function parseCreateCharacterFormData(formData: FormData): CreateCharacte
         equipmentChoices,
         ancestryAbilityChoices,
         backgroundAbilityChoice,
+        customSubclass,
     };
 }
 

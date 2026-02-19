@@ -24,6 +24,7 @@ import { ABILITY_KEYS, DEFAULT_ABILITY_SCORES, type AbilityKey } from "@/lib/poi
 import { applyAncestryBonuses } from "@/lib/characters/ancestry-bonuses";
 import { applyBackgroundBonus } from "@/lib/characters/background-bonuses";
 import { getClassOptions, type EquipmentReference } from "@/lib/classes/load-classes";
+import type { EquipmentSlot } from "@/lib/characters/types";
 
 const SLOT_ORDINALS = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"] as const;
 const MAX_LEVEL_UP_ABILITY_SCORE = 20;
@@ -34,6 +35,38 @@ function formatSpellLevelLabel(level: number) {
     }
     const ordinal = SLOT_ORDINALS[level - 1] ?? `${level}th`;
     return `${ordinal}-level`;
+}
+
+function resolveEquipmentSlot(referenceId: string | null, itemName: string): EquipmentSlot | null {
+    const reference = referenceId ? findReferenceItemById(referenceId) : null;
+    const categories = reference?.categories ?? [];
+    const isWeapon = categories.some((category) => /weapon/i.test(category));
+    const isArmor = categories.some((category) => /armor/i.test(category));
+    const isShield = categories.some((category) => /shield/i.test(category)) || /shield/i.test(itemName);
+
+    if (isShield) return "SHIELD";
+    if (isArmor) return "ARMOR";
+    if (isWeapon) return "MAIN_HAND";
+    return null;
+}
+
+function assignStartingSlots(items: Array<{ name: string; referenceId: string | null }>) {
+    const takenSlots = new Set<EquipmentSlot>();
+
+    return items.map((item) => {
+        const slot = resolveEquipmentSlot(item.referenceId, item.name);
+
+        if (!slot || takenSlots.has(slot)) {
+            if (slot === "MAIN_HAND" && !takenSlots.has("OFF_HAND")) {
+                takenSlots.add("OFF_HAND");
+                return { ...item, equippedSlot: "OFF_HAND" as EquipmentSlot };
+            }
+            return { ...item, equippedSlot: null };
+        }
+
+        takenSlots.add(slot);
+        return { ...item, equippedSlot: slot };
+    });
 }
 
 export class CharacterService {
@@ -98,7 +131,7 @@ export class CharacterService {
         const classData = classOptions.find((c) => c.value === input.charClass);
 
         // Build starting equipment list
-        const startingItems: Array<{ name: string; quantity: number }> = [];
+        const startingItems: Array<{ name: string; quantity: number; referenceId: string | null }> = [];
 
         if (classData) {
             // Add automatic starting equipment
@@ -106,6 +139,7 @@ export class CharacterService {
                 startingItems.push({
                     name: item.equipment.name,
                     quantity: item.quantity,
+                    referenceId: item.equipment.index ?? null,
                 });
             });
 
@@ -128,6 +162,7 @@ export class CharacterService {
                                 startingItems.push({
                                     name: itemName,
                                     quantity: count,
+                                    referenceId: selectedChoice.of?.index ?? null,
                                 });
                             }
                         } else if (selectedChoice.option_type === "choice") {
@@ -153,16 +188,22 @@ export class CharacterService {
                     background: input.background,
                     alignment: input.alignment,
                     proficiencies: input.proficiencies,
+                    customSubclass: input.customSubclass ?? null,
                 },
             });
 
             // Create starting equipment items
             if (startingItems.length > 0) {
+                const itemsWithSlots = assignStartingSlots(
+                    startingItems.map((item) => ({ name: item.name, referenceId: item.referenceId }))
+                );
                 await tx.item.createMany({
-                    data: startingItems.map((item) => ({
+                    data: startingItems.map((item, index) => ({
                         characterId: newCharacter.id,
                         name: item.name,
                         quantity: item.quantity,
+                        referenceId: item.referenceId,
+                        equippedSlot: itemsWithSlots[index]?.equippedSlot ?? null,
                         isCustom: false,
                     })),
                 });

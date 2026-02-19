@@ -18,7 +18,9 @@ import {
 } from "@/lib/point-buy";
 import type { ClassOption } from "@/lib/classes/load-classes";
 import { getClassOptions } from "@/lib/classes/load-classes";
-import { getBackgroundBonuses } from "@/lib/characters/background-bonuses";
+import { getBackgroundBonuses, applyBackgroundBonus } from "@/lib/characters/background-bonuses";
+import { getAncestryBonuses, applyAncestryBonuses } from "@/lib/characters/ancestry-bonuses";
+import { abilityModifier, formatModifier } from "@/lib/characters/statistics";
 
 type AbilityGenerationMethod = "POINT_BUY" | "RANDOM";
 
@@ -492,6 +494,16 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
             result.languages.push(...selectedAncestry.proficiencies.languages);
         }
 
+        // Add background proficiencies
+        const selectedBackground = backgroundOptions.find((b) => b.value === formState.background);
+        if (selectedBackground) {
+            result.armor.push(...selectedBackground.proficiencies.armor);
+            result.weapons.push(...selectedBackground.proficiencies.weapons);
+            result.tools.push(...selectedBackground.proficiencies.tools);
+            result.skills.push(...selectedBackground.proficiencies.skills);
+            result.languages.push(...selectedBackground.proficiencies.languages);
+        }
+
         // Add class proficiencies
         const selectedClass = classOptions.find((c) => c.value === formState.charClass);
         if (selectedClass) {
@@ -511,7 +523,20 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
         result.languages = dedupeList(result.languages);
 
         return result;
-    }, [formState.ancestry, formState.charClass, formState.selectedSkills]);
+    }, [formState.ancestry, formState.background, formState.charClass, formState.selectedSkills]);
+
+    // Calculate final ability scores with all bonuses applied
+    const finalAbilityScores = useMemo(() => {
+        let scores = { ...formState.abilityScores };
+
+        // Apply ancestry bonuses
+        scores = applyAncestryBonuses(scores, formState.ancestry, formState.ancestryAbilityChoices);
+
+        // Apply background bonus
+        scores = applyBackgroundBonus(scores, formState.background, formState.backgroundAbilityChoice as AbilityKey);
+
+        return scores;
+    }, [formState.abilityScores, formState.ancestry, formState.ancestryAbilityChoices, formState.background, formState.backgroundAbilityChoice]);
 
     // Calculate available skill choices from class
     const availableSkillChoices = useMemo(() => {
@@ -961,15 +986,32 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                         </div>
                     </div>
                     <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                        {ABILITY_KEYS.map((ability) => (
-                            <div key={ability} className="rounded-2xl border border-white/10 bg-black/20 p-3">
-                                <p className="text-[0.55rem] uppercase tracking-[0.35em] text-white/50">{abilityMeta[ability].label}</p>
-                                <div className="mt-1 flex items-baseline gap-2">
-                                    <p className="text-2xl font-semibold text-white">{formState.abilityScores[ability]}</p>
-                                    <p className="text-xs text-white/50">{ability.toUpperCase()}</p>
+                        {ABILITY_KEYS.map((ability) => {
+                            const baseScore = formState.abilityScores[ability];
+                            const finalScore = finalAbilityScores[ability];
+                            const modifier = abilityModifier(finalScore);
+                            const hasBonus = baseScore !== finalScore;
+
+                            return (
+                                <div key={ability} className="rounded-2xl border border-white/10 bg-black/20 p-3">
+                                    <p className="text-[0.55rem] uppercase tracking-[0.35em] text-white/50">{abilityMeta[ability].label}</p>
+                                    <div className="mt-1 flex items-baseline gap-2">
+                                        <p className="text-2xl font-semibold text-white">{finalScore}</p>
+                                        <p className="text-xs text-white/50">{ability.toUpperCase()}</p>
+                                    </div>
+                                    <div className="mt-1 flex items-center gap-2">
+                                        <p className={`text-sm font-medium ${modifier >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                            {formatModifier(modifier)}
+                                        </p>
+                                        {hasBonus && (
+                                            <p className="text-xs text-rose-300">
+                                                ({baseScore} + {finalScore - baseScore})
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
 
                     {(combinedProficiencies.skills.length > 0 ||
@@ -1572,8 +1614,8 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                                                         type="button"
                                                         onClick={() => setFormState((prev) => ({ ...prev, backgroundAbilityChoice: ability }))}
                                                         className={`flex-1 min-w-[140px] rounded-2xl border px-4 py-3 text-left transition ${isSelected
-                                                                ? "border-rose-300 bg-rose-300/10"
-                                                                : "border-white/15 bg-black/40 hover:border-white/30"
+                                                            ? "border-rose-300 bg-rose-300/10"
+                                                            : "border-white/15 bg-black/40 hover:border-white/30"
                                                             }`}
                                                     >
                                                         <p className="text-sm font-semibold text-white">

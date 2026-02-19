@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
 
 import { deleteCharacter } from "@/app/characters/actions";
 import { Card } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { MAX_CHARACTER_LEVEL } from "@/lib/characters/constants";
 
 type AbilityScores = Record<string, number>;
@@ -149,15 +152,31 @@ export function CharacterCard({ character, disableLevelUp = false }: CharacterCa
                                 Level Up
                             </Link>
                         )}
-                        <form action={deleteCharacter} className="text-right">
-                            <input type="hidden" name="characterId" value={id} />
-                            <button
-                                type="submit"
-                                className="rounded-lg border border-rose-400/40 bg-rose-400/10 px-3 py-1.5 text-[0.65rem] font-semibold text-rose-300 transition hover:bg-rose-400/20 hover:border-rose-400/60"
-                            >
-                                Delete
-                            </button>
-                        </form>
+                        <ConfirmDialog
+                            title="Delete Character"
+                            message={
+                                <>
+                                    Are you sure you want to delete <strong>{name}</strong>? This action cannot be undone.
+                                </>
+                            }
+                            confirmLabel="Delete"
+                            cancelLabel="Cancel"
+                            variant="danger"
+                            onConfirm={async () => {
+                                const formData = new FormData();
+                                formData.append("characterId", id);
+                                await deleteCharacter(formData);
+                            }}
+                            trigger={(openDialog) => (
+                                <button
+                                    type="button"
+                                    onClick={openDialog}
+                                    className="rounded-lg border border-rose-400/40 bg-rose-400/10 px-3 py-1.5 text-[0.65rem] font-semibold text-rose-300 transition hover:bg-rose-400/20 hover:border-rose-400/60"
+                                >
+                                    Delete
+                                </button>
+                            )}
+                        />
                     </div>
                 </div>
 

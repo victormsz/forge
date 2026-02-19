@@ -23,6 +23,8 @@ import {
     normalizeAbilityScores,
     normalizeProficiencies,
 } from "@/lib/characters/statistics";
+import { EquipmentCalculator } from "@/lib/characters/equipment-calculator";
+import type { EquippedItem } from "@/lib/characters/equipment-types";
 
 export const metadata: Metadata = {
     title: "ForgeSheet | Character Sheet",
@@ -111,89 +113,6 @@ function formatAbilityIncreases(choices: LevelUpChoicesMeta["abilityIncreases"])
     return choices
         .map((choice) => `${choice.ability.toUpperCase()} +${choice.amount}`)
         .join(", ");
-}
-
-function parseDamageLabel(damageLabel: string | null) {
-    if (!damageLabel) {
-        return null;
-    }
-    const base = damageLabel.split(" (")[0] ?? damageLabel;
-    const match = base.match(/^(\d+d\d+)\s*([+-]\s*\d+)?\s*(.*)?$/i);
-    if (!match) {
-        return null;
-    }
-    const bonus = match[2] ? Number(match[2].replace(/\s+/g, "")) : 0;
-    const tail = match[3]?.trim() ?? "";
-    const damageType = tail.replace(/\s*damage$/i, "").trim() || null;
-    return {
-        dice: match[1],
-        bonus: Number.isFinite(bonus) ? bonus : 0,
-        damageType,
-        label: base,
-    };
-}
-
-function chooseWeaponAbilityModifier(reference: ItemReference | null, abilityModifiers: Record<AbilityKey, number>) {
-    const properties = reference?.properties?.map((property) => property.toLowerCase()) ?? [];
-    const isFinesse = properties.includes("finesse");
-    const isRanged = properties.includes("range") || properties.includes("ammunition");
-    if (isRanged) {
-        return abilityModifiers.dex;
-    }
-    if (isFinesse) {
-        return Math.max(abilityModifiers.dex, abilityModifiers.str);
-    }
-    return abilityModifiers.str;
-}
-
-function formatWeaponDamage(reference: ItemReference | null, abilityModifiers: Record<AbilityKey, number>) {
-    const parsed = parseDamageLabel(reference?.damageLabel ?? null);
-    if (!parsed) {
-        return null;
-    }
-    const modifier = chooseWeaponAbilityModifier(reference, abilityModifiers);
-    const totalBonus = modifier + (parsed.bonus ?? 0);
-    const modifierLabel = totalBonus === 0 ? "" : totalBonus > 0 ? ` + ${totalBonus}` : ` - ${Math.abs(totalBonus)}`;
-    const typeLabel = parsed.damageType ? ` ${parsed.damageType}` : "";
-    return `${parsed.dice}${modifierLabel}${typeLabel}`;
-}
-
-function isWeaponProficient(reference: ItemReference | null, proficiencies: CharacterProficiencies) {
-    if (!reference) {
-        return false;
-    }
-    const proficiencyNames = proficiencies.weapons.map((item) => item.toLowerCase());
-    const categories = (reference.categories ?? []).map((category) => category.toLowerCase());
-    const name = reference.name.toLowerCase();
-    return proficiencyNames.some((proficiency) => {
-        if (!proficiency.trim()) {
-            return false;
-        }
-        if (proficiency.includes("all weapon")) {
-            return categories.some((category) => category.includes("weapon"));
-        }
-        return (
-            name.includes(proficiency) ||
-            categories.some((category) => category.includes(proficiency) || proficiency.includes(category))
-        );
-    });
-}
-
-function formatUnarmedDamage(strModifier: number) {
-    const modifierLabel = formatModifier(strModifier);
-    return `1 ${modifierLabel} bludgeoning`;
-}
-
-function computeArmorBase(reference: ItemReference | null, dexModifier: number) {
-    if (!reference?.armorClass) {
-        return 10 + dexModifier;
-    }
-    const { base, dexBonus, maxBonus } = reference.armorClass;
-    if (!dexBonus) {
-        return base;
-    }
-    const dexApplied = typeof maxBonus === "number" ? Math.min(dexModifier, maxBonus) : dexModifier;
-    return base + dexApplied;
 }
 
 export default async function CharacterSheetPage({ params }: CharacterSheetPageProps) {
@@ -287,6 +206,40 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
             equippedSlot: (item.equippedSlot as EquippedSlot | null) ?? null,
         };
     });
+
+    // Build equipped items for calculator
+    const equippedItems: EquippedItem[] = inventoryItems
+        .filter((item) => item.equippedSlot !== null)
+        .map((item) => ({
+            id: item.id,
+            name: item.name,
+            slot: item.equippedSlot!,
+            referenceId: item.referenceId,
+            reference: item.referenceId ? findReferenceItemById(item.referenceId) : null,
+        }));
+
+    // Calculate equipment bonuses using the equipment calculator
+    const equipmentCalculator = new EquipmentCalculator({
+        equippedItems,
+        abilityModifiers,
+        proficiencyBonus,
+        proficiencies,
+        legacyArmorBonus: character.armorBonus ?? 0,
+        legacyShieldBonus: character.shieldBonus ?? 0,
+        legacyMiscBonus: character.miscBonus ?? 0,
+    });
+
+    const equipmentBonuses = equipmentCalculator.calculateBonuses();
+
+    // Extract calculated values
+    const armorClass = equipmentBonuses.armorClass.total;
+    const armorSegments = equipmentBonuses.armorClass.breakdown;
+    const mainHandAttackBonus = equipmentBonuses.mainHand?.attackBonus ?? 0;
+    const mainHandDamage = equipmentBonuses.mainHand?.damage ?? null;
+    const offHandAttackBonus = equipmentBonuses.offHand?.attackBonus ?? 0;
+    const offHandDamage = equipmentBonuses.offHand?.damage ?? null;
+
+    // For display purposes, keep the equipped item references
     const equippedMainHand = inventoryPreview.find((item) => item.equippedSlot === "MAIN_HAND") ?? null;
     const equippedOffHand = inventoryPreview.find((item) => item.equippedSlot === "OFF_HAND") ?? null;
     const equippedArmor = inventoryPreview.find((item) => item.equippedSlot === "ARMOR") ?? null;
@@ -296,46 +249,7 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
     const offHandReference = equippedOffHand?.referenceId ? findReferenceItemById(equippedOffHand.referenceId) : null;
     const armorReference = equippedArmor?.referenceId ? findReferenceItemById(equippedArmor.referenceId) : null;
     const shieldReference = equippedShield?.referenceId ? findReferenceItemById(equippedShield.referenceId) : null;
-
-    const mainHandDamage = formatWeaponDamage(mainHandReference, abilityModifiers);
-    const offHandDamage = formatWeaponDamage(offHandReference, abilityModifiers);
-    const mainHandAttackBonus =
-        mainHandReference && isWeaponProficient(mainHandReference, proficiencies)
-            ? chooseWeaponAbilityModifier(mainHandReference, abilityModifiers) + proficiencyBonus
-            : mainHandReference
-                ? chooseWeaponAbilityModifier(mainHandReference, abilityModifiers)
-                : abilityModifiers.str + proficiencyBonus;
-    const offHandAttackBonus =
-        offHandReference && isWeaponProficient(offHandReference, proficiencies)
-            ? chooseWeaponAbilityModifier(offHandReference, abilityModifiers) + proficiencyBonus
-            : offHandReference
-                ? chooseWeaponAbilityModifier(offHandReference, abilityModifiers)
-                : abilityModifiers.str;
-    const unarmedDamage = formatUnarmedDamage(abilityModifiers.str);
-
-    const armorBase = computeArmorBase(armorReference, abilityModifiers.dex);
     const shieldGearBonus = shieldReference?.armorClass?.base ?? 0;
-    const armorClass = armorBase + shieldGearBonus + armorBonus + shieldBonus + miscBonus;
-    const armorSegments = [
-        armorReference?.armorClass
-            ? `${armorReference.name} base ${armorReference.armorClass.base}`
-            : "10 base",
-        armorReference?.armorClass
-            ? armorReference.armorClass.dexBonus
-                ? (() => {
-                    const maxBonus = armorReference.armorClass?.maxBonus;
-                    const dexApplied = typeof maxBonus === "number" ? Math.min(abilityModifiers.dex, maxBonus) : abilityModifiers.dex;
-                    return `${formatModifier(dexApplied)} DEX${typeof maxBonus === "number" ? ` (max +${maxBonus})` : ""}`;
-                })()
-                : "DEX not applied"
-            : `${formatModifier(abilityModifiers.dex)} DEX`,
-        shieldGearBonus ? `+${shieldGearBonus} shield` : null,
-        armorBonus ? `+${armorBonus} armor` : null,
-        shieldBonus ? `+${shieldBonus} shield` : null,
-        miscBonus ? `+${miscBonus} misc` : null,
-    ]
-        .filter(Boolean)
-        .join(" · ");
     const inventoryTotalCount = character._count?.items ?? inventoryItems.length;
     const totalInventoryWeight = inventoryItems.reduce((sum, item) => sum + (item.weight ?? 0) * item.quantity, 0);
     const totalInventoryQuantity = inventoryItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -597,18 +511,18 @@ export default async function CharacterSheetPage({ params }: CharacterSheetPageP
                                     <AttackRoller
                                         attackBonus={mainHandAttackBonus}
                                         damage={mainHandDamage}
-                                        weaponName={equippedMainHand?.name ?? "Unarmed Strike"}
-                                        proficiencyApplied={isWeaponProficient(mainHandReference, proficiencies)}
-                                        unarmedFallbackDamage={unarmedDamage}
+                                        weaponName={equipmentBonuses.mainHand?.name ?? "Unarmed Strike"}
+                                        proficiencyApplied={equipmentBonuses.mainHand?.proficient ?? true}
+                                        unarmedFallbackDamage={equipmentBonuses.mainHand?.damage ?? undefined}
                                     />
-                                    {equippedOffHand && (
+                                    {equipmentBonuses.offHand && (
                                         <div className="mt-3">
                                             <AttackRoller
                                                 attackBonus={offHandAttackBonus}
                                                 damage={offHandDamage}
-                                                weaponName={`${equippedOffHand.name} (Off-hand)`}
-                                                proficiencyApplied={isWeaponProficient(offHandReference, proficiencies)}
-                                                unarmedFallbackDamage={unarmedDamage}
+                                                weaponName={equipmentBonuses.offHand.name}
+                                                proficiencyApplied={equipmentBonuses.offHand.proficient}
+                                                unarmedFallbackDamage={undefined}
                                             />
                                         </div>
                                     )}

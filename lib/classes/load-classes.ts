@@ -67,7 +67,12 @@ export type EquipmentOptionChoice =
 
 export interface EquipmentOptionSource {
     option_set_type: string;
-    options: EquipmentOptionChoice[];
+    options?: EquipmentOptionChoice[];
+    equipment_category?: {
+        index: string;
+        name: string;
+        url: string;
+    };
 }
 
 export interface EquipmentOption {

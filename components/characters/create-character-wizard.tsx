@@ -21,6 +21,7 @@ import { getClassOptions } from "@/lib/classes/load-classes";
 import { getBackgroundBonuses, applyBackgroundBonus } from "@/lib/characters/background-bonuses";
 import { getAncestryBonuses, applyAncestryBonuses } from "@/lib/characters/ancestry-bonuses";
 import { abilityModifier, formatModifier } from "@/lib/characters/statistics";
+import equipmentCategoriesData from "@/db/2014/5e-SRD-Equipment-Categories.json";
 
 type AbilityGenerationMethod = "POINT_BUY" | "RANDOM";
 
@@ -293,6 +294,23 @@ const alignmentOptions = [
 ];
 
 const classOptions = getClassOptions();
+
+// Helper to expand equipment category to actual equipment options
+function expandEquipmentCategory(categoryIndex: string): any[] {
+    const category = (equipmentCategoriesData as any[]).find((cat: any) => cat.index === categoryIndex);
+    if (!category || !category.equipment) {
+        return [];
+    }
+    return category.equipment.map((equip: any) => ({
+        option_type: "counted_reference",
+        count: 1,
+        of: {
+            index: equip.index,
+            name: equip.name,
+            url: equip.url,
+        },
+    }));
+}
 
 const abilityMeta: Record<AbilityKey, { label: string; summary: string }> = {
     str: { label: "Strength", summary: "Melee damage and athletics" },
@@ -1926,7 +1944,13 @@ export function CreateCharacterWizard({ action }: CreateCharacterWizardProps) {
                                         </div>
 
                                         {equipmentOptions.map((equipOption, optionIndex) => {
-                                            const options = equipOption.from?.options || [];
+                                            let options = equipOption.from?.options || [];
+                                            
+                                            // If it's an equipment_category type, expand it to actual equipment
+                                            if (equipOption.from?.option_set_type === "equipment_category" && equipOption.from?.equipment_category) {
+                                                options = expandEquipmentCategory(equipOption.from.equipment_category.index);
+                                            }
+                                            
                                             const selectedChoice = formState.equipmentChoices[optionIndex];
 
                                             return (
